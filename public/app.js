@@ -1,3 +1,13 @@
+/**
+ * AI 文生图 - 前端交互逻辑
+ * 处理用户输入、参数收集、API 调用和结果展示
+ *
+ * @copyright 2026 wenyinos. All rights reserved.
+ * @license MIT
+ * @see https://github.com/wenyinos/ai-image-generator
+ */
+
+// DOM 元素引用
 const apiKeyInput = document.getElementById('apiKeyInput');
 const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
 const modelSelect = document.getElementById('modelSelect');
@@ -16,6 +26,7 @@ const negativePrompt = document.getElementById('negativePrompt');
 const promptExtend = document.getElementById('promptExtend');
 const watermarkToggle = document.getElementById('watermarkToggle');
 
+// 各模型支持的尺寸选项
 const MODEL_SIZES = {
   'wan2.7-image-pro': ['1K', '2K', '4K'],
   'wan2.7-image': ['1K', '2K', '4K'],
@@ -34,6 +45,9 @@ const MODEL_SIZES = {
   'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
 };
 
+/**
+ * 根据当前选择的模型更新尺寸选项
+ */
 function updateSizeOptions() {
   const model = modelSelect.value;
   const sizes = MODEL_SIZES[model] || ['1024*1024'];
@@ -46,6 +60,7 @@ function updateSizeOptions() {
   });
 }
 
+// 从 localStorage 恢复用户设置
 if (localStorage.getItem('apiKey')) {
   apiKeyInput.value = localStorage.getItem('apiKey');
 }
@@ -65,13 +80,16 @@ if (localStorage.getItem('watermark') !== null) {
   watermarkToggle.checked = localStorage.getItem('watermark') === 'true';
 }
 
+// 初始化尺寸选项
 updateSizeOptions();
 
+// 模型切换时更新尺寸选项并保存
 modelSelect.addEventListener('change', () => {
   updateSizeOptions();
   localStorage.setItem('model', modelSelect.value);
 });
 
+// 保存参数偏好到 localStorage
 imageCount.addEventListener('change', () => {
   localStorage.setItem('imageCount', imageCount.value);
 });
@@ -84,12 +102,18 @@ watermarkToggle.addEventListener('change', () => {
   localStorage.setItem('watermark', watermarkToggle.checked);
 });
 
+// API Key 显示/隐藏切换
 toggleApiKeyBtn.addEventListener('click', () => {
   const isPassword = apiKeyInput.type === 'password';
   apiKeyInput.type = isPassword ? 'text' : 'password';
   toggleApiKeyBtn.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
 });
 
+/**
+ * 显示提示信息
+ * @param {string} message - 提示内容
+ * @param {string} type - 提示类型 (danger/success)
+ */
 function showAlert(message, type = 'danger') {
   alertContainer.innerHTML = `
     <div class="alert alert-${type} alert-dismissible fade show" role="alert">
@@ -99,6 +123,10 @@ function showAlert(message, type = 'danger') {
   `;
 }
 
+/**
+ * 设置加载状态
+ * @param {boolean} isLoading - 是否加载中
+ */
 function setLoading(isLoading) {
   generateBtn.disabled = isLoading;
   placeholder.classList.toggle('d-none', isLoading);
@@ -106,6 +134,10 @@ function setLoading(isLoading) {
   resultImages.classList.toggle('d-none', isLoading);
 }
 
+/**
+ * 展示生成的图片 (支持多张网格布局)
+ * @param {string[]} imageUrls - 图片 URL 数组
+ */
 function displayImages(imageUrls) {
   resultImages.innerHTML = '';
   const count = imageUrls.length;
@@ -125,6 +157,7 @@ function displayImages(imageUrls) {
   downloadLink.href = imageUrls[0];
 }
 
+// 生成按钮点击事件
 generateBtn.addEventListener('click', async () => {
   const apiKey = apiKeyInput.value.trim();
   const model = modelSelect.value;
@@ -187,6 +220,7 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
+// 快捷键 Ctrl+Enter 触发生成
 promptInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) {
     generateBtn.click();
