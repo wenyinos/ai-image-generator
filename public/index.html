@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 文生图</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .main-card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .image-container {
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+    }
+    .placeholder-text {
+      color: #6c757d;
+    }
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card main-card">
+          <div class="card-body p-4">
+            <h1 class="card-title text-center mb-4">
+              <i class="bi bi-palette-fill text-primary"></i> AI 文生图
+            </h1>
+            <p class="text-center text-muted mb-4">输入描述，使用阿里云模型生成图片</p>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="apiKeyInput" class="form-label fw-semibold">
+                  API Key
+                  <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key">
+                    <i class="bi bi-question-circle text-muted"></i>
+                  </a>
+                </label>
+                <div class="input-group">
+                  <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
+                  <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </div>
+                <div class="form-text">
+                  <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none">
+                    <i class="bi bi-box-arrow-up-right"></i> 前往百炼控制台获取 API Key
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="modelSelect" class="form-label fw-semibold">模型</label>
+                <select class="form-select" id="modelSelect">
+                  <optgroup label="万相 2.7">
+                    <option value="wan2.7-image-pro">wan2.7-image-pro (最新推荐, 支持4K)</option>
+                    <option value="wan2.7-image">wan2.7-image (更快)</option>
+                  </optgroup>
+                  <optgroup label="万相 2.x">
+                    <option value="wan2.6-t2i">wan2.6-t2i (推荐)</option>
+                    <option value="wan2.5-t2i-preview">wan2.5-t2i-preview</option>
+                    <option value="wan2.2-t2i-flash">wan2.2-t2i-flash (极速)</option>
+                    <option value="wan2.2-t2i-plus">wan2.2-t2i-plus (专业)</option>
+                  </optgroup>
+                  <optgroup label="万相 2.1/2.0">
+                    <option value="wanx2.1-t2i-turbo">wanx2.1-t2i-turbo</option>
+                    <option value="wanx2.1-t2i-plus">wanx2.1-t2i-plus</option>
+                    <option value="wanx2.0-t2i-turbo">wanx2.0-t2i-turbo</option>
+                  </optgroup>
+                  <optgroup label="千问 Qwen-Image">
+                    <option value="qwen-image-2.0-pro">qwen-image-2.0-pro (推荐, 擅长文字渲染)</option>
+                    <option value="qwen-image-2.0">qwen-image-2.0 (加速版)</option>
+                    <option value="qwen-image-max">qwen-image-max (真实感强)</option>
+                    <option value="qwen-image-plus">qwen-image-plus (多样艺术风格)</option>
+                    <option value="qwen-image">qwen-image</option>
+                  </optgroup>
+                  <optgroup label="Z-Image">
+                    <option value="z-image-turbo">z-image-turbo (轻量快速)</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="promptInput" class="form-label fw-semibold">图片描述</label>
+              <textarea
+                class="form-control"
+                id="promptInput"
+                rows="3"
+                placeholder="例如：一只在月光下奔跑的金色猎犬"
+              ></textarea>
+            </div>
+
+            <div class="d-grid mb-4">
+              <button class="btn btn-primary btn-lg" id="generateBtn" type="button">
+                <i class="bi bi-magic"></i> 生成图片
+              </button>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="image-container" id="imageContainer">
+              <p class="placeholder-text mb-0" id="placeholder">
+                <i class="bi bi-image fs-1 d-block mb-2"></i>
+                生成的图片将在这里显示
+              </p>
+              <div class="text-center d-none" id="loading">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="text-muted mb-0">正在生成图片，请稍候...</p>
+              </div>
+              <img id="resultImage" class="d-none" alt="生成的图片">
+            </div>
+
+            <div class="text-center mt-3 d-none" id="downloadBtn">
+              <a class="btn btn-outline-success" id="downloadLink" download="generated-image.png">
+                <i class="bi bi-download"></i> 下载图片
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
