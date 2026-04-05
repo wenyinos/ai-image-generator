@@ -46,11 +46,13 @@ function getModelConfig(model) {
   return MODEL_CONFIG[model] || { size: '1024*1024', type: 'wan' };
 }
 
-function extractImageUrl(data, model) {
+function extractImageUrls(data, model) {
   if (isSyncModel(model)) {
-    return data.output?.choices?.[0]?.message?.content?.[0]?.image;
+    const choices = data.output?.choices?.[0]?.message?.content || [];
+    return choices.filter(c => c.image).map(c => c.image);
   }
-  return data.output?.results?.[0]?.url;
+  const results = data.output?.results || [];
+  return results.filter(r => r.url).map(r => r.url);
 }
 
 app.use(cors());
@@ -62,7 +64,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/generate-image', async (req, res) => {
-  const { prompt, apiKey, model } = req.body;
+  const { prompt, apiKey, model, parameters = {} } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -75,8 +77,24 @@ app.post('/api/generate-image', async (req, res) => {
   const config = getModelConfig(selectedModel);
   const authHeader = { 'Authorization': `Bearer ${apiKey}` };
 
+  const size = parameters.size || config.size;
+  const n = parameters.n || 1;
+  const seed = parameters.seed;
+  const negativePrompt = parameters.negative_prompt;
+  const promptExtend = parameters.prompt_extend !== undefined ? parameters.prompt_extend : true;
+  const watermark = parameters.watermark || false;
+
   try {
     if (isSyncModel(selectedModel)) {
+      const syncParams = {
+        size,
+        n,
+        prompt_extend: promptExtend,
+        watermark,
+      };
+      if (seed !== undefined) syncParams.seed = seed;
+      if (negativePrompt) syncParams.negative_prompt = negativePrompt;
+
       const syncRes = await fetch(`${BASE_URL}${SYNC_ENDPOINT}`, {
         method: 'POST',
         headers: {
@@ -88,12 +106,7 @@ app.post('/api/generate-image', async (req, res) => {
           input: {
             messages: [{ role: 'user', content: [{ text: prompt }] }],
           },
-          parameters: {
-            size: config.size,
-            n: 1,
-            prompt_extend: true,
-            watermark: false,
-          },
+          parameters: syncParams,
         }),
       });
 
@@ -103,13 +116,22 @@ app.post('/api/generate-image', async (req, res) => {
         return res.status(syncRes.status).json({ error: syncData.message || syncData });
       }
 
-      const imageUrl = extractImageUrl(syncData, selectedModel);
-      if (!imageUrl) {
+      const imageUrls = extractImageUrls(syncData, selectedModel);
+      if (!imageUrls.length) {
         return res.status(500).json({ error: 'No image URL in response' });
       }
 
-      return res.json({ imageUrl });
+      return res.json({ imageUrls });
     }
+
+    const asyncParams = {
+      size,
+      n,
+    };
+    if (seed !== undefined) asyncParams.seed = seed;
+    if (negativePrompt) asyncParams.negative_prompt = negativePrompt;
+    if (promptExtend) asyncParams.prompt_extend = promptExtend;
+    if (watermark) asyncParams.watermark = watermark;
 
     const submitRes = await fetch(`${BASE_URL}${ASYNC_ENDPOINT}`, {
       method: 'POST',
@@ -121,10 +143,7 @@ app.post('/api/generate-image', async (req, res) => {
       body: JSON.stringify({
         model: selectedModel,
         input: { prompt },
-        parameters: {
-          size: config.size,
-          n: 1,
-        },
+        parameters: asyncParams,
       }),
     });
 
@@ -139,7 +158,7 @@ app.post('/api/generate-image', async (req, res) => {
       return res.status(500).json({ error: 'No task_id returned' });
     }
 
-    let imageUrl = null;
+    let imageUrls = null;
     let attempts = 0;
     const maxAttempts = 90;
 
@@ -154,7 +173,7 @@ app.post('/api/generate-image', async (req, res) => {
       const status = pollData.output?.task_status;
 
       if (status === 'SUCCEEDED') {
-        imageUrl = extractImageUrl(pollData, selectedModel);
+        imageUrls = extractImageUrls(pollData, selectedModel);
         break;
       } else if (status === 'FAILED') {
         return res.status(500).json({ error: pollData.output?.message || 'Task failed' });
@@ -163,11 +182,11 @@ app.post('/api/generate-image', async (req, res) => {
       attempts++;
     }
 
-    if (!imageUrl) {
+    if (!imageUrls || !imageUrls.length) {
       return res.status(504).json({ error: 'Task timeout' });
     }
 
-    res.json({ imageUrl });
+    res.json({ imageUrls });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

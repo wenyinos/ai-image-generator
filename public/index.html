@@ -29,6 +29,25 @@
       max-width: 100%;
       height: auto;
     }
+    .result-images-grid {
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+    .result-images-grid.grid-1 { grid-template-columns: 1fr; }
+    .result-images-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .result-images-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .result-images-grid.grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .result-images-grid img {
+      width: 100%;
+      height: auto;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .result-images-grid img:hover {
+      transform: scale(1.02);
+    }
     .placeholder-text {
       color: #6c757d;
     }
@@ -111,6 +130,57 @@
               ></textarea>
             </div>
 
+            <div class="mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">生成参数</label>
+                <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#advancedParams" aria-expanded="false" aria-controls="advancedParams">
+                  <i class="bi bi-sliders"></i> 高级选项
+                </button>
+              </div>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label for="imageCount" class="form-label">图片数量</label>
+                  <select class="form-select" id="imageCount">
+                    <option value="1" selected>1 张</option>
+                    <option value="2">2 张</option>
+                    <option value="3">3 张</option>
+                    <option value="4">4 张</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="imageSize" class="form-label">图片尺寸</label>
+                  <select class="form-select" id="imageSize">
+                    <option value="auto" selected>自动 (模型默认)</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="seedInput" class="form-label">随机种子</label>
+                  <input type="number" class="form-control" id="seedInput" placeholder="留空随机" min="0" max="2147483647">
+                </div>
+              </div>
+              <div class="collapse mt-3" id="advancedParams">
+                <div class="card card-body">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label for="negativePrompt" class="form-label">负向提示词</label>
+                      <textarea class="form-control" id="negativePrompt" rows="2" placeholder="不想出现在图片中的内容"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="promptExtend" checked>
+                        <label class="form-check-label" for="promptExtend">提示词增强</label>
+                      </div>
+                      <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="watermarkToggle">
+                        <label class="form-check-label" for="watermarkToggle">添加水印</label>
+                      </div>
+                      <div class="form-text">仅部分模型支持以上选项</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="d-grid mb-4">
               <button class="btn btn-primary btn-lg" id="generateBtn" type="button">
                 <i class="bi bi-magic"></i> 生成图片
@@ -128,7 +198,7 @@
                 <div class="spinner-border text-primary mb-3" role="status"></div>
                 <p class="text-muted mb-0">正在生成图片，请稍候...</p>
               </div>
-              <img id="resultImage" class="d-none" alt="生成的图片">
+              <div id="resultImages" class="d-none w-100"></div>
             </div>
 
             <div class="text-center mt-3 d-none" id="downloadBtn">
