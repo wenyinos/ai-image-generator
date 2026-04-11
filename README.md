@@ -9,6 +9,7 @@
 - **生成参数控制**：支持图片数量 (1-4张)、尺寸、随机种子、负向提示词、提示词增强、水印等参数调节
 - **动态尺寸适配**：切换模型时自动更新可用尺寸选项
 - **API Key 管理**：前端输入 API Key，自动缓存至本地，提供直达百炼控制台获取链接
+- **自定义 Favicon**：支持多种尺寸的网站图标，适配不同设备和浏览器
 - **响应式 UI**：基于 Bootstrap 5，适配桌面和移动端
 - **实时预览**：生成完成后直接展示图片，支持多张网格显示和一键下载
 
@@ -75,7 +76,12 @@ AI-image/
 ├── .gitignore
 └── public/
     ├── index.html      # Bootstrap 5 前端页面
-    └── app.js          # 前端交互逻辑
+    ├── app.js          # 前端交互逻辑
+    └── favicon/
+        ├── favicon.ico              # 标准网站图标
+        ├── favicon-16x16.png        # 16x16 PNG 图标
+        ├── favicon-32x32.png        # 32x32 PNG 图标
+        └── apple-touch-icon.png     # Apple 触摸设备图标
 ```
 
 ## API 说明
