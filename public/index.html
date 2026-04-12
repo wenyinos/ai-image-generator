@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 文生图</title>
+  <title>AI 图片生成器</title>
   <link rel="icon" href="favicon/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -59,6 +59,37 @@
       width: 3rem;
       height: 3rem;
     }
+    .upload-area {
+      border: 2px dashed #dee2e6;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f8f9fa;
+    }
+    .upload-area:hover {
+      border-color: #667eea;
+      background: #e9ecef;
+    }
+    .upload-area.dragover {
+      border-color: #667eea;
+      background: #e7f3ff;
+    }
+    .upload-preview {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 0.5rem;
+      margin-top: 1rem;
+    }
+    .nav-tabs .nav-link {
+      color: #495057;
+      font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+      color: #667eea;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -68,70 +99,152 @@
         <div class="card main-card">
           <div class="card-body p-4">
             <h1 class="card-title text-center mb-4">
-              <i class="bi bi-palette-fill text-primary"></i> AI 文生图
+              <i class="bi bi-palette-fill text-primary"></i> AI 图片生成
             </h1>
-            <p class="text-center text-muted mb-4">输入描述，使用阿里云模型生成图片</p>
 
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label for="apiKeyInput" class="form-label fw-semibold">
-                  API Key
-                  <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key">
-                    <i class="bi bi-question-circle text-muted"></i>
-                  </a>
-                </label>
-                <div class="input-group">
-                  <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
-                  <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
-                    <i class="bi bi-eye"></i>
-                  </button>
+            <!-- 模式切换标签 -->
+            <ul class="nav nav-tabs mb-4" id="modeTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="text2image-tab" data-bs-toggle="tab" data-bs-target="#text2image" type="button" role="tab">
+                  <i class="bi bi-fonts"></i> 文生图
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="image2image-tab" data-bs-toggle="tab" data-bs-target="#image2image" type="button" role="tab">
+                  <i class="bi bi-image"></i> 图生图
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="modeTabContent">
+              <!-- 文生图模式 -->
+              <div class="tab-pane fade show active" id="text2image" role="tabpanel">
+                <p class="text-center text-muted mb-4">输入描述，使用阿里云模型生成图片</p>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label for="apiKeyInput" class="form-label fw-semibold">
+                      API Key
+                      <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key">
+                        <i class="bi bi-question-circle text-muted"></i>
+                      </a>
+                    </label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
+                      <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                    <div class="form-text">
+                      <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right"></i> 前往百炼控制台获取 API Key
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="modelSelect" class="form-label fw-semibold">模型</label>
+                    <select class="form-select" id="modelSelect">
+                      <optgroup label="⭐ 万相 2.7 (最新)">
+                        <option value="wan2.7-image-pro">wan2.7-image-pro (最强, 支持4K)</option>
+                        <option value="wan2.7-image" selected>wan2.7-image (快速)</option>
+                      </optgroup>
+                      <optgroup label="🎨 万相 2.6">
+                        <option value="wan2.6-image">wan2.6-image (图文混排)</option>
+                        <option value="wan2.6-t2i">wan2.6-t2i (标准)</option>
+                      </optgroup>
+                      <optgroup label="⚡ 万相 2.5/2.2">
+                        <option value="wan2.5-t2i-preview">wan2.5-t2i-preview (预览)</option>
+                        <option value="wan2.2-t2i-flash">wan2.2-t2i-flash (极速)</option>
+                        <option value="wan2.2-t2i-plus">wan2.2-t2i-plus (增强)</option>
+                      </optgroup>
+                      <optgroup label="万相 2.1/2.0">
+                        <option value="wanx2.1-t2i-turbo">wanx2.1-t2i-turbo</option>
+                        <option value="wanx2.1-t2i-plus">wanx2.1-t2i-plus</option>
+                        <option value="wanx2.0-t2i-turbo">wanx2.0-t2i-turbo</option>
+                      </optgroup>
+                      <optgroup label="💬 千问 Qwen-Image">
+                        <option value="qwen-image-2.0-pro">qwen-image-2.0-pro (擅长文字)</option>
+                        <option value="qwen-image-2.0">qwen-image-2.0</option>
+                        <option value="qwen-image-max">qwen-image-max (真实感)</option>
+                        <option value="qwen-image-plus">qwen-image-plus (艺术风格)</option>
+                        <option value="qwen-image">qwen-image</option>
+                      </optgroup>
+                      <optgroup label="🚀 Z-Image">
+                        <option value="z-image-turbo">z-image-turbo (轻量快速)</option>
+                      </optgroup>
+                    </select>
+                  </div>
                 </div>
-                <div class="form-text">
-                  <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none">
-                    <i class="bi bi-box-arrow-up-right"></i> 前往百炼控制台获取 API Key
-                  </a>
+
+                <div class="mb-3">
+                  <label for="promptInput" class="form-label fw-semibold">图片描述</label>
+                  <textarea
+                    class="form-control"
+                    id="promptInput"
+                    rows="3"
+                    placeholder="例如：一只在月光下奔跑的金色猎犬"
+                  ></textarea>
                 </div>
               </div>
-              <div class="col-md-6">
-                <label for="modelSelect" class="form-label fw-semibold">模型</label>
-                <select class="form-select" id="modelSelect">
-                  <optgroup label="万相 2.7">
-                    <option value="wan2.7-image-pro">wan2.7-image-pro (最新推荐, 支持4K)</option>
-                    <option value="wan2.7-image">wan2.7-image (更快)</option>
-                  </optgroup>
-                  <optgroup label="万相 2.x">
-                    <option value="wan2.6-t2i">wan2.6-t2i (推荐)</option>
-                    <option value="wan2.5-t2i-preview">wan2.5-t2i-preview</option>
-                    <option value="wan2.2-t2i-flash">wan2.2-t2i-flash (极速)</option>
-                    <option value="wan2.2-t2i-plus">wan2.2-t2i-plus (专业)</option>
-                  </optgroup>
-                  <optgroup label="万相 2.1/2.0">
-                    <option value="wanx2.1-t2i-turbo">wanx2.1-t2i-turbo</option>
-                    <option value="wanx2.1-t2i-plus">wanx2.1-t2i-plus</option>
-                    <option value="wanx2.0-t2i-turbo">wanx2.0-t2i-turbo</option>
-                  </optgroup>
-                  <optgroup label="千问 Qwen-Image">
-                    <option value="qwen-image-2.0-pro">qwen-image-2.0-pro (推荐, 擅长文字渲染)</option>
-                    <option value="qwen-image-2.0">qwen-image-2.0 (加速版)</option>
-                    <option value="qwen-image-max">qwen-image-max (真实感强)</option>
-                    <option value="qwen-image-plus">qwen-image-plus (多样艺术风格)</option>
-                    <option value="qwen-image">qwen-image</option>
-                  </optgroup>
-                  <optgroup label="Z-Image">
-                    <option value="z-image-turbo">z-image-turbo (轻量快速)</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
 
-            <div class="mb-3">
-              <label for="promptInput" class="form-label fw-semibold">图片描述</label>
-              <textarea
-                class="form-control"
-                id="promptInput"
-                rows="3"
-                placeholder="例如：一只在月光下奔跑的金色猎犬"
-              ></textarea>
+              <!-- 图生图模式 -->
+              <div class="tab-pane fade" id="image2image" role="tabpanel">
+                <p class="text-center text-muted mb-4">上传参考图，基于图片生成新图像</p>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label for="apiKeyInputI2I" class="form-label fw-semibold">
+                      API Key
+                    </label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-...">
+                      <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="modelSelectI2I" class="form-label fw-semibold">模型</label>
+                    <select class="form-select" id="modelSelectI2I">
+                      <optgroup label="⭐ 万相 2.7 (推荐)">
+                        <option value="wan2.7-image-pro">wan2.7-image-pro (最强)</option>
+                        <option value="wan2.7-image" selected>wan2.7-image (快速)</option>
+                      </optgroup>
+                      <optgroup label="🎨 万相 2.6">
+                        <option value="wan2.6-image">wan2.6-image (图文混排)</option>
+                        <option value="wan2.6-t2i">wan2.6-t2i</option>
+                      </optgroup>
+                    </select>
+                    <div class="form-text">图生图仅支持万相 2.6+ 系列模型</div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">参考图片</label>
+                  <div class="upload-area" id="uploadArea">
+                    <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                    <p class="mb-0 mt-2">点击上传或拖拽图片到这里</p>
+                    <small class="text-muted">支持 JPG、PNG 格式，最大10MB</small>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                  </div>
+                  <div id="imagePreview" class="text-center d-none">
+                    <img id="previewImage" class="upload-preview" alt="参考图片预览">
+                    <button class="btn btn-sm btn-outline-danger mt-2" id="removeImageBtn">
+                      <i class="bi bi-trash"></i> 移除图片
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="promptInputI2I" class="form-label fw-semibold">图片描述（可选）</label>
+                  <textarea
+                    class="form-control"
+                    id="promptInputI2I"
+                    rows="2"
+                    placeholder="描述你想要生成的效果，例如：转换为水彩画风格"
+                  ></textarea>
+                </div>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -162,6 +275,20 @@
                   <input type="number" class="form-control" id="seedInput" placeholder="留空随机" min="0" max="2147483647">
                 </div>
               </div>
+              
+              <!-- 图生图特有参数 -->
+              <div class="row g-3 mt-2 d-none" id="image2imageParams">
+                <div class="col-md-6">
+                  <label for="imageStrength" class="form-label">参考图强度</label>
+                  <input type="range" class="form-range" id="imageStrength" min="0" max="1" step="0.05" value="0.5">
+                  <div class="d-flex justify-content-between">
+                    <small class="text-muted">低(更创意)</small>
+                    <small class="text-muted fw-bold" id="strengthValue">0.5</small>
+                    <small class="text-muted">高(更相似)</small>
+                  </div>
+                </div>
+              </div>
+
               <div class="collapse mt-3" id="advancedParams">
                 <div class="card card-body">
                   <div class="row g-3">
@@ -189,6 +316,9 @@
               <button class="btn btn-primary btn-lg" id="generateBtn" type="button">
                 <i class="bi bi-magic"></i> 生成图片
               </button>
+              <button class="btn btn-primary btn-lg d-none" id="generateBtnI2I" type="button">
+                <i class="bi bi-images"></i> 基于参考图生成
+              </button>
             </div>
 
             <div id="alertContainer"></div>
@@ -215,7 +345,16 @@
       </div>
     </div>
     <footer class="text-center text-white py-4 mt-4">
-      <small>&copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.</small>
+      <small>
+        &copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.
+        <br>
+        <span class="mt-1">
+          <i class="bi bi-github"></i> 
+          <a href="https://github.com/wenyinos/ai-image-generator" target="_blank" class="text-white text-decoration-none">
+            GitHub 仓库
+          </a>
+        </span>
+      </small>
     </footer>
   </div>
 

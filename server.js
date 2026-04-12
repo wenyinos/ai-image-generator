@@ -11,9 +11,24 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 配置文件上传
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 限制
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('只支持图片文件'), false);
+    }
+  },
+});
 
 // DashScope API 基础地址
 const BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
@@ -22,7 +37,7 @@ const BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 const SYNC_MODELS = new Set([
   'wan2.7-image-pro',
   'wan2.7-image',
-  'wan2.6-t2i',
+  'wan2.6-image',
   'qwen-image-2.0-pro',
   'qwen-image-2.0',
 ]);
@@ -34,20 +49,26 @@ const TASK_ENDPOINT = '/tasks/';
 
 // 模型默认配置 (尺寸和类型)
 const MODEL_CONFIG = {
+  // 万相 2.7 系列
   'wan2.7-image-pro': { size: '2K', type: 'wan' },
   'wan2.7-image': { size: '2K', type: 'wan' },
+  // 万相 2.6 系列
+  'wan2.6-image': { size: '1024*1024', type: 'wan' },
   'wan2.6-t2i': { size: '1280*1280', type: 'wan' },
   'wan2.5-t2i-preview': { size: '1280*1280', type: 'wan' },
   'wan2.2-t2i-flash': { size: '1024*1024', type: 'wan' },
   'wan2.2-t2i-plus': { size: '1024*1024', type: 'wan' },
+  // 万相 2.1/2.0
   'wanx2.1-t2i-turbo': { size: '1024*1024', type: 'wan' },
   'wanx2.1-t2i-plus': { size: '1024*1024', type: 'wan' },
   'wanx2.0-t2i-turbo': { size: '1024*1024', type: 'wan' },
+  // 千问 Qwen-Image
   'qwen-image-2.0-pro': { size: '2048*2048', type: 'qwen' },
   'qwen-image-2.0': { size: '2048*2048', type: 'qwen' },
   'qwen-image-max': { size: '1664*928', type: 'qwen' },
   'qwen-image-plus': { size: '1664*928', type: 'qwen' },
   'qwen-image': { size: '1664*928', type: 'qwen' },
+  // Z-Image
   'z-image-turbo': { size: '1024*1024', type: 'wan' },
 };
 
@@ -95,7 +116,7 @@ app.get('/', (req, res) => {
 });
 
 /**
- * 图片生成接口
+ * 图片生成接口 (文生图)
  * POST /api/generate-image
  * 请求体: { prompt, apiKey, model, parameters: { n, size, seed, negative_prompt, prompt_extend, watermark } }
  * 响应: { imageUrls: string[] }
@@ -235,4 +256,119 @@ app.post('/api/generate-image', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
+
+/**
+ * 图生图接口
+ * POST /api/image-to-image
+ * 请求: multipart/form-data { image: File, prompt: string, apiKey: string, model: string, parameters: JSON }
+ * 响应: { imageUrls: string[] }
+ */
+app.post('/api/image-to-image', upload.single('image'), async (req, res) => {
+  const { prompt, apiKey, model, parameters } = req.body;
+  const imageFile = req.file;
+
+  if (!imageFile) {
+    return res.status(400).json({ error: '参考图片是必需的' });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API Key is required' });
+  }
+
+  const selectedModel = model || 'wan2.7-image';
+  const authHeader = { 'Authorization': `Bearer ${apiKey}` };
+
+  // 将图片转换为 base64
+  const imageBase64 = imageFile.buffer.toString('base64');
+  const mimeType = imageFile.mimetype || 'image/png';
+  const imageDataUrl = `data:${mimeType};base64,${imageBase64}`;
+
+  // 解析生成参数
+  let params;
+  try {
+    params = parameters ? JSON.parse(parameters) : {};
+  } catch (e) {
+    params = {};
+  }
+
+  const size = params.size;
+  const n = params.n || 1;
+  const seed = params.seed;
+  const negativePrompt = params.negative_prompt;
+  const promptExtend = params.prompt_extend !== undefined ? params.prompt_extend : true;
+  const watermark = params.watermark || false;
+  const imageStrength = params.image_strength !== undefined ? params.image_strength : 0.5; // 参考图强度
+
+  try {
+    // 图生图使用同步API (多模态生成端点)
+    const syncParams = {
+      n,
+    };
+    
+    // 图生图最高支持2K分辨率
+    if (size) syncParams.size = size;
+    if (seed !== undefined) syncParams.seed = seed;
+    if (negativePrompt) syncParams.negative_prompt = negativePrompt;
+    // prompt_extend 和 watermark 仅在明确设置时才添加
+    if (promptExtend === true) syncParams.prompt_extend = true;
+    if (watermark === true) syncParams.watermark = true;
+
+    // 构建 content 数组:先放图片,再放文本
+    const content = [
+      { image: imageDataUrl },
+    ];
+    if (prompt) {
+      content.push({ text: prompt });
+    }
+
+    const requestBody = {
+      model: selectedModel,
+      input: {
+        messages: [{ role: 'user', content }],
+      },
+      parameters: syncParams,
+    };
+
+    // 调试日志
+    console.log('=== 图生图请求调试 ===');
+    console.log('模型:', selectedModel);
+    console.log('图片大小:', imageFile.size, '字节');
+    console.log('图片类型:', imageFile.mimetype);
+    console.log('Base64长度:', imageDataUrl.length);
+    console.log('请求参数:', JSON.stringify(syncParams, null, 2));
+    console.log('=====================');
+
+    const syncRes = await fetch(`${BASE_URL}${SYNC_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        ...authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const syncData = await syncRes.json();
+
+    if (!syncRes.ok) {
+      console.error('❌ 图生图API错误:');
+      console.error('HTTP状态码:', syncRes.status);
+      console.error('错误响应:', JSON.stringify(syncData, null, 2));
+      return res.status(syncRes.status).json({ error: syncData.message || syncData });
+    }
+
+    console.log('✅ 图生图API调用成功');
+
+    const imageUrls = extractImageUrls(syncData, selectedModel);
+    if (!imageUrls.length) {
+      console.error('❌ API返回中未找到图片URL');
+      console.log('API响应:', JSON.stringify(syncData, null, 2));
+      return res.status(500).json({ error: 'No image URL in response' });
+    }
+
+    console.log('✅ 生成图片数量:', imageUrls.length);
+    res.json({ imageUrls });
+  } catch (err) {
+    console.error('❌ 图生图异常:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
