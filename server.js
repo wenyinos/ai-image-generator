@@ -315,8 +315,23 @@ app.post('/api/image-to-image', (req, res, next) => {
     return res.status(400).json({ error: 'API Key is required' });
   }
 
-  const selectedModel = model || 'wan2.7-image';
+  const selectedModel = model || 'wan2.6-image';
   const authHeader = { 'Authorization': `Bearer ${apiKey}` };
+
+  // 验证模型是否支持图生图
+  const I2I_SUPPORTED_MODELS = [
+    'wan2.7-image-pro',
+    'wan2.7-image',
+    'wan2.6-image',
+  ];
+  
+  if (!I2I_SUPPORTED_MODELS.includes(selectedModel)) {
+    return res.status(400).json({ 
+      error: `模型 ${selectedModel} 不支持图生图，请使用: ${I2I_SUPPORTED_MODELS.join(', ')}` 
+    });
+  }
+
+  console.log('📷 图生图请求 - 使用模型:', selectedModel);
 
   // 将图片转换为 base64
   const imageBase64 = imageFile.buffer.toString('base64');

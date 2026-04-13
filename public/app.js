@@ -283,12 +283,11 @@ image2imageTab.addEventListener('click', () => {
   updateSizeOptionsI2I();
 });
 
-// 图生图模型尺寸选项
+// 图生图模型尺寸选项（仅支持多模态模型，不支持 t2i 文生图模型）
 const MODEL_SIZES_I2I = {
   'wan2.7-image-pro': ['1K', '2K'],
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
 };
 
 function updateSizeOptionsI2I() {
