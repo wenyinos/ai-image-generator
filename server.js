@@ -428,17 +428,29 @@ app.post('/api/image-to-image', (req, res, next) => {
     res.json({ imageUrls });
   } catch (err) {
     console.error('❌ 图生图异常:', err);
-    
+
     // 如果响应已经发送，不要再处理
     if (res.headersSent) {
       console.warn('响应已发送，跳过错误处理');
       return;
     }
-    
-    // 区分超时错误和其他错误
+
+    // 区分不同类型的错误
     if (err.name === 'AbortError' || err.message?.includes('abort')) {
       return res.status(504).json({ error: '请求超时,图片较大或网络较慢,请稍后重试' });
     }
-    res.status(500).json({ error: err.message });
+    
+    // 网络错误（DNS 解析失败、连接被拒绝等）
+    if (err.message?.includes('fetch failed') || err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      console.error('🌐 网络错误详情:', {
+        message: err.message,
+        code: err.code,
+        cause: err.cause?.message
+      });
+      return res.status(502).json({ error: '网络错误,无法连接到 AI 服务,请检查网络或稍后重试' });
+    }
+    
+    // 其他错误
+    res.status(500).json({ error: `生成失败: ${err.message}` });
   }
 });
