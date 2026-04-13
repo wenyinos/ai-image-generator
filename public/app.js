@@ -352,17 +352,17 @@ uploadArea.addEventListener('drop', (e) => {
 /**
  * 压缩图片文件
  * @param {File} file - 原始图片文件
- * @param {number} maxWidth - 最大宽度 (默认 2048)
- * @param {number} quality - JPEG 质量 (默认 0.85)
+ * @param {number} maxWidth - 最大宽度 (默认 1536)
+ * @param {number} quality - JPEG 质量 (默认 0.8)
  * @returns {Promise<File>} - 压缩后的图片文件
  */
-function compressImage(file, maxWidth = 2048, quality = 0.85) {
+function compressImage(file, maxWidth = 1536, quality = 0.8) {
   return new Promise((resolve, reject) => {
     // 如果图片尺寸已经小于 maxWidth,直接返回
     const img = new Image();
     img.onload = () => {
       // 不需要压缩
-      if (img.width <= maxWidth && file.size < 5 * 1024 * 1024) {
+      if (img.width <= maxWidth && file.size < 2 * 1024 * 1024) {
         resolve(file);
         return;
       }
@@ -417,10 +417,10 @@ async function handleImageFile(file) {
   }
 
   try {
-    // 对于大于 2MB 的图片,先压缩再上传
-    if (file.size > 2 * 1024 * 1024) {
+    // 对于大于 1MB 的图片,先压缩再上传 (降低阈值，避免大图导致超时)
+    if (file.size > 1 * 1024 * 1024) {
       console.log(`图片较大 (${(file.size / 1024 / 1024).toFixed(2)}MB),正在压缩...`);
-      uploadedImageFile = await compressImage(file, 2048, 0.85);
+      uploadedImageFile = await compressImage(file, 1536, 0.8);
       console.log(`压缩后大小: ${(uploadedImageFile.size / 1024 / 1024).toFixed(2)}MB`);
     } else {
       uploadedImageFile = file;

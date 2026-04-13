@@ -118,7 +118,7 @@ function extractImageUrls(data, model) {
 
 // 中间件
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // 增加 body 限制,因为 base64 图片 会很大
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 首页路由
@@ -403,7 +403,7 @@ app.post('/api/image-to-image', (req, res, next) => {
         },
         body: JSON.stringify(requestBody),
       },
-      180000 // 3 分钟超时,适合大图片
+      300000 // 5 分钟超时,适合大图片和慢网络
     );
 
     const syncData = await syncRes.json();
