@@ -30,6 +30,17 @@ const upload = multer({
   },
 });
 
+// 错误处理中间件 - 处理 multer 文件过大等错误
+const handleMulterError = (err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: '图片文件过大，最大支持 10MB' });
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: `文件上传错误: ${err.message}` });
+  }
+  next(err);
+};
+
 // DashScope API 基础地址
 const BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 
@@ -286,7 +297,14 @@ app.listen(PORT, () => {
  * 请求: multipart/form-data { image: File, prompt: string, apiKey: string, model: string, parameters: JSON }
  * 响应: { imageUrls: string[] }
  */
-app.post('/api/image-to-image', upload.single('image'), async (req, res) => {
+app.post('/api/image-to-image', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return handleMulterError(err, req, res, next);
+    }
+    next();
+  });
+}, async (req, res) => {
   const { prompt, apiKey, model, parameters } = req.body;
   const imageFile = req.file;
 
@@ -395,6 +413,13 @@ app.post('/api/image-to-image', upload.single('image'), async (req, res) => {
     res.json({ imageUrls });
   } catch (err) {
     console.error('❌ 图生图异常:', err);
+    
+    // 如果响应已经发送，不要再处理
+    if (res.headersSent) {
+      console.warn('响应已发送，跳过错误处理');
+      return;
+    }
+    
     // 区分超时错误和其他错误
     if (err.name === 'AbortError' || err.message?.includes('abort')) {
       return res.status(504).json({ error: '请求超时,图片较大或网络较慢,请稍后重试' });

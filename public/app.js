@@ -521,11 +521,18 @@ generateBtnI2I.addEventListener('click', async () => {
       } else {
         setLoading(false);
         try {
+          // 先检查响应是否为 JSON 格式
+          const contentType = xhr.getResponseHeader('Content-Type');
+          if (!contentType || !contentType.includes('application/json')) {
+            // 服务器返回了非 JSON 响应（可能是 HTML 错误页面）
+            throw new Error(`服务器错误 (HTTP ${xhr.status})`);
+          }
+          
           const data = JSON.parse(xhr.responseText);
           const errorMsg = data.error?.message || data.error || '生成失败';
           throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
         } catch (err) {
-          showAlert(`生成失败 (HTTP ${xhr.status}): ${err.message}`);
+          showAlert(`生成失败: ${err.message}`);
         }
       }
     });
