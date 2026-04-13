@@ -152,12 +152,20 @@ function showAlert(message, type = 'danger') {
 /**
  * 设置加载状态
  * @param {boolean} isLoading - 是否加载中
+ * @param {string} message - 可选的加载提示消息
  */
-function setLoading(isLoading) {
+function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   generateBtn.disabled = isLoading;
+  generateBtnI2I.disabled = isLoading;
   placeholder.classList.toggle('d-none', isLoading);
   loading.classList.toggle('d-none', !isLoading);
   resultImages.classList.toggle('d-none', isLoading);
+  
+  // 更新加载提示文本
+  const loadingText = loading.querySelector('p');
+  if (loadingText) {
+    loadingText.textContent = message;
+  }
 }
 
 /**
@@ -342,23 +350,94 @@ uploadArea.addEventListener('drop', (e) => {
   }
 });
 
-function handleImageFile(file) {
+/**
+ * 压缩图片文件
+ * @param {File} file - 原始图片文件
+ * @param {number} maxWidth - 最大宽度 (默认 2048)
+ * @param {number} quality - JPEG 质量 (默认 0.85)
+ * @returns {Promise<File>} - 压缩后的图片文件
+ */
+function compressImage(file, maxWidth = 2048, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    // 如果图片尺寸已经小于 maxWidth,直接返回
+    const img = new Image();
+    img.onload = () => {
+      // 不需要压缩
+      if (img.width <= maxWidth && file.size < 5 * 1024 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      // 计算新尺寸
+      let newWidth = img.width;
+      let newHeight = img.height;
+      if (img.width > maxWidth) {
+        newWidth = maxWidth;
+        newHeight = (img.height / img.width) * maxWidth;
+      }
+
+      // 使用 canvas 压缩
+      const canvas = document.createElement('canvas');
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+      // 转换为 blob
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('图片压缩失败'));
+            return;
+          }
+          // 创建新的 File 对象
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error('图片加载失败'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
+ * 处理图片文件
+ * @param {File} file - 图片文件
+ */
+async function handleImageFile(file) {
   // 检查文件大小 (10MB)
   if (file.size > 10 * 1024 * 1024) {
     showAlert('图片文件大小不能超过10MB');
     return;
   }
 
-  uploadedImageFile = file;
+  try {
+    // 对于大于 2MB 的图片,先压缩再上传
+    if (file.size > 2 * 1024 * 1024) {
+      console.log(`图片较大 (${(file.size / 1024 / 1024).toFixed(2)}MB),正在压缩...`);
+      uploadedImageFile = await compressImage(file, 2048, 0.85);
+      console.log(`压缩后大小: ${(uploadedImageFile.size / 1024 / 1024).toFixed(2)}MB`);
+    } else {
+      uploadedImageFile = file;
+    }
 
-  // 预览图片
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    previewImage.src = e.target.result;
-    imagePreview.classList.remove('d-none');
-    uploadArea.classList.add('d-none');
-  };
-  reader.readAsDataURL(file);
+    // 预览图片 (使用原始文件)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImage.src = e.target.result;
+      imagePreview.classList.remove('d-none');
+      uploadArea.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showAlert(`图片处理失败: ${err.message}`);
+  }
 }
 
 // 移除图片
@@ -397,7 +476,7 @@ generateBtnI2I.addEventListener('click', async () => {
   localStorage.setItem('apiKeyI2I', apiKey);
 
   alertContainer.innerHTML = '';
-  setLoading(true);
+  setLoading(true, '正在上传图片，请稍候...');
   downloadBtn.classList.add('d-none');
 
   // 构建表单数据
@@ -417,20 +496,55 @@ generateBtnI2I.addEventListener('click', async () => {
   }));
 
   try {
-    const res = await fetch('/api/image-to-image', {
-      method: 'POST',
-      body: formData,
+    // 使用 XMLHttpRequest 以便监听上传进度
+    const xhr = new XMLHttpRequest();
+    
+    // 上传进度
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        setLoading(true, `正在上传图片 (${percent}%)...`);
+      }
     });
 
-    const data = await res.json();
+    // 请求完成
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          displayImages(data.imageUrls);
+          setLoading(false);
+        } catch (err) {
+          setLoading(false);
+          showAlert(`解析响应失败: ${err.message}`);
+        }
+      } else {
+        setLoading(false);
+        try {
+          const data = JSON.parse(xhr.responseText);
+          const errorMsg = data.error?.message || data.error || '生成失败';
+          throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
+        } catch (err) {
+          showAlert(`生成失败 (HTTP ${xhr.status}): ${err.message}`);
+        }
+      }
+    });
 
-    if (!res.ok) {
-      const errorMsg = data.error?.message || data.error || '生成失败';
-      throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
-    }
+    // 请求错误
+    xhr.addEventListener('error', () => {
+      setLoading(false);
+      showAlert('网络错误,请检查网络连接后重试');
+    });
 
-    displayImages(data.imageUrls);
-    setLoading(false);
+    // 请求超时
+    xhr.addEventListener('timeout', () => {
+      setLoading(false);
+      showAlert('请求超时,图片可能较大,请稍后重试');
+    });
+
+    xhr.open('POST', '/api/image-to-image');
+    xhr.timeout = 300000; // 5 分钟超时
+    xhr.send(formData);
   } catch (err) {
     setLoading(false);
     showAlert(`生成失败: ${err.message}`);

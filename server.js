@@ -254,6 +254,28 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
+/**
+ * 带超时的 fetch 请求
+ * @param {string} url - 请求 URL
+ * @param {object} options - fetch 选项
+ * @param {number} timeoutMs - 超时时间 (毫秒),默认 120 秒
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 120000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
@@ -338,14 +360,18 @@ app.post('/api/image-to-image', upload.single('image'), async (req, res) => {
     console.log('请求参数:', JSON.stringify(syncParams, null, 2));
     console.log('=====================');
 
-    const syncRes = await fetch(`${BASE_URL}${SYNC_ENDPOINT}`, {
-      method: 'POST',
-      headers: {
-        ...authHeader,
-        'Content-Type': 'application/json',
+    const syncRes = await fetchWithTimeout(
+      `${BASE_URL}${SYNC_ENDPOINT}`,
+      {
+        method: 'POST',
+        headers: {
+          ...authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       },
-      body: JSON.stringify(requestBody),
-    });
+      180000 // 3 分钟超时,适合大图片
+    );
 
     const syncData = await syncRes.json();
 
@@ -369,6 +395,10 @@ app.post('/api/image-to-image', upload.single('image'), async (req, res) => {
     res.json({ imageUrls });
   } catch (err) {
     console.error('❌ 图生图异常:', err);
+    // 区分超时错误和其他错误
+    if (err.name === 'AbortError' || err.message?.includes('abort')) {
+      return res.status(504).json({ error: '请求超时,图片较大或网络较慢,请稍后重试' });
+    }
     res.status(500).json({ error: err.message });
   }
 });

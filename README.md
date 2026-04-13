@@ -11,7 +11,8 @@
 - **动态尺寸适配**：切换模型时自动更新可用尺寸选项
 
 ### 🖼️ 图生图模式
-- **参考图上传**：支持拖拽上传和点击上传，最大 10MB
+- **参考图上传**：支持拖拽/点击上传,自动压缩大图(>2MB),最大 10MB
+- **上传进度**：实时显示上传百分比,优化网络体验
 - **参考图强度控制**：可调滑块控制生成图片与参考图的相似度 (0-1)
 - **多模型支持**：支持万相 2.7、2.6 系列模型
 - **图片预览**：上传前即时预览参考图
@@ -92,93 +93,6 @@ npm start
 ```
 
 服务启动后访问：http://localhost:3000
-
-## 项目结构
-
-```
-AI-image/
-├── server.js           # Express 后端，代理 DashScope API
-├── package.json        # 项目依赖配置
-├── .env.example        # 环境变量模板
-├── .gitignore
-└── public/
-    ├── index.html      # Bootstrap 5 前端页面
-    ├── app.js          # 前端交互逻辑
-    └── favicon/
-        ├── favicon.ico              # 标准网站图标
-        ├── favicon-16x16.png        # 16x16 PNG 图标
-        ├── favicon-32x32.png        # 32x32 PNG 图标
-        └── apple-touch-icon.png     # Apple 触摸设备图标
-```
-
-## API 说明
-
-### 文生图接口
-
-后端提供 `/api/generate-image` 接口：
-
-- **方法**：POST
-- **请求体**：
-  ```json
-  {
-    "prompt": "图片描述",
-    "apiKey": "阿里云百炼 API Key",
-    "model": "模型名称（可选）",
-    "parameters": {
-      "n": 1,
-      "size": "auto",
-      "seed": 42,
-      "negative_prompt": "模糊, 低质量",
-      "prompt_extend": true,
-      "watermark": false
-    }
-  }
-  ```
-- **响应**：
-  ```json
-  {
-    "imageUrls": ["生成的图片 URL 1", "生成的图片 URL 2"]
-  }
-  ```
-
-### 图生图接口
-
-后端提供 `/api/image-to-image` 接口：
-
-- **方法**：POST (multipart/form-data)
-- **请求参数**：
-  - `image`: 参考图片文件 (File)
-  - `apiKey`: API Key
-  - `model`: 模型名称
-  - `prompt`: 图片描述（可选）
-  - `parameters`: JSON 字符串，包含 n, size, seed, image_strength 等参数
-- **响应**：
-  ```json
-  {
-    "imageUrls": ["生成的图片 URL"]
-  }
-  ```
-
-### 参数说明
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| n | number | 1 | 生成图片数量 (1-4) |
-| size | string | auto | 图片尺寸，auto 使用模型默认 |
-| seed | number | 随机 | 随机种子，用于结果可复现 |
-| negative_prompt | string | - | 负向提示词，不想出现的内容 |
-| prompt_extend | boolean | true | 提示词增强（万相2.7不支持） |
-| watermark | boolean | false | 是否添加水印 |
-| image_strength | number | 0.5 | 图生图参考图强度 (0-1)，仅图生图可用 |
-
-## 注意事项
-
-- 生成的图片 URL 有效期为 **24 小时**，请及时下载保存
-- 不同模型的默认分辨率和最大分辨率不同，前端已自动适配
-- 万相 2.7/2.6 使用同步接口，其他模型使用异步接口（自动轮询）
-- 图生图模式最高支持 2K 分辨率
-- API Key 仅保存在浏览器本地存储（localStorage），不会上传至服务器
-- 图生图仅支持万相 2.6+ 系列模型
 
 ## 项目结构
 
