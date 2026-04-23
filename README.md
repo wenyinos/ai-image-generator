@@ -61,7 +61,7 @@
 ### 1. 环境准备
 
 - Node.js >= 18.0.0
-- 阿里云百炼 API Key（[获取地址](https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key)）
+- 阿里云百炼 API Key（可在前端输入，或在服务端通过环境变量配置；[获取地址](https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key)）
 
 ### 2. 安装依赖
 
@@ -80,10 +80,24 @@ cp .env.example .env
 编辑 `.env` 文件：
 
 ```env
-# 可选：在此配置 API Key，也可在前端页面输入
+# 可选：在此配置 API Key；前端留空时将使用该值
 DASHSCOPE_API_KEY=your_api_key_here
 # 服务端口，默认 3000
 PORT=3000
+
+# 可选：CORS 白名单（逗号分隔），例如：
+# CORS_ORIGIN=http://localhost:3000,https://your-domain.com
+# 不设置则不限制（保持兼容）。
+
+# 可选：上游 DashScope 请求超时（毫秒），默认 120000
+# DASHSCOPE_TIMEOUT_MS=120000
+
+# 可选：API 速率限制（按 IP，简单内存实现）
+# RATE_LIMIT_WINDOW_MS=60000
+# RATE_LIMIT_MAX=30
+
+# 可选：调试日志开关（true/1 开启）
+# DEBUG=false
 ```
 
 ### 4. 启动服务
@@ -119,7 +133,7 @@ ai-image-generator/
 - 不同模型的默认分辨率和最大分辨率不同，前端已自动适配
 - 万相 2.7/2.6 使用同步接口，其他模型使用异步接口（自动轮询）
 - 图生图仅支持**图像模型** (`wan2.7-image-pro`、`wan2.7-image`、`wan2.6-image`)，**不支持文生图模型** (`t2i` 系列)
-- API Key 仅保存在浏览器本地存储（localStorage），不会上传至服务器
+- API Key 可在前端输入（保存在浏览器 localStorage），也可仅在服务端通过 `.env` 配置（不会暴露给前端）
 
 ## 许可证
 

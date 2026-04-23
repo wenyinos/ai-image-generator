@@ -15,6 +15,7 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
 
 // 配置文件上传
 const storage = multer.memoryStorage();
@@ -83,6 +84,32 @@ const MODEL_CONFIG = {
   'z-image-turbo': { size: '1024*1024', type: 'wan' },
 };
 
+// 各模型允许的 size 白名单（用于服务端校验）
+const ALLOWED_SIZES_BY_MODEL = {
+  // 万相 2.7
+  'wan2.7-image-pro': ['1K', '2K', '4K'],
+  'wan2.7-image': ['1K', '2K'],
+  // 万相 2.6
+  'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
+  // 万相 2.5/2.2
+  'wan2.5-t2i-preview': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'wan2.2-t2i-flash': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'wan2.2-t2i-plus': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  // 万相 2.1/2.0
+  'wanx2.1-t2i-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'wanx2.1-t2i-plus': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'wanx2.0-t2i-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  // 千问 Qwen-Image
+  'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-2.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-max': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
+  'qwen-image-plus': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
+  'qwen-image': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
+  // Z-Image
+  'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+};
+
 /**
  * 判断模型是否使用同步调用协议
  * @param {string} model - 模型名称
@@ -116,8 +143,81 @@ function extractImageUrls(data, model) {
   return results.filter(r => r.url).map(r => r.url);
 }
 
+function getApiKey(providedApiKey) {
+  const trimmed = typeof providedApiKey === 'string' ? providedApiKey.trim() : '';
+  if (trimmed) return trimmed;
+  const envKey = typeof process.env.DASHSCOPE_API_KEY === 'string' ? process.env.DASHSCOPE_API_KEY.trim() : '';
+  return envKey || '';
+}
+
+function validateIntegerInRange(name, value, min, max) {
+  if (!Number.isInteger(value)) return `${name} must be an integer`;
+  if (value < min || value > max) return `${name} must be between ${min} and ${max}`;
+  return null;
+}
+
+function validateStringMaxLen(name, value, maxLen) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') return `${name} must be a string`;
+  if (value.length > maxLen) return `${name} is too long (max ${maxLen})`;
+  return null;
+}
+
+function validateSize(model, size) {
+  const allowed = ALLOWED_SIZES_BY_MODEL[model];
+  if (!allowed) return null;
+  if (!allowed.includes(size)) {
+    return `Invalid size for model ${model}. Allowed: ${allowed.join(', ')}`;
+  }
+  return null;
+}
+
+function createRateLimiter({ windowMs, max, keyGenerator }) {
+  const hits = new Map();
+  const getKey = typeof keyGenerator === 'function' ? keyGenerator : (req) => req.ip;
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = getKey(req);
+    const current = hits.get(key);
+
+    if (!current || current.resetAt <= now) {
+      hits.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+
+    current.count += 1;
+    if (current.count > max) {
+      const retryAfter = Math.ceil((current.resetAt - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfter));
+      return res.status(429).json({ error: 'Too many requests, please try again later' });
+    }
+
+    return next();
+  };
+}
+
 // 中间件
-app.use(cors());
+const corsOriginsEnv = process.env.CORS_ORIGIN;
+const corsOrigins = corsOriginsEnv
+  ? corsOriginsEnv.split(',').map(s => s.trim()).filter(Boolean)
+  : null;
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!corsOrigins || corsOrigins.length === 0) return callback(null, true);
+    if (!origin) return callback(null, true);
+    if (corsOrigins.includes('*')) return callback(null, true);
+    return callback(null, corsOrigins.includes(origin));
+  },
+}));
+
+const apiRateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+const apiRateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '30', 10);
+if (Number.isFinite(apiRateLimitWindowMs) && Number.isFinite(apiRateLimitMax) && apiRateLimitWindowMs > 0 && apiRateLimitMax > 0) {
+  app.use('/api/', createRateLimiter({ windowMs: apiRateLimitWindowMs, max: apiRateLimitMax }));
+}
+
 app.use(express.json({ limit: '50mb' })); // 增加 body 限制,因为 base64 图片 会很大
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -135,24 +235,41 @@ app.get('/', (req, res) => {
 app.post('/api/generate-image', async (req, res) => {
   const { prompt, apiKey, model, parameters = {} } = req.body;
 
-  if (!prompt) {
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API Key is required' });
-  }
+  const resolvedApiKey = getApiKey(apiKey);
+  if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
   const selectedModel = model || 'wan2.6-t2i';
   const config = getModelConfig(selectedModel);
-  const authHeader = { 'Authorization': `Bearer ${apiKey}` };
+  const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
   // 解析生成参数
   const size = parameters.size || config.size;
-  const n = parameters.n || 1;
+  const n = parameters.n === undefined ? 1 : parameters.n;
   const seed = parameters.seed;
   const negativePrompt = parameters.negative_prompt;
   const promptExtend = parameters.prompt_extend !== undefined ? parameters.prompt_extend : true;
   const watermark = parameters.watermark || false;
+
+  const promptErr = validateStringMaxLen('prompt', prompt, 4000);
+  if (promptErr) return res.status(400).json({ error: promptErr });
+  const negativeErr = validateStringMaxLen('negative_prompt', negativePrompt, 4000);
+  if (negativeErr) return res.status(400).json({ error: negativeErr });
+
+  const nErr = validateIntegerInRange('n', n, 1, 4);
+  if (nErr) return res.status(400).json({ error: nErr });
+
+  if (seed !== undefined) {
+    const seedErr = validateIntegerInRange('seed', seed, 0, 2147483647);
+    if (seedErr) return res.status(400).json({ error: seedErr });
+  }
+
+  const sizeErr = validateSize(selectedModel, size);
+  if (sizeErr) return res.status(400).json({ error: sizeErr });
+
+  const dashscopeTimeoutMs = Number.parseInt(process.env.DASHSCOPE_TIMEOUT_MS || '120000', 10);
 
   try {
     // 同步模型调用
@@ -166,20 +283,24 @@ app.post('/api/generate-image', async (req, res) => {
       if (seed !== undefined) syncParams.seed = seed;
       if (negativePrompt) syncParams.negative_prompt = negativePrompt;
 
-      const syncRes = await fetch(`${BASE_URL}${SYNC_ENDPOINT}`, {
-        method: 'POST',
-        headers: {
-          ...authHeader,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          input: {
-            messages: [{ role: 'user', content: [{ text: prompt }] }],
+      const syncRes = await fetchWithTimeout(
+        `${BASE_URL}${SYNC_ENDPOINT}`,
+        {
+          method: 'POST',
+          headers: {
+            ...authHeader,
+            'Content-Type': 'application/json',
           },
-          parameters: syncParams,
-        }),
-      });
+          body: JSON.stringify({
+            model: selectedModel,
+            input: {
+              messages: [{ role: 'user', content: [{ text: prompt.trim() }] }],
+            },
+            parameters: syncParams,
+          }),
+        },
+        dashscopeTimeoutMs
+      );
 
       const syncData = await syncRes.json();
 
@@ -205,19 +326,23 @@ app.post('/api/generate-image', async (req, res) => {
     if (promptExtend) asyncParams.prompt_extend = promptExtend;
     if (watermark) asyncParams.watermark = watermark;
 
-    const submitRes = await fetch(`${BASE_URL}${ASYNC_ENDPOINT}`, {
-      method: 'POST',
-      headers: {
-        ...authHeader,
-        'Content-Type': 'application/json',
-        'X-DashScope-Async': 'enable',
+    const submitRes = await fetchWithTimeout(
+      `${BASE_URL}${ASYNC_ENDPOINT}`,
+      {
+        method: 'POST',
+        headers: {
+          ...authHeader,
+          'Content-Type': 'application/json',
+          'X-DashScope-Async': 'enable',
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          input: { prompt: prompt.trim() },
+          parameters: asyncParams,
+        }),
       },
-      body: JSON.stringify({
-        model: selectedModel,
-        input: { prompt },
-        parameters: asyncParams,
-      }),
-    });
+      dashscopeTimeoutMs
+    );
 
     const submitData = await submitRes.json();
 
@@ -238,9 +363,11 @@ app.post('/api/generate-image', async (req, res) => {
     while (attempts < maxAttempts) {
       await new Promise(r => setTimeout(r, 2000));
 
-      const pollRes = await fetch(`${BASE_URL}${TASK_ENDPOINT}${taskId}`, {
-        headers: authHeader,
-      });
+      const pollRes = await fetchWithTimeout(
+        `${BASE_URL}${TASK_ENDPOINT}${taskId}`,
+        { headers: authHeader },
+        dashscopeTimeoutMs
+      );
 
       const pollData = await pollRes.json();
       const status = pollData.output?.task_status;
@@ -261,6 +388,9 @@ app.post('/api/generate-image', async (req, res) => {
 
     res.json({ imageUrls });
   } catch (err) {
+    if (err?.name === 'AbortError' || err?.message?.includes('abort')) {
+      return res.status(504).json({ error: 'Upstream request timeout' });
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -311,12 +441,11 @@ app.post('/api/image-to-image', (req, res, next) => {
   if (!imageFile) {
     return res.status(400).json({ error: '参考图片是必需的' });
   }
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API Key is required' });
-  }
+  const resolvedApiKey = getApiKey(apiKey);
+  if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
   const selectedModel = model || 'wan2.6-image';
-  const authHeader = { 'Authorization': `Bearer ${apiKey}` };
+  const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
   // 验证模型是否支持图生图
   const I2I_SUPPORTED_MODELS = [
@@ -331,7 +460,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     });
   }
 
-  console.log('📷 图生图请求 - 使用模型:', selectedModel);
+  if (DEBUG) console.log('📷 图生图请求 - 使用模型:', selectedModel);
 
   // 将图片转换为 base64
   const imageBase64 = imageFile.buffer.toString('base64');
@@ -347,14 +476,39 @@ app.post('/api/image-to-image', (req, res, next) => {
   }
 
   const size = params.size;
-  const n = params.n || 1;
+  const n = params.n === undefined ? 1 : params.n;
   const seed = params.seed;
   const negativePrompt = params.negative_prompt;
   const promptExtend = params.prompt_extend !== undefined ? params.prompt_extend : true;
   const watermark = params.watermark || false;
-  const imageStrength = params.image_strength !== undefined ? params.image_strength : 0.5; // 参考图强度
+  const hasImageStrength = params.image_strength !== undefined;
+  const imageStrength = hasImageStrength ? params.image_strength : 0.5; // 参考图强度
 
   try {
+    const negativeErr = validateStringMaxLen('negative_prompt', negativePrompt, 4000);
+    if (negativeErr) return res.status(400).json({ error: negativeErr });
+    const promptErr = validateStringMaxLen('prompt', prompt, 4000);
+    if (promptErr) return res.status(400).json({ error: promptErr });
+
+    const nErr = validateIntegerInRange('n', n, 1, 4);
+    if (nErr) return res.status(400).json({ error: nErr });
+
+    if (seed !== undefined) {
+      const seedErr = validateIntegerInRange('seed', seed, 0, 2147483647);
+      if (seedErr) return res.status(400).json({ error: seedErr });
+    }
+
+    if (size) {
+      const sizeErr = validateSize(selectedModel, size);
+      if (sizeErr) return res.status(400).json({ error: sizeErr });
+    }
+
+    if (imageStrength !== undefined) {
+      if (typeof imageStrength !== 'number' || Number.isNaN(imageStrength) || imageStrength < 0 || imageStrength > 1) {
+        return res.status(400).json({ error: 'image_strength must be a number between 0 and 1' });
+      }
+    }
+
     // 图生图使用同步API (多模态生成端点)
     const syncParams = {
       n,
@@ -364,6 +518,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     if (size) syncParams.size = size;
     if (seed !== undefined) syncParams.seed = seed;
     if (negativePrompt) syncParams.negative_prompt = negativePrompt;
+    if (hasImageStrength) syncParams.image_strength = imageStrength;
     // prompt_extend 和 watermark 仅在明确设置时才添加
     if (promptExtend === true) syncParams.prompt_extend = true;
     if (watermark === true) syncParams.watermark = true;
@@ -385,13 +540,15 @@ app.post('/api/image-to-image', (req, res, next) => {
     };
 
     // 调试日志
-    console.log('=== 图生图请求调试 ===');
-    console.log('模型:', selectedModel);
-    console.log('图片大小:', imageFile.size, '字节');
-    console.log('图片类型:', imageFile.mimetype);
-    console.log('Base64长度:', imageDataUrl.length);
-    console.log('请求参数:', JSON.stringify(syncParams, null, 2));
-    console.log('=====================');
+    if (DEBUG) {
+      console.log('=== 图生图请求调试 ===');
+      console.log('模型:', selectedModel);
+      console.log('图片大小:', imageFile.size, '字节');
+      console.log('图片类型:', imageFile.mimetype);
+      console.log('Base64长度:', imageDataUrl.length);
+      console.log('请求参数:', JSON.stringify(syncParams, null, 2));
+      console.log('=====================');
+    }
 
     const syncRes = await fetchWithTimeout(
       `${BASE_URL}${SYNC_ENDPOINT}`,
@@ -411,20 +568,20 @@ app.post('/api/image-to-image', (req, res, next) => {
     if (!syncRes.ok) {
       console.error('❌ 图生图API错误:');
       console.error('HTTP状态码:', syncRes.status);
-      console.error('错误响应:', JSON.stringify(syncData, null, 2));
+      if (DEBUG) console.error('错误响应:', JSON.stringify(syncData, null, 2));
       return res.status(syncRes.status).json({ error: syncData.message || syncData });
     }
 
-    console.log('✅ 图生图API调用成功');
+    if (DEBUG) console.log('✅ 图生图API调用成功');
 
     const imageUrls = extractImageUrls(syncData, selectedModel);
     if (!imageUrls.length) {
       console.error('❌ API返回中未找到图片URL');
-      console.log('API响应:', JSON.stringify(syncData, null, 2));
+      if (DEBUG) console.log('API响应:', JSON.stringify(syncData, null, 2));
       return res.status(500).json({ error: 'No image URL in response' });
     }
 
-    console.log('✅ 生成图片数量:', imageUrls.length);
+    if (DEBUG) console.log('✅ 生成图片数量:', imageUrls.length);
     res.json({ imageUrls });
   } catch (err) {
     console.error('❌ 图生图异常:', err);

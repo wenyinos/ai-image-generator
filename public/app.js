@@ -203,16 +203,12 @@ generateBtn.addEventListener('click', async () => {
   const promptExtendVal = promptExtend.checked;
   const watermarkVal = watermarkToggle.checked;
 
-  if (!apiKey) {
-    showAlert('请输入 API Key');
-    return;
-  }
   if (!prompt) {
     showAlert('请输入图片描述');
     return;
   }
 
-  localStorage.setItem('apiKey', apiKey);
+  if (apiKey) localStorage.setItem('apiKey', apiKey);
   localStorage.setItem('model', model);
   if (size) localStorage.setItem('imageSize', imageSize.value);
 
@@ -466,13 +462,11 @@ generateBtnI2I.addEventListener('click', async () => {
     showAlert('请上传参考图片');
     return;
   }
-  if (!apiKey) {
-    showAlert('请输入 API Key');
-    return;
-  }
 
-  localStorage.setItem('apiKey', apiKey);
-  localStorage.setItem('apiKeyI2I', apiKey);
+  if (apiKey) {
+    localStorage.setItem('apiKey', apiKey);
+    localStorage.setItem('apiKeyI2I', apiKey);
+  }
 
   alertContainer.innerHTML = '';
   setLoading(true, '正在上传图片，请稍候...');
