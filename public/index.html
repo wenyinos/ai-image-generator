@@ -119,35 +119,58 @@
             <div class="tab-content" id="modeTabContent">
               <!-- 文生图模式 -->
               <div class="tab-pane fade show active" id="text2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">输入描述，支持 DashScope 与 Gemini 生成图片</p>
+                <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine 与 Gemini 生成图片</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-4">
                     <label for="providerSelect" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelect">
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
+                      <option value="volcengine">Volcengine (火山方舟)</option>
                       <option value="gemini">Gemini (Google)</option>
                     </select>
                   </div>
                   <div class="col-md-4">
-                    <label for="apiKeyInput" class="form-label fw-semibold">
-                      <span id="apiKeyLabelText">DashScope API Key（可选）</span>
-                      <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key" id="apiKeyHelpLink">
-                        <i class="bi bi-question-circle text-muted"></i>
-                      </a>
-                    </label>
-                    <div class="input-group">
-                      <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
-                      <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
-                        <i class="bi bi-eye"></i>
-                      </button>
+                    <div id="standardApiKeyGroup">
+                      <label for="apiKeyInput" class="form-label fw-semibold">
+                        <span id="apiKeyLabelText">DashScope API Key（可选）</span>
+                        <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key" id="apiKeyHelpLink">
+                          <i class="bi bi-question-circle text-muted"></i>
+                        </a>
+                      </label>
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <div class="form-text" id="apiKeyHelpText">
+                        留空将使用服务端环境变量 <code id="apiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。
+                        <br>
+                        <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none" id="apiKeyConsoleLink">
+                          <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
+                        </a>
+                      </div>
                     </div>
-                    <div class="form-text" id="apiKeyHelpText">
-                      留空将使用服务端环境变量 <code id="apiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。
-                      <br>
-                      <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none" id="apiKeyConsoleLink">
-                        <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
-                      </a>
+
+                    <div id="volcengineCredGroup" class="d-none">
+                      <label for="volcengineAkInput" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
+                      <div class="input-group mb-2">
+                        <input type="password" class="form-control" id="volcengineAkInput" placeholder="AK...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtn">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <label for="volcengineSkInput" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="volcengineSkInput" placeholder="SK...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtn">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <div class="form-text">
+                        留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。
+                      </div>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -198,28 +221,51 @@
 
               <!-- 图生图模式 -->
               <div class="tab-pane fade" id="image2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope 与 Gemini 图生图</p>
+                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Gemini 与 Volcengine 图生图</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-4">
                     <label for="providerSelectI2I" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelectI2I">
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
+                      <option value="volcengine">Volcengine (火山方舟)</option>
                       <option value="gemini">Gemini (Google)</option>
                     </select>
                   </div>
                   <div class="col-md-4">
-                    <label for="apiKeyInputI2I" class="form-label fw-semibold">
-                      <span id="apiKeyLabelTextI2I">DashScope API Key（可选）</span>
-                    </label>
-                    <div class="input-group">
-                      <input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-...">
-                      <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
-                        <i class="bi bi-eye"></i>
-                      </button>
+                    <div id="standardApiKeyGroupI2I">
+                      <label for="apiKeyInputI2I" class="form-label fw-semibold">
+                        <span id="apiKeyLabelTextI2I">DashScope API Key（可选）</span>
+                      </label>
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <div class="form-text">
+                        留空将使用服务端环境变量 <code id="apiEnvNameI2I">DASHSCOPE_API_KEY</code>（如已配置）。
+                      </div>
                     </div>
-                    <div class="form-text">
-                      留空将使用服务端环境变量 <code id="apiEnvNameI2I">DASHSCOPE_API_KEY</code>（如已配置）。
+
+                    <div id="volcengineCredGroupI2I" class="d-none">
+                      <label for="volcengineAkInputI2I" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
+                      <div class="input-group mb-2">
+                        <input type="password" class="form-control" id="volcengineAkInputI2I" placeholder="AK...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtnI2I">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <label for="volcengineSkInputI2I" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="volcengineSkInputI2I" placeholder="SK...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtnI2I">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <div class="form-text">
+                        留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。
+                      </div>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -251,6 +297,21 @@
                       <i class="bi bi-trash"></i> 移除图片
                     </button>
                   </div>
+                  <div class="form-text d-none" id="volcengineLocalUploadHint">
+                    Volcengine 本地上传参考图将以 data URL 方式提交。
+                  </div>
+                </div>
+
+                <div class="mb-3 d-none" id="volcengineImageUrlsGroup">
+                  <label for="volcengineImageUrls" class="form-label fw-semibold">参考图片 URL（可选）</label>
+                  <textarea
+                    class="form-control"
+                    id="volcengineImageUrls"
+                    rows="3"
+                    placeholder="每行一个公网图片 URL，最多 14 张，例如：https://example.com/a.jpg"
+                  ></textarea>
+                  <div class="form-text">即梦接口按文档使用 image_urls，需可公网访问的 http/https 链接。</div>
+                  <div class="form-text">也可直接使用上方本地上传图片作为参考图。</div>
                 </div>
 
                 <div class="mb-3">
@@ -282,15 +343,38 @@
                     <option value="4">4 张</option>
                   </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="genericSizeGroup">
                   <label for="imageSize" class="form-label">图片尺寸</label>
                   <select class="form-select" id="imageSize">
                     <option value="auto" selected>自动 (模型默认)</option>
                   </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="genericSeedGroup">
                   <label for="seedInput" class="form-label">随机种子</label>
                   <input type="number" class="form-control" id="seedInput" placeholder="留空随机" min="0" max="2147483647">
+                </div>
+              </div>
+
+              <div class="row g-3 mt-2 d-none" id="volcengineParams">
+                <div class="col-md-4">
+                  <label for="volcengineSize" class="form-label">面积 size（可选）</label>
+                  <select class="form-select" id="volcengineSize">
+                    <option value="auto" selected>自动 (2048*2048)</option>
+                    <option value="1048576">1K (1024*1024)</option>
+                    <option value="4194304">2K (2048*2048)</option>
+                    <option value="16777216">4K (4096*4096)</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="volcengineWidth" class="form-label">宽 width（可选）</label>
+                  <input type="number" class="form-control" id="volcengineWidth" placeholder="例如 2048" min="1024" max="8192">
+                </div>
+                <div class="col-md-4">
+                  <label for="volcengineHeight" class="form-label">高 height（可选）</label>
+                  <input type="number" class="form-control" id="volcengineHeight" placeholder="例如 2048" min="1024" max="8192">
+                </div>
+                <div class="col-12">
+                  <div class="form-text">即梦文档要求 size 与 width/height 二选一；若同时提供 width/height，则优先使用宽高。</div>
                 </div>
               </div>
               
@@ -322,6 +406,10 @@
                       <div class="form-check form-switch mb-2">
                         <input class="form-check-input" type="checkbox" id="watermarkToggle">
                         <label class="form-check-label" for="watermarkToggle">添加水印</label>
+                      </div>
+                      <div class="form-check form-switch mb-2 d-none" id="volcengineWatermarkGroup">
+                        <input class="form-check-input" type="checkbox" id="volcengineWatermarkToggle">
+                        <label class="form-check-label" for="volcengineWatermarkToggle">即梦明水印（logo_info.add_logo）</label>
                       </div>
                       <div class="form-text">仅部分模型支持以上选项</div>
                     </div>

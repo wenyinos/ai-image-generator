@@ -11,6 +11,12 @@
 const providerSelect = document.getElementById('providerSelect');
 const providerSelectI2I = document.getElementById('providerSelectI2I');
 const apiKeyInput = document.getElementById('apiKeyInput');
+const standardApiKeyGroup = document.getElementById('standardApiKeyGroup');
+const volcengineCredGroup = document.getElementById('volcengineCredGroup');
+const volcengineAkInput = document.getElementById('volcengineAkInput');
+const volcengineSkInput = document.getElementById('volcengineSkInput');
+const toggleVolcengineAkBtn = document.getElementById('toggleVolcengineAkBtn');
+const toggleVolcengineSkBtn = document.getElementById('toggleVolcengineSkBtn');
 const apiKeyLabelText = document.getElementById('apiKeyLabelText');
 const apiKeyHelpLink = document.getElementById('apiKeyHelpLink');
 const apiKeyConsoleLink = document.getElementById('apiKeyConsoleLink');
@@ -28,16 +34,30 @@ const downloadBtn = document.getElementById('downloadBtn');
 const downloadLink = document.getElementById('downloadLink');
 const imageCount = document.getElementById('imageCount');
 const imageSize = document.getElementById('imageSize');
+const genericSizeGroup = document.getElementById('genericSizeGroup');
+const genericSeedGroup = document.getElementById('genericSeedGroup');
 const seedInput = document.getElementById('seedInput');
 const negativePrompt = document.getElementById('negativePrompt');
 const promptExtend = document.getElementById('promptExtend');
 const watermarkToggle = document.getElementById('watermarkToggle');
+const volcengineParams = document.getElementById('volcengineParams');
+const volcengineSize = document.getElementById('volcengineSize');
+const volcengineWidth = document.getElementById('volcengineWidth');
+const volcengineHeight = document.getElementById('volcengineHeight');
+const volcengineWatermarkGroup = document.getElementById('volcengineWatermarkGroup');
+const volcengineWatermarkToggle = document.getElementById('volcengineWatermarkToggle');
 const imageStrength = document.getElementById('imageStrength');
 const strengthValue = document.getElementById('strengthValue');
 const image2imageParams = document.getElementById('image2imageParams');
 
 // 图生图相关元素
 const apiKeyInputI2I = document.getElementById('apiKeyInputI2I');
+const standardApiKeyGroupI2I = document.getElementById('standardApiKeyGroupI2I');
+const volcengineCredGroupI2I = document.getElementById('volcengineCredGroupI2I');
+const volcengineAkInputI2I = document.getElementById('volcengineAkInputI2I');
+const volcengineSkInputI2I = document.getElementById('volcengineSkInputI2I');
+const toggleVolcengineAkBtnI2I = document.getElementById('toggleVolcengineAkBtnI2I');
+const toggleVolcengineSkBtnI2I = document.getElementById('toggleVolcengineSkBtnI2I');
 const apiKeyLabelTextI2I = document.getElementById('apiKeyLabelTextI2I');
 const apiEnvNameI2I = document.getElementById('apiEnvNameI2I');
 const modelHintI2I = document.getElementById('modelHintI2I');
@@ -49,6 +69,9 @@ const imageUpload = document.getElementById('imageUpload');
 const imagePreview = document.getElementById('imagePreview');
 const previewImage = document.getElementById('previewImage');
 const removeImageBtn = document.getElementById('removeImageBtn');
+const volcengineLocalUploadHint = document.getElementById('volcengineLocalUploadHint');
+const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
+const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 
 // 当前模式
 let currentMode = 'text2image'; // 'text2image' 或 'image2image'
@@ -70,6 +93,13 @@ const PROVIDER_CONFIG = {
     placeholder: 'AIza...',
     helpLink: 'https://ai.google.dev/gemini-api/docs/api-key',
     consoleLink: 'https://aistudio.google.com/apikey',
+  },
+  volcengine: {
+    label: 'Volcengine AK:SK（可选）',
+    envName: 'VOLCENGINE_ACCESS_KEY / VOLCENGINE_SECRET_KEY',
+    placeholder: 'AK:SK',
+    helpLink: 'https://www.volcengine.com/docs/82379/1666945',
+    consoleLink: 'https://console.volcengine.com/ark',
   },
 };
 
@@ -109,6 +139,12 @@ const MODELS_T2I = {
       { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
     ] },
   ],
+  volcengine: [
+    { group: '🌋 即梦AI', options: [
+      { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
+      { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
+    ] },
+  ],
 };
 
 const MODELS_I2I = {
@@ -124,6 +160,12 @@ const MODELS_I2I = {
   gemini: [
     { group: '✨ Gemini', options: [
       { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
+    ] },
+  ],
+  volcengine: [
+    { group: '🌋 即梦AI', options: [
+      { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
+      { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
     ] },
   ],
 };
@@ -154,6 +196,9 @@ const MODEL_SIZES = {
   'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
   // Gemini
   [GEMINI_MODEL_ID]: [],
+  // Volcengine Jimeng
+  'jimeng-4.0': ['1K', '2K', '4K'],
+  'jimeng-4.6': ['1K', '2K', '4K'],
 };
 
 const MODEL_SIZES_I2I = {
@@ -161,6 +206,8 @@ const MODEL_SIZES_I2I = {
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   [GEMINI_MODEL_ID]: [],
+  'jimeng-4.0': ['1K', '2K', '4K'],
+  'jimeng-4.6': ['1K', '2K', '4K'],
 };
 
 function normalizeGeminiModel(model) {
@@ -169,6 +216,14 @@ function normalizeGeminiModel(model) {
 
 function getApiKeyStorageKey(mode, provider) {
   return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
+}
+
+function getVolcengineAkStorageKey(mode) {
+  return mode === 'image2image' ? 'volcengineAkI2I' : 'volcengineAk';
+}
+
+function getVolcengineSkStorageKey(mode) {
+  return mode === 'image2image' ? 'volcengineSkI2I' : 'volcengineSk';
 }
 
 function getModelStorageKey(mode, provider) {
@@ -196,6 +251,17 @@ function renderModelOptions(selectElement, groups, selectedValue) {
 }
 
 function setTextApiKeyMeta(provider) {
+  if (provider === 'volcengine') {
+    standardApiKeyGroup.classList.add('d-none');
+    volcengineCredGroup.classList.remove('d-none');
+    volcengineAkInput.value = localStorage.getItem(getVolcengineAkStorageKey('text2image')) || '';
+    volcengineSkInput.value = localStorage.getItem(getVolcengineSkStorageKey('text2image')) || '';
+    return;
+  }
+
+  standardApiKeyGroup.classList.remove('d-none');
+  volcengineCredGroup.classList.add('d-none');
+
   const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
   apiKeyLabelText.textContent = cfg.label;
   apiEnvName.textContent = cfg.envName;
@@ -208,6 +274,17 @@ function setTextApiKeyMeta(provider) {
 }
 
 function setImageApiKeyMeta(provider) {
+  if (provider === 'volcengine') {
+    standardApiKeyGroupI2I.classList.add('d-none');
+    volcengineCredGroupI2I.classList.remove('d-none');
+    volcengineAkInputI2I.value = localStorage.getItem(getVolcengineAkStorageKey('image2image')) || '';
+    volcengineSkInputI2I.value = localStorage.getItem(getVolcengineSkStorageKey('image2image')) || '';
+    modelHintI2I.textContent = '即梦AI 4.0/4.6 支持参考图与多图生成';
+  } else {
+    standardApiKeyGroupI2I.classList.remove('d-none');
+    volcengineCredGroupI2I.classList.add('d-none');
+  }
+
   const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
   apiKeyLabelTextI2I.textContent = cfg.label;
   apiEnvNameI2I.textContent = cfg.envName;
@@ -221,6 +298,28 @@ function setImageApiKeyMeta(provider) {
 
   const savedKey = localStorage.getItem(getApiKeyStorageKey('image2image', provider));
   apiKeyInputI2I.value = savedKey || '';
+
+  if (provider === 'volcengine') {
+    volcengineImageUrlsGroup.classList.remove('d-none');
+    if (volcengineLocalUploadHint) volcengineLocalUploadHint.classList.remove('d-none');
+    if (uploadedImageFile) {
+      imagePreview.classList.remove('d-none');
+      uploadArea.classList.add('d-none');
+    } else {
+      imagePreview.classList.add('d-none');
+      uploadArea.classList.remove('d-none');
+    }
+  } else {
+    volcengineImageUrlsGroup.classList.add('d-none');
+    if (volcengineLocalUploadHint) volcengineLocalUploadHint.classList.add('d-none');
+    if (uploadedImageFile) {
+      imagePreview.classList.remove('d-none');
+      uploadArea.classList.add('d-none');
+    } else {
+      imagePreview.classList.add('d-none');
+      uploadArea.classList.remove('d-none');
+    }
+  }
 }
 
 function updateSizeOptions() {
@@ -277,6 +376,18 @@ function updateImageProviderState() {
   localStorage.setItem('providerI2I', provider);
 }
 
+function getActiveProvider() {
+  return currentMode === 'image2image' ? providerSelectI2I.value : providerSelect.value;
+}
+
+function updateVolcengineUiState() {
+  const isVolcengine = getActiveProvider() === 'volcengine';
+  if (genericSizeGroup) genericSizeGroup.classList.toggle('d-none', isVolcengine);
+  if (genericSeedGroup) genericSeedGroup.classList.toggle('d-none', isVolcengine);
+  if (volcengineParams) volcengineParams.classList.toggle('d-none', !isVolcengine);
+  if (volcengineWatermarkGroup) volcengineWatermarkGroup.classList.toggle('d-none', !isVolcengine);
+}
+
 // 从 localStorage 恢复用户设置
 providerSelect.value = localStorage.getItem('provider') || 'dashscope';
 providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
@@ -296,10 +407,13 @@ if (localStorage.getItem('watermark') !== null) {
 
 updateTextProviderState();
 updateImageProviderState();
+updateVolcengineUiState();
 
 // 切换事件
 providerSelect.addEventListener('change', updateTextProviderState);
 providerSelectI2I.addEventListener('change', updateImageProviderState);
+providerSelect.addEventListener('change', updateVolcengineUiState);
+providerSelectI2I.addEventListener('change', updateVolcengineUiState);
 
 modelSelect.addEventListener('change', () => {
   const provider = providerSelect.value;
@@ -341,6 +455,20 @@ if (toggleApiKeyBtnI2I) {
   });
 }
 
+function bindPasswordToggle(buttonEl, inputEl) {
+  if (!buttonEl || !inputEl) return;
+  buttonEl.addEventListener('click', () => {
+    const isPassword = inputEl.type === 'password';
+    inputEl.type = isPassword ? 'text' : 'password';
+    buttonEl.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
+  });
+}
+
+bindPasswordToggle(toggleVolcengineAkBtn, volcengineAkInput);
+bindPasswordToggle(toggleVolcengineSkBtn, volcengineSkInput);
+bindPasswordToggle(toggleVolcengineAkBtnI2I, volcengineAkInputI2I);
+bindPasswordToggle(toggleVolcengineSkBtnI2I, volcengineSkInputI2I);
+
 /**
  * 显示提示信息
  * @param {string} message - 提示内容
@@ -374,6 +502,50 @@ function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   }
 }
 
+function validateVolcengineSizeAndRatio({ size, width, height }) {
+  const minArea = 1024 * 1024;
+  const maxArea = 4096 * 4096;
+  const minRatio = 1 / 16;
+  const maxRatio = 16;
+
+  if (size !== undefined) {
+    if (!Number.isInteger(size) || size < minArea || size > maxArea) {
+      return 'Volcengine 参数错误：size 需在 1048576 到 16777216 之间。';
+    }
+  }
+
+  const hasWidth = width !== undefined;
+  const hasHeight = height !== undefined;
+  if (hasWidth !== hasHeight) {
+    return 'Volcengine 参数错误：width 和 height 必须同时填写。';
+  }
+
+  if (hasWidth && hasHeight) {
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+      return 'Volcengine 参数错误：width/height 必须为正整数。';
+    }
+    const area = width * height;
+    if (area < minArea || area > maxArea) {
+      return 'Volcengine 参数错误：width*height 需在 1048576 到 16777216 之间。';
+    }
+    const ratio = width / height;
+    if (ratio < minRatio || ratio > maxRatio) {
+      return 'Volcengine 参数错误：宽高比需在 1/16 到 16 之间。';
+    }
+  }
+
+  return null;
+}
+
+function validateVolcengineImageUrls(urls, model) {
+  if (!Array.isArray(urls)) return null;
+  const maxCount = model === 'jimeng-4.0' ? 10 : 14;
+  if (urls.length > maxCount) {
+    return `Volcengine 参数错误：${model} 最多支持 ${maxCount} 张参考图 URL。`;
+  }
+  return null;
+}
+
 /**
  * 展示生成的图片 (支持多张网格布局)
  * @param {string[]} imageUrls - 图片 URL 数组
@@ -400,26 +572,56 @@ function displayImages(imageUrls) {
 // 生成按钮点击事件
 generateBtn.addEventListener('click', async () => {
   const provider = providerSelect.value;
-  const apiKey = apiKeyInput.value.trim();
+  const volcAk = (volcengineAkInput.value || '').trim();
+  const volcSk = (volcengineSkInput.value || '').trim();
+  const apiKey = provider === 'volcengine'
+    ? (volcAk && volcSk ? `${volcAk}:${volcSk}` : '')
+    : apiKeyInput.value.trim();
   const model = modelSelect.value;
   const prompt = promptInput.value.trim();
   const n = parseInt(imageCount.value, 10);
-  const size = imageSize.value === 'auto' ? undefined : imageSize.value;
+  const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;
+  const volcengineSizeVal = volcengineSize && volcengineSize.value !== 'auto' ? parseInt(volcengineSize.value, 10) : undefined;
+  const volcengineWidthVal = volcengineWidth && volcengineWidth.value ? parseInt(volcengineWidth.value, 10) : undefined;
+  const volcengineHeightVal = volcengineHeight && volcengineHeight.value ? parseInt(volcengineHeight.value, 10) : undefined;
+  const size = provider === 'volcengine' ? volcengineSizeVal : genericSize;
   const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
   const negativePromptVal = negativePrompt.value.trim() || undefined;
   const promptExtendVal = promptExtend.checked;
-  const watermarkVal = watermarkToggle.checked;
+  const watermarkVal = provider === 'volcengine'
+    ? (volcengineWatermarkToggle ? volcengineWatermarkToggle.checked : false)
+    : watermarkToggle.checked;
 
   if (!prompt) {
     showAlert('请输入图片描述');
     return;
   }
 
-  if (apiKey) {
+  if (provider === 'volcengine' && ((volcAk && !volcSk) || (!volcAk && volcSk))) {
+    showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
+    return;
+  }
+
+  if (provider === 'volcengine') {
+    const volcParamErr = validateVolcengineSizeAndRatio({
+      size,
+      width: volcengineWidthVal,
+      height: volcengineHeightVal,
+    });
+    if (volcParamErr) {
+      showAlert(volcParamErr);
+      return;
+    }
+  }
+
+  if (provider === 'volcengine') {
+    localStorage.setItem(getVolcengineAkStorageKey('text2image'), (volcengineAkInput.value || '').trim());
+    localStorage.setItem(getVolcengineSkStorageKey('text2image'), (volcengineSkInput.value || '').trim());
+  } else if (apiKey) {
     localStorage.setItem(getApiKeyStorageKey('text2image', provider), apiKey);
   }
   localStorage.setItem(getModelStorageKey('text2image', provider), model);
-  if (size) localStorage.setItem('imageSize', imageSize.value);
+  if (genericSize) localStorage.setItem('imageSize', imageSize.value);
 
   alertContainer.innerHTML = '';
   setLoading(true);
@@ -437,6 +639,8 @@ generateBtn.addEventListener('click', async () => {
         parameters: {
           n,
           size,
+          width: provider === 'volcengine' ? volcengineWidthVal : undefined,
+          height: provider === 'volcengine' ? volcengineHeightVal : undefined,
           seed,
           negative_prompt: negativePromptVal,
           prompt_extend: promptExtendVal,
@@ -479,6 +683,7 @@ text2imageTab.addEventListener('click', () => {
   generateBtnI2I.classList.add('d-none');
   image2imageParams.classList.add('d-none');
   updateSizeOptions();
+  updateVolcengineUiState();
 });
 
 image2imageTab.addEventListener('click', () => {
@@ -487,6 +692,7 @@ image2imageTab.addEventListener('click', () => {
   generateBtnI2I.classList.remove('d-none');
   image2imageParams.classList.remove('d-none');
   updateSizeOptionsI2I();
+  updateVolcengineUiState();
 });
 
 // 参考图强度滑块
@@ -630,23 +836,41 @@ if (removeImageBtn) {
 // 图生图生成按钮点击
 generateBtnI2I.addEventListener('click', async () => {
   const provider = providerSelectI2I.value;
-  const apiKey = apiKeyInputI2I.value.trim();
+  const volcAkI2I = (volcengineAkInputI2I.value || '').trim();
+  const volcSkI2I = (volcengineSkInputI2I.value || '').trim();
+  const apiKey = provider === 'volcengine'
+    ? (volcAkI2I && volcSkI2I ? `${volcAkI2I}:${volcSkI2I}` : '')
+    : apiKeyInputI2I.value.trim();
   const model = modelSelectI2I.value;
   const prompt = promptInputI2I.value.trim();
   const n = parseInt(imageCount.value, 10);
-  const size = imageSize.value === 'auto' ? undefined : imageSize.value;
+  const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;
+  const volcengineSizeVal = volcengineSize && volcengineSize.value !== 'auto' ? parseInt(volcengineSize.value, 10) : undefined;
+  const volcengineWidthVal = volcengineWidth && volcengineWidth.value ? parseInt(volcengineWidth.value, 10) : undefined;
+  const volcengineHeightVal = volcengineHeight && volcengineHeight.value ? parseInt(volcengineHeight.value, 10) : undefined;
+  const size = provider === 'volcengine' ? volcengineSizeVal : genericSize;
   const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
   const negativePromptVal = negativePrompt.value.trim() || undefined;
   const promptExtendVal = promptExtend.checked;
-  const watermarkVal = watermarkToggle.checked;
+  const watermarkVal = provider === 'volcengine'
+    ? (volcengineWatermarkToggle ? volcengineWatermarkToggle.checked : false)
+    : watermarkToggle.checked;
   const imageStrengthVal = parseFloat(imageStrength.value);
 
-  if (!uploadedImageFile) {
+  if (provider !== 'volcengine' && !uploadedImageFile) {
     showAlert('请上传参考图片');
     return;
   }
 
-  if (apiKey) {
+  if (provider === 'volcengine' && ((volcAkI2I && !volcSkI2I) || (!volcAkI2I && volcSkI2I))) {
+    showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
+    return;
+  }
+
+  if (provider === 'volcengine') {
+    localStorage.setItem(getVolcengineAkStorageKey('image2image'), (volcengineAkInputI2I.value || '').trim());
+    localStorage.setItem(getVolcengineSkStorageKey('image2image'), (volcengineSkInputI2I.value || '').trim());
+  } else if (apiKey) {
     localStorage.setItem(getApiKeyStorageKey('image2image', provider), apiKey);
   }
   localStorage.setItem(getModelStorageKey('image2image', provider), model);
@@ -658,13 +882,48 @@ generateBtnI2I.addEventListener('click', async () => {
   // 构建表单数据
   const formData = new FormData();
   formData.append('provider', provider);
-  formData.append('image', uploadedImageFile);
+  if (uploadedImageFile) {
+    formData.append('image', uploadedImageFile);
+  }
   formData.append('apiKey', apiKey);
   formData.append('model', model);
   if (prompt) formData.append('prompt', prompt);
+  if (provider === 'volcengine' && volcengineImageUrls) {
+    const urls = volcengineImageUrls.value
+      .split(/[\n,\s]+/)
+      .map(v => v.trim())
+      .filter(v => /^https?:\/\//i.test(v));
+    const volcParamErr = validateVolcengineSizeAndRatio({
+      size,
+      width: volcengineWidthVal,
+      height: volcengineHeightVal,
+    });
+    if (volcParamErr) {
+      showAlert(volcParamErr);
+      return;
+    }
+    const volcUrlErr = validateVolcengineImageUrls(urls, model);
+    if (volcUrlErr) {
+      showAlert(volcUrlErr);
+      return;
+    }
+    formData.append('imageUrls', JSON.stringify(urls));
+  } else if (provider === 'volcengine') {
+    const volcParamErr = validateVolcengineSizeAndRatio({
+      size,
+      width: volcengineWidthVal,
+      height: volcengineHeightVal,
+    });
+    if (volcParamErr) {
+      showAlert(volcParamErr);
+      return;
+    }
+  }
   formData.append('parameters', JSON.stringify({
     n,
     size,
+    width: provider === 'volcengine' ? volcengineWidthVal : undefined,
+    height: provider === 'volcengine' ? volcengineHeightVal : undefined,
     seed,
     negative_prompt: negativePromptVal,
     prompt_extend: promptExtendVal,
