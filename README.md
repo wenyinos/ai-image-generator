@@ -1,140 +1,145 @@
-# AI 图片生成器
+<p align="right">
+  <a href="README.zh.md">🇨🇳 中文</a>
+</p>
 
-基于阿里云百炼（DashScope）平台的 AI 图片生成 Web 应用，支持**文生图**和**图生图**两种模式。前端使用 Bootstrap 5 构建，后端使用 Express 代理 API 请求，支持多种模型切换。
+# AI Image Generator
 
-## 功能特性
+A web application for AI image generation powered by Alibaba Cloud DashScope, supporting **text-to-image** and **image-to-image** modes. Built with Bootstrap 5 on the frontend and an Express proxy for API requests, with support for multiple models.
 
-### 🎨 文生图模式
-- **多模型支持**：内置 16+ 阿里云百炼文生图模型，包括万相 2.7、万相 2.x、千问 Qwen-Image、Z-Image 等
-- **模型切换**：支持在前端页面直接切换不同模型，自动适配同步/异步调用协议
-- **生成参数控制**：支持图片数量 (1-4张)、尺寸、随机种子、负向提示词、提示词增强、水印等参数调节
-- **动态尺寸适配**：切换模型时自动更新可用尺寸选项
+## Features
 
-### 🖼️ 图生图模式
-- **参考图上传**：支持拖拽/点击上传,自动压缩大图(>1MB,最大1536px),最大 10MB
-- **上传进度**：实时显示上传百分比,优化网络体验
-- **超时优化**：后端 5 分钟超时,避免大图上传失败
-- **参考图强度控制**：可调滑块控制生成图片与参考图的相似度 (0-1)
-- **多模型支持**：支持万相 2.7、2.6 系列模型（默认 wan2.6-image）
-- **图片预览**：上传前即时预览参考图
+### 🎨 Text-to-Image Mode
+- **Multi-model support**: 16+ DashScope text-to-image models including Wanxiang 2.7, Wanxiang 2.x, Qwen Qwen-Image, Z-Image, and more
+- **Model switching**: Switch between models directly from the frontend, with automatic adaptation to sync/async API protocols
+- **Generation parameters**: Control image count (1-4), size, random seed, negative prompt, prompt enhancement, watermark, and more
+- **Dynamic size presets**: Automatically updates available size options when switching models
 
-### 🌐 通用功能
-- **API Key 管理**：前端输入 API Key，自动缓存至本地，提供直达百炼控制台获取链接
-- **自定义 Favicon**：支持多种尺寸的网站图标，适配不同设备和浏览器
-- **响应式 UI**：基于 Bootstrap 5，适配桌面和移动端
-- **实时预览**：生成完成后直接展示图片，支持多张网格显示和一键下载
-- **快捷键支持**：Ctrl+Enter 快速生成
+### 🖼️ Image-to-Image Mode
+- **Reference image upload**: Drag-and-drop / click to upload, automatic compression for large images (>1MB, max 1536px), up to 10MB
+- **Upload progress**: Real-time upload percentage display for better network experience
+- **Timeout optimization**: 5-minute backend timeout prevents large image upload failures
+- **Reference strength control**: Adjustable slider to control similarity between generated and reference images (0-1)
+- **Multi-model support**: Wanxiang 2.7 and 2.6 series models (default: wan2.6-image)
+- **Image preview**: Instant preview of reference image before uploading
 
-## 支持的模型
+### 🌐 General Features
+- **API Key management**: Enter API Key on the frontend, auto-cached locally, with direct link to DashScope console
+- **Custom Favicon**: Multi-size site icons for different devices and browsers
+- **Responsive UI**: Built with Bootstrap 5,适配 desktop and mobile
+- **Real-time preview**: Images displayed immediately after generation, with grid view and one-click download
+- **Shortcut support**: Ctrl+Enter for quick generation
 
-### 文生图模型
+## Supported Models
 
-| 系列 | 模型名称 | 说明 | 最高分辨率 |
-|------|----------|------|-----------|
-| ⭐ 万相 2.7 | `wan2.7-image-pro` | 最新推荐，支持 4K、组图生成 | 4K |
-| ⭐ 万相 2.7 | `wan2.7-image` | 快速版本 | 2K |
-| 🎨 万相 2.6 | `wan2.6-image` | 图文混排输出 | 1280×1280 |
-| 万相 2.6 | `wan2.6-t2i` | 标准模型 | 1440×1440 |
-| 万相 2.5 | `wan2.5-t2i-preview` | 预览版 | 1440×1440 |
-| 万相 2.2 | `wan2.2-t2i-flash` | 极速版 | 1440×1440 |
-| 万相 2.2 | `wan2.2-t2i-plus` | 增强版 | 1440×1440 |
-| 万相 2.1 | `wanx2.1-t2i-turbo` | 经典快速版 | 1024×1024 |
-| 万相 2.1 | `wanx2.1-t2i-plus` | 经典专业版 | 1024×1024 |
-| 万相 2.0 | `wanx2.0-t2i-turbo` | 早期版本 | 1024×1024 |
-| 💬 千问 | `qwen-image-2.0-pro` | 擅长文字渲染 | 2048×2048 |
-| 💬 千问 | `qwen-image-2.0` | 加速版 | 2048×2048 |
-| 💬 千问 | `qwen-image-max` | 真实感强 | 1664×928 |
-| 💬 千问 | `qwen-image-plus` | 艺术风格 | 1664×928 |
-| 💬 千问 | `qwen-image` | 标准版 | 1664×928 |
-| 🚀 Z-Image | `z-image-turbo` | 轻量快速 | 1024×1024 |
+### Text-to-Image Models
 
-### 图生图模型
+| Series | Model Name | Description | Max Resolution |
+|--------|------------|-------------|----------------|
+| ⭐ Wanxiang 2.7 | `wan2.7-image-pro` | Latest recommended, supports 4K & batch generation | 4K |
+| ⭐ Wanxiang 2.7 | `wan2.7-image` | Fast version | 2K |
+| 🎨 Wanxiang 2.6 | `wan2.6-image` | Text-image mixed output | 1280×1280 |
+| Wanxiang 2.6 | `wan2.6-t2i` | Standard model | 1440×1440 |
+| Wanxiang 2.5 | `wan2.5-t2i-preview` | Preview version | 1440×1440 |
+| Wanxiang 2.2 | `wan2.2-t2i-flash` | Turbo version | 1440×1440 |
+| Wanxiang 2.2 | `wan2.2-t2i-plus` | Enhanced version | 1440×1440 |
+| Wanxiang 2.1 | `wanx2.1-t2i-turbo` | Classic fast version | 1024×1024 |
+| Wanxiang 2.1 | `wanx2.1-t2i-plus` | Classic pro version | 1024×1024 |
+| Wanxiang 2.0 | `wanx2.0-t2i-turbo` | Early version | 1024×1024 |
+| 💬 Qwen | `qwen-image-2.0-pro` | Excellent text rendering | 2048×2048 |
+| 💬 Qwen | `qwen-image-2.0` | Accelerated version | 2048×2048 |
+| 💬 Qwen | `qwen-image-max` | Strong realism | 1664×928 |
+| 💬 Qwen | `qwen-image-plus` | Artistic style | 1664×928 |
+| 💬 Qwen | `qwen-image` | Standard version | 1664×928 |
+| 🚀 Z-Image | `z-image-turbo` | Lightweight & fast | 1024×1024 |
 
-| 系列 | 模型名称 | 说明 | 最高分辨率 |
-|------|----------|------|-----------|
-| ⭐ 万相 2.7 | `wan2.7-image-pro` | 最强效果 | 2K |
-| ⭐ 万相 2.7 | `wan2.7-image` | 快速版本 | 2K |
-| 🎨 万相 2.6 | `wan2.6-image` | 图文混排 | 2K |
+### Image-to-Image Models
 
-## 快速开始
+| Series | Model Name | Description | Max Resolution |
+|--------|------------|-------------|----------------|
+| ⭐ Wanxiang 2.7 | `wan2.7-image-pro` | Best quality | 2K |
+| ⭐ Wanxiang 2.7 | `wan2.7-image` | Fast version | 2K |
+| 🎨 Wanxiang 2.6 | `wan2.6-image` | Text-image mixed | 2K |
 
-### 1. 环境准备
+## Quick Start
+
+### 1. Prerequisites
 
 - Node.js >= 18.0.0
-- 阿里云百炼 API Key（可在前端输入，或在服务端通过环境变量配置；[获取地址](https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key)）
+- Alibaba Cloud DashScope API Key (can be entered on the frontend, or configured server-side via environment variables; [get one here](https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key))
 
-### 2. 安装依赖
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 3. 配置环境变量（可选）
+### 3. Configure Environment Variables (Optional)
 
-复制环境变量模板：
+Copy the environment template:
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件：
+Edit the `.env` file:
 
 ```env
-# 可选：在此配置 API Key；前端留空时将使用该值
+# Optional: configure API Key here; used when frontend leaves it blank
 DASHSCOPE_API_KEY=your_api_key_here
-# 服务端口，默认 3000
+# Server port, default 3000
 PORT=3000
 
-# 可选：CORS 白名单（逗号分隔），例如：
+# Optional: CORS whitelist (comma-separated), e.g.:
 # CORS_ORIGIN=http://localhost:3000,https://your-domain.com
-# 不设置则不限制（保持兼容）。
+# If not set, all origins are allowed (backward compatible).
 
-# 可选：上游 DashScope 请求超时（毫秒），默认 120000
+# Optional: upstream DashScope request timeout (ms), default 120000
 # DASHSCOPE_TIMEOUT_MS=120000
 
-# 可选：API 速率限制（按 IP，简单内存实现）
+# Optional: API rate limiting (per IP, simple in-memory)
 # RATE_LIMIT_WINDOW_MS=60000
 # RATE_LIMIT_MAX=30
 
-# 可选：调试日志开关（true/1 开启）
+# Optional: debug logging toggle (true/1 to enable)
 # DEBUG=false
 ```
 
-### 4. 启动服务
+### 4. Start the Server
 
 ```bash
 npm start
 ```
 
-服务启动后访问：http://localhost:3000
+After starting, visit: http://localhost:3000
 
-## 项目结构
+## Project Structure
 
 ```
 ai-image-generator/
-├── server.js           # Express 后端，代理 DashScope API
-├── package.json        # 项目依赖配置
-├── .env.example        # 环境变量模板
+├── server.js           # Express backend, DashScope API proxy
+├── package.json        # Project dependencies
+├── .env.example        # Environment variable template
 ├── .gitignore
-├── README.md           # 项目说明文档
+├── README.md           # Project documentation (English)
+├── README.zh.md        # Project documentation (Chinese)
 └── public/
-    ├── index.html      # Bootstrap 5 前端页面
-    ├── app.js          # 前端交互逻辑
+    ├── index.html      # Bootstrap 5 frontend page
+    ├── app.js          # Frontend logic
     └── favicon/
-        ├── favicon.ico              # 标准网站图标
-        ├── favicon-16x16.png        # 16x16 PNG 图标
-        ├── favicon-32x32.png        # 32x32 PNG 图标
-        └── apple-touch-icon.png     # Apple 触摸设备图标
+        ├── favicon.ico              # Standard site icon
+        ├── favicon-16x16.png        # 16x16 PNG icon
+        ├── favicon-32x32.png        # 32x32 PNG icon
+        └── apple-touch-icon.png     # Apple touch device icon
 ```
 
-## 注意事项
+## Notes
 
-- 生成的图片 URL 有效期为 **24 小时**，请及时下载保存
-- 不同模型的默认分辨率和最大分辨率不同，前端已自动适配
-- 万相 2.7/2.6 使用同步接口，其他模型使用异步接口（自动轮询）
-- 图生图仅支持**图像模型** (`wan2.7-image-pro`、`wan2.7-image`、`wan2.6-image`)，**不支持文生图模型** (`t2i` 系列)
-- API Key 可在前端输入（保存在浏览器 localStorage），也可仅在服务端通过 `.env` 配置（不会暴露给前端）
+- Generated image URLs are valid for **24 hours**, please download them promptly
+- Different models have different default and maximum resolutions; the frontend adapts automatically
+- Wanxiang 2.7/2.6 use synchronous APIs; other models use asynchronous APIs (auto-polling)
+- Image-to-image mode only supports **image models** (`wan2.7-image-pro`, `wan2.7-image`, `wan2.6-image`), **not text-to-image models** (`t2i` series)
+- API Key can be entered on the frontend (saved in browser localStorage) or configured server-side only via `.env` (not exposed to the frontend)
 
-## 许可证
+## License
 
 MIT
