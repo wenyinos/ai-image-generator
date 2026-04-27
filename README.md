@@ -4,141 +4,233 @@
 
 # AI Image Generator
 
-A web application for AI image generation powered by Alibaba Cloud DashScope, supporting **text-to-image** and **image-to-image** modes. Built with Bootstrap 5 on the frontend and an Express proxy for API requests, with support for multiple models.
+A production-oriented AI image generation web app with **text-to-image** and **image-to-image** workflows.
+
+- Frontend: Bootstrap 5 + vanilla JavaScript
+- Backend: Express (Node.js)
+- Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**
 
 ## Features
 
-### 🎨 Text-to-Image Mode
-- **Multi-model support**: 16+ DashScope text-to-image models including Wanxiang 2.7, Wanxiang 2.x, Qwen Qwen-Image, Z-Image, and more
-- **Model switching**: Switch between models directly from the frontend, with automatic adaptation to sync/async API protocols
-- **Generation parameters**: Control image count (1-4), size, random seed, negative prompt, prompt enhancement, watermark, and more
-- **Dynamic size presets**: Automatically updates available size options when switching models
+### Text-to-Image
+- Provider switching in UI (DashScope / Gemini / Volcengine)
+- Multi-model support with model-specific size constraints
+- Parameters: image count, size, seed, negative prompt, prompt extension, watermark
+- Sync/async protocol handling for DashScope models
 
-### 🖼️ Image-to-Image Mode
-- **Reference image upload**: Drag-and-drop / click to upload, automatic compression for large images (>1MB, max 1536px), up to 10MB
-- **Upload progress**: Real-time upload percentage display for better network experience
-- **Timeout optimization**: 5-minute backend timeout prevents large image upload failures
-- **Reference strength control**: Adjustable slider to control similarity between generated and reference images (0-1)
-- **Multi-model support**: Wanxiang 2.7 and 2.6 series models (default: wan2.6-image)
-- **Image preview**: Instant preview of reference image before uploading
+### Image-to-Image
+- Drag & drop upload with client-side compression (max 10MB upload)
+- Upload progress indicator
+- Reference strength slider (`image_strength`)
+- Volcengine supports:
+  - uploaded local image (server stores temp file and exposes HTTP URL)
+  - external HTTP(S) image URLs input
+- Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
 
-### 🌐 General Features
-- **API Key management**: Enter API Key on the frontend, auto-cached locally, with direct link to DashScope console
-- **Custom Favicon**: Multi-size site icons for different devices and browsers
-- **Responsive UI**: Built with Bootstrap 5,适配 desktop and mobile
-- **Real-time preview**: Images displayed immediately after generation, with grid view and one-click download
-- **Shortcut support**: Ctrl+Enter for quick generation
+### Security & Reliability
+- Optional API key input from UI, with server-side `.env` fallback
+- Volcengine AK/SK parsing and signature request flow
+- Request timeout controls per provider
+- Basic in-memory API rate limit
+- CORS allowlist support
 
-## Supported Models
+## Providers & Credentials
 
-### Text-to-Image Models
+### DashScope
+- Frontend key or `DASHSCOPE_API_KEY`
 
-| Series | Model Name | Description | Max Resolution |
-|--------|------------|-------------|----------------|
-| ⭐ Wanxiang 2.7 | `wan2.7-image-pro` | Latest recommended, supports 4K & batch generation | 4K |
-| ⭐ Wanxiang 2.7 | `wan2.7-image` | Fast version | 2K |
-| 🎨 Wanxiang 2.6 | `wan2.6-image` | Text-image mixed output | 1280×1280 |
-| Wanxiang 2.6 | `wan2.6-t2i` | Standard model | 1440×1440 |
-| Wanxiang 2.5 | `wan2.5-t2i-preview` | Preview version | 1440×1440 |
-| Wanxiang 2.2 | `wan2.2-t2i-flash` | Turbo version | 1440×1440 |
-| Wanxiang 2.2 | `wan2.2-t2i-plus` | Enhanced version | 1440×1440 |
-| Wanxiang 2.1 | `wanx2.1-t2i-turbo` | Classic fast version | 1024×1024 |
-| Wanxiang 2.1 | `wanx2.1-t2i-plus` | Classic pro version | 1024×1024 |
-| Wanxiang 2.0 | `wanx2.0-t2i-turbo` | Early version | 1024×1024 |
-| 💬 Qwen | `qwen-image-2.0-pro` | Excellent text rendering | 2048×2048 |
-| 💬 Qwen | `qwen-image-2.0` | Accelerated version | 2048×2048 |
-| 💬 Qwen | `qwen-image-max` | Strong realism | 1664×928 |
-| 💬 Qwen | `qwen-image-plus` | Artistic style | 1664×928 |
-| 💬 Qwen | `qwen-image` | Standard version | 1664×928 |
-| 🚀 Z-Image | `z-image-turbo` | Lightweight & fast | 1024×1024 |
+### Gemini
+- Frontend key or `GEMINI_API_KEY` (fallback: `GOOGLE_API_KEY`)
 
-### Image-to-Image Models
-
-| Series | Model Name | Description | Max Resolution |
-|--------|------------|-------------|----------------|
-| ⭐ Wanxiang 2.7 | `wan2.7-image-pro` | Best quality | 2K |
-| ⭐ Wanxiang 2.7 | `wan2.7-image` | Fast version | 2K |
-| 🎨 Wanxiang 2.6 | `wan2.6-image` | Text-image mixed | 2K |
+### Volcengine (Jimeng)
+- Frontend uses `AK:SK` format
+- Or backend env:
+  - `VOLCENGINE_ACCESS_KEY`
+  - `VOLCENGINE_SECRET_KEY`
+  - optional `VOLCENGINE_SESSION_TOKEN`
 
 ## Quick Start
 
 ### 1. Prerequisites
+- Node.js >= 18
 
-- Node.js >= 18.0.0
-- Alibaba Cloud DashScope API Key (can be entered on the frontend, or configured server-side via environment variables; [get one here](https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key))
-
-### 2. Install Dependencies
-
+### 2. Install
 ```bash
 npm install
 ```
 
-### 3. Configure Environment Variables (Optional)
-
-Copy the environment template:
-
+### 3. Configure env
 ```bash
 cp .env.example .env
 ```
 
-Edit the `.env` file:
+Minimum example:
 
 ```env
-# Optional: configure API Key here; used when frontend leaves it blank
-DASHSCOPE_API_KEY=your_api_key_here
-# Server port, default 3000
 PORT=3000
-
-# Optional: CORS whitelist (comma-separated), e.g.:
-# CORS_ORIGIN=http://localhost:3000,https://your-domain.com
-# If not set, all origins are allowed (backward compatible).
-
-# Optional: upstream DashScope request timeout (ms), default 120000
-# DASHSCOPE_TIMEOUT_MS=120000
-
-# Optional: API rate limiting (per IP, simple in-memory)
-# RATE_LIMIT_WINDOW_MS=60000
-# RATE_LIMIT_MAX=30
-
-# Optional: debug logging toggle (true/1 to enable)
-# DEBUG=false
+DASHSCOPE_API_KEY=your_dashscope_key
+# GEMINI_API_KEY=your_gemini_key
+# VOLCENGINE_ACCESS_KEY=your_ak
+# VOLCENGINE_SECRET_KEY=your_sk
 ```
 
-### 4. Start the Server
-
+### 4. Start
 ```bash
-npm start
+npm run dev
 ```
 
-After starting, visit: http://localhost:3000
+Open `http://localhost:3000`.
+
+## Environment Variables
+
+Core:
+- `PORT` (default `3000`)
+- `DEBUG` (`true/1` to enable)
+
+Provider keys:
+- `DASHSCOPE_API_KEY`
+- `GEMINI_API_KEY` / `GOOGLE_API_KEY`
+- `VOLCENGINE_ACCESS_KEY`
+- `VOLCENGINE_SECRET_KEY`
+- `VOLCENGINE_SESSION_TOKEN` (optional)
+
+Timeouts:
+- `DASHSCOPE_TIMEOUT_MS` (default `120000`)
+- `GEMINI_TIMEOUT_MS` (default `180000`)
+- `VOLCENGINE_TIMEOUT_MS` (default `120000` in server code)
+
+Volcengine request tuning:
+- `VOLCENGINE_HOST` (default `visual.volcengineapi.com`)
+- `VOLCENGINE_REGION` (default `cn-north-1`)
+- `VOLCENGINE_SERVICE` (default `cv`)
+- `VOLCENGINE_JIMENG_40_REQ_KEY` (default `jimeng_t2i_v40`)
+- `VOLCENGINE_JIMENG_46_REQ_KEY` (default `jimeng_seedream46_cvtob`)
+- `VOLCENGINE_MAX_POLL_ATTEMPTS` (default `90`)
+- `VOLCENGINE_POLL_INTERVAL_MS` (default `2000`)
+
+Gateway:
+- `CORS_ORIGIN` (comma-separated allowlist)
+- `RATE_LIMIT_WINDOW_MS` (default `60000`)
+- `RATE_LIMIT_MAX` (default `30`)
+
+## Volcengine Image URL Requirement (Important)
+
+Volcengine `image_urls` only accepts **publicly reachable HTTP(S) URLs**.
+It does **not** accept `data:` URLs.
+
+For local upload in image-to-image mode, backend will:
+1. save uploaded image into `public/uploads/`
+2. expose a public URL
+3. pass this URL to Volcengine
+
+### `PUBLIC_BASE_URL`
+Set this in production when behind reverse proxy/CDN:
+
+```env
+PUBLIC_BASE_URL=https://image.example.com
+```
+
+If your app resolves host to `localhost` or private network, Volcengine will fail to fetch the image.
+
+## Nginx Reverse Proxy (Recommended)
+
+Essential forwarded headers:
+
+```nginx
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header Forwarded "for=$remote_addr;proto=$scheme;host=$host";
+```
+
+Optional cache for `/uploads` (for faster image load):
+
+```nginx
+location ^~ /uploads/ {
+  proxy_pass http://127.0.0.1:3000;
+  expires 365d;
+  add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+```
+
+Full Nginx config example (single file):
+
+```nginx
+server {
+  listen 80;
+  server_name image.example.com;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  server_name image.example.com;
+
+  ssl_certificate     /path/to/fullchain.pem;
+  ssl_certificate_key /path/to/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 10m;
+
+  client_max_body_size 20m;
+
+  location ^~ /uploads/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header Forwarded "for=$remote_addr;proto=$scheme;host=$host";
+
+    expires 365d;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    access_log off;
+  }
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header Forwarded "for=$remote_addr;proto=$scheme;host=$host";
+
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+  }
+}
+```
+
+## API Endpoints
+
+- `POST /api/generate-image`
+  - body: `{ prompt, apiKey, model, provider, parameters }`
+- `POST /api/image-to-image`
+  - multipart: `image` + fields (`prompt`, `apiKey`, `model`, `provider`, `parameters`, optional `imageUrls`)
 
 ## Project Structure
 
-```
+```text
 ai-image-generator/
-├── server.js           # Express backend, DashScope API proxy
-├── package.json        # Project dependencies
-├── .env.example        # Environment variable template
-├── .gitignore
-├── README.md           # Project documentation (English)
-├── README.zh.md        # Project documentation (Chinese)
-└── public/
-    ├── index.html      # Bootstrap 5 frontend page
-    ├── app.js          # Frontend logic
-    └── favicon/
-        ├── favicon.ico              # Standard site icon
-        ├── favicon-16x16.png        # 16x16 PNG icon
-        ├── favicon-32x32.png        # 32x32 PNG icon
-        └── apple-touch-icon.png     # Apple touch device icon
+├── server.js
+├── public/
+│   ├── index.html
+│   ├── app.js
+│   └── favicon/
+├── .env.example
+├── README.md
+└── README.zh.md
 ```
-
-## Notes
-
-- Generated image URLs are valid for **24 hours**, please download them promptly
-- Different models have different default and maximum resolutions; the frontend adapts automatically
-- Wanxiang 2.7/2.6 use synchronous APIs; other models use asynchronous APIs (auto-polling)
-- Image-to-image mode only supports **image models** (`wan2.7-image-pro`, `wan2.7-image`, `wan2.6-image`), **not text-to-image models** (`t2i` series)
-- API Key can be entered on the frontend (saved in browser localStorage) or configured server-side only via `.env` (not exposed to the frontend)
 
 ## License
 
