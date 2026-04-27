@@ -44,6 +44,8 @@ const handleMulterError = (err, req, res, next) => {
 
 // DashScope API 基础地址
 const BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash-image';
 
 // 使用同步调用协议的模型列表
 const SYNC_MODELS = new Set([
@@ -143,11 +145,105 @@ function extractImageUrls(data, model) {
   return results.filter(r => r.url).map(r => r.url);
 }
 
-function getApiKey(providedApiKey) {
+function normalizeProvider(provider) {
+  return provider === 'gemini' ? 'gemini' : 'dashscope';
+}
+
+function getApiKey(provider, providedApiKey) {
   const trimmed = typeof providedApiKey === 'string' ? providedApiKey.trim() : '';
   if (trimmed) return trimmed;
-  const envKey = typeof process.env.DASHSCOPE_API_KEY === 'string' ? process.env.DASHSCOPE_API_KEY.trim() : '';
-  return envKey || '';
+
+  if (provider === 'gemini') {
+    const geminiEnv = typeof process.env.GEMINI_API_KEY === 'string' ? process.env.GEMINI_API_KEY.trim() : '';
+    if (geminiEnv) return geminiEnv;
+    const googleEnv = typeof process.env.GOOGLE_API_KEY === 'string' ? process.env.GOOGLE_API_KEY.trim() : '';
+    return googleEnv || '';
+  }
+
+  const dashscopeEnv = typeof process.env.DASHSCOPE_API_KEY === 'string' ? process.env.DASHSCOPE_API_KEY.trim() : '';
+  return dashscopeEnv || '';
+}
+
+function parseDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], data: match[2] };
+}
+
+function extractGeminiImageDataUrls(data) {
+  const urls = [];
+  const candidates = data?.candidates || [];
+
+  candidates.forEach((candidate) => {
+    const parts = candidate?.content?.parts || [];
+    parts.forEach((part) => {
+      const inlineData = part?.inlineData || part?.inline_data;
+      if (inlineData?.data) {
+        const mimeType = inlineData.mimeType || inlineData.mime_type || 'image/png';
+        urls.push(`data:${mimeType};base64,${inlineData.data}`);
+      }
+    });
+  });
+
+  return urls;
+}
+
+async function generateWithGemini({
+  apiKey,
+  model,
+  prompt,
+  n,
+  imageDataUrl,
+}) {
+  const imageUrls = [];
+  const selectedModel = model || GEMINI_DEFAULT_MODEL;
+  const requestCount = Number.isInteger(n) ? n : 1;
+  const parsedImage = imageDataUrl ? parseDataUrl(imageDataUrl) : null;
+  const geminiTimeoutMs = Number.parseInt(process.env.GEMINI_TIMEOUT_MS || '180000', 10);
+
+  for (let i = 0; i < requestCount; i += 1) {
+    const parts = [];
+
+    if (parsedImage) {
+      parts.push({
+        inlineData: {
+          mimeType: parsedImage.mimeType,
+          data: parsedImage.data,
+        },
+      });
+    }
+
+    parts.push({
+      text: (prompt && prompt.trim()) ? prompt.trim() : 'Generate an image',
+    });
+
+    const geminiRes = await fetchWithTimeout(
+      `${GEMINI_BASE_URL}/models/${encodeURIComponent(selectedModel)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: { responseModalities: ['IMAGE'] },
+        }),
+      },
+      geminiTimeoutMs
+    );
+
+    const geminiData = await geminiRes.json();
+    if (!geminiRes.ok) {
+      throw new Error(geminiData?.error?.message || geminiData?.message || `Gemini request failed (${geminiRes.status})`);
+    }
+
+    const generatedUrls = extractGeminiImageDataUrls(geminiData);
+    if (!generatedUrls.length) {
+      throw new Error('Gemini response does not include image data');
+    }
+    imageUrls.push(generatedUrls[0]);
+  }
+
+  return imageUrls;
 }
 
 function validateIntegerInRange(name, value, min, max) {
@@ -233,15 +329,16 @@ app.get('/', (req, res) => {
  * 响应: { imageUrls: string[] }
  */
 app.post('/api/generate-image', async (req, res) => {
-  const { prompt, apiKey, model, parameters = {} } = req.body;
+  const { prompt, apiKey, model, parameters = {}, provider } = req.body;
+  const selectedProvider = normalizeProvider(provider);
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-  const resolvedApiKey = getApiKey(apiKey);
+  const resolvedApiKey = getApiKey(selectedProvider, apiKey);
   if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
-  const selectedModel = model || 'wan2.6-t2i';
+  const selectedModel = model || (selectedProvider === 'gemini' ? GEMINI_DEFAULT_MODEL : 'wan2.6-t2i');
   const config = getModelConfig(selectedModel);
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
@@ -266,12 +363,24 @@ app.post('/api/generate-image', async (req, res) => {
     if (seedErr) return res.status(400).json({ error: seedErr });
   }
 
-  const sizeErr = validateSize(selectedModel, size);
-  if (sizeErr) return res.status(400).json({ error: sizeErr });
+  if (selectedProvider === 'dashscope') {
+    const sizeErr = validateSize(selectedModel, size);
+    if (sizeErr) return res.status(400).json({ error: sizeErr });
+  }
 
   const dashscopeTimeoutMs = Number.parseInt(process.env.DASHSCOPE_TIMEOUT_MS || '120000', 10);
 
   try {
+    if (selectedProvider === 'gemini') {
+      const imageUrls = await generateWithGemini({
+        apiKey: resolvedApiKey,
+        model: selectedModel,
+        prompt,
+        n,
+      });
+      return res.json({ imageUrls });
+    }
+
     // 同步模型调用
     if (isSyncModel(selectedModel)) {
       const syncParams = {
@@ -435,16 +544,17 @@ app.post('/api/image-to-image', (req, res, next) => {
     next();
   });
 }, async (req, res) => {
-  const { prompt, apiKey, model, parameters } = req.body;
+  const { prompt, apiKey, model, parameters, provider } = req.body;
+  const selectedProvider = normalizeProvider(provider);
   const imageFile = req.file;
 
   if (!imageFile) {
     return res.status(400).json({ error: '参考图片是必需的' });
   }
-  const resolvedApiKey = getApiKey(apiKey);
+  const resolvedApiKey = getApiKey(selectedProvider, apiKey);
   if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
-  const selectedModel = model || 'wan2.6-image';
+  const selectedModel = model || (selectedProvider === 'gemini' ? GEMINI_DEFAULT_MODEL : 'wan2.6-image');
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
   // 验证模型是否支持图生图
@@ -453,10 +563,9 @@ app.post('/api/image-to-image', (req, res, next) => {
     'wan2.7-image',
     'wan2.6-image',
   ];
-  
-  if (!I2I_SUPPORTED_MODELS.includes(selectedModel)) {
-    return res.status(400).json({ 
-      error: `模型 ${selectedModel} 不支持图生图，请使用: ${I2I_SUPPORTED_MODELS.join(', ')}` 
+  if (selectedProvider === 'dashscope' && !I2I_SUPPORTED_MODELS.includes(selectedModel)) {
+    return res.status(400).json({
+      error: `模型 ${selectedModel} 不支持图生图，请使用: ${I2I_SUPPORTED_MODELS.join(', ')}`,
     });
   }
 
@@ -498,7 +607,7 @@ app.post('/api/image-to-image', (req, res, next) => {
       if (seedErr) return res.status(400).json({ error: seedErr });
     }
 
-    if (size) {
+    if (selectedProvider === 'dashscope' && size) {
       const sizeErr = validateSize(selectedModel, size);
       if (sizeErr) return res.status(400).json({ error: sizeErr });
     }
@@ -507,6 +616,17 @@ app.post('/api/image-to-image', (req, res, next) => {
       if (typeof imageStrength !== 'number' || Number.isNaN(imageStrength) || imageStrength < 0 || imageStrength > 1) {
         return res.status(400).json({ error: 'image_strength must be a number between 0 and 1' });
       }
+    }
+
+    if (selectedProvider === 'gemini') {
+      const imageUrls = await generateWithGemini({
+        apiKey: resolvedApiKey,
+        model: selectedModel,
+        prompt,
+        n,
+        imageDataUrl,
+      });
+      return res.json({ imageUrls });
     }
 
     // 图生图使用同步API (多模态生成端点)

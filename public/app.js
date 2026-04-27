@@ -8,7 +8,13 @@
  */
 
 // DOM 元素引用
+const providerSelect = document.getElementById('providerSelect');
+const providerSelectI2I = document.getElementById('providerSelectI2I');
 const apiKeyInput = document.getElementById('apiKeyInput');
+const apiKeyLabelText = document.getElementById('apiKeyLabelText');
+const apiKeyHelpLink = document.getElementById('apiKeyHelpLink');
+const apiKeyConsoleLink = document.getElementById('apiKeyConsoleLink');
+const apiEnvName = document.getElementById('apiEnvName');
 const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
 const modelSelect = document.getElementById('modelSelect');
 const promptInput = document.getElementById('promptInput');
@@ -32,6 +38,9 @@ const image2imageParams = document.getElementById('image2imageParams');
 
 // 图生图相关元素
 const apiKeyInputI2I = document.getElementById('apiKeyInputI2I');
+const apiKeyLabelTextI2I = document.getElementById('apiKeyLabelTextI2I');
+const apiEnvNameI2I = document.getElementById('apiEnvNameI2I');
+const modelHintI2I = document.getElementById('modelHintI2I');
 const toggleApiKeyBtnI2I = document.getElementById('toggleApiKeyBtnI2I');
 const modelSelectI2I = document.getElementById('modelSelectI2I');
 const promptInputI2I = document.getElementById('promptInputI2I');
@@ -44,6 +53,78 @@ const removeImageBtn = document.getElementById('removeImageBtn');
 // 当前模式
 let currentMode = 'text2image'; // 'text2image' 或 'image2image'
 let uploadedImageFile = null;
+
+const PROVIDER_CONFIG = {
+  dashscope: {
+    label: 'DashScope API Key（可选）',
+    envName: 'DASHSCOPE_API_KEY',
+    placeholder: 'sk-...',
+    helpLink: 'https://help.aliyun.com/zh/model-studio/get-api-key',
+    consoleLink: 'https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key',
+  },
+  gemini: {
+    label: 'Gemini API Key（可选）',
+    envName: 'GEMINI_API_KEY',
+    placeholder: 'AIza...',
+    helpLink: 'https://ai.google.dev/gemini-api/docs/api-key',
+    consoleLink: 'https://aistudio.google.com/apikey',
+  },
+};
+
+const MODELS_T2I = {
+  dashscope: [
+    { group: '⭐ 万相 2.7 (最新)', options: [
+      { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强, 支持4K)' },
+      { value: 'wan2.7-image', label: 'wan2.7-image (快速)' },
+    ] },
+    { group: '🎨 万相 2.6', options: [
+      { value: 'wan2.6-image', label: 'wan2.6-image (图文混排)' },
+      { value: 'wan2.6-t2i', label: 'wan2.6-t2i (标准)' },
+    ] },
+    { group: '⚡ 万相 2.5/2.2', options: [
+      { value: 'wan2.5-t2i-preview', label: 'wan2.5-t2i-preview (预览)' },
+      { value: 'wan2.2-t2i-flash', label: 'wan2.2-t2i-flash (极速)' },
+      { value: 'wan2.2-t2i-plus', label: 'wan2.2-t2i-plus (增强)' },
+    ] },
+    { group: '万相 2.1/2.0', options: [
+      { value: 'wanx2.1-t2i-turbo', label: 'wanx2.1-t2i-turbo' },
+      { value: 'wanx2.1-t2i-plus', label: 'wanx2.1-t2i-plus' },
+      { value: 'wanx2.0-t2i-turbo', label: 'wanx2.0-t2i-turbo' },
+    ] },
+    { group: '💬 千问 Qwen-Image', options: [
+      { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
+      { value: 'qwen-image-2.0', label: 'qwen-image-2.0' },
+      { value: 'qwen-image-max', label: 'qwen-image-max (真实感)' },
+      { value: 'qwen-image-plus', label: 'qwen-image-plus (艺术风格)' },
+      { value: 'qwen-image', label: 'qwen-image' },
+    ] },
+    { group: '🚀 Z-Image', options: [
+      { value: 'z-image-turbo', label: 'z-image-turbo (轻量快速)' },
+    ] },
+  ],
+  gemini: [
+    { group: '✨ Gemini', options: [
+      { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
+    ] },
+  ],
+};
+
+const MODELS_I2I = {
+  dashscope: [
+    { group: '⭐ 万相 2.7 (推荐)', options: [
+      { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强)' },
+      { value: 'wan2.7-image', label: 'wan2.7-image (快速)' },
+    ] },
+    { group: '🎨 万相 2.6', options: [
+      { value: 'wan2.6-image', label: 'wan2.6-image (图文混排)' },
+    ] },
+  ],
+  gemini: [
+    { group: '✨ Gemini', options: [
+      { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
+    ] },
+  ],
+};
 
 // 各模型支持的尺寸选项
 const MODEL_SIZES = {
@@ -69,30 +150,123 @@ const MODEL_SIZES = {
   'qwen-image': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
   // Z-Image
   'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  // Gemini
+  'gemini-2.5-flash-image': [],
 };
 
-/**
- * 根据当前选择的模型更新尺寸选项
- */
+const MODEL_SIZES_I2I = {
+  'wan2.7-image-pro': ['1K', '2K'],
+  'wan2.7-image': ['1K', '2K'],
+  'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'gemini-2.5-flash-image': [],
+};
+
+function getApiKeyStorageKey(mode, provider) {
+  return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
+}
+
+function getModelStorageKey(mode, provider) {
+  return mode === 'image2image' ? `modelI2I_${provider}` : `model_${provider}`;
+}
+
+function renderModelOptions(selectElement, groups, selectedValue) {
+  selectElement.innerHTML = '';
+  groups.forEach((group) => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.group;
+    group.options.forEach((item) => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      optgroup.appendChild(option);
+    });
+    selectElement.appendChild(optgroup);
+  });
+
+  const availableValues = groups.flatMap(group => group.options.map(option => option.value));
+  if (selectedValue && availableValues.includes(selectedValue)) {
+    selectElement.value = selectedValue;
+  }
+}
+
+function setTextApiKeyMeta(provider) {
+  const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
+  apiKeyLabelText.textContent = cfg.label;
+  apiEnvName.textContent = cfg.envName;
+  apiKeyInput.placeholder = cfg.placeholder;
+  apiKeyHelpLink.href = cfg.helpLink;
+  apiKeyConsoleLink.href = cfg.consoleLink;
+
+  const savedKey = localStorage.getItem(getApiKeyStorageKey('text2image', provider));
+  apiKeyInput.value = savedKey || '';
+}
+
+function setImageApiKeyMeta(provider) {
+  const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
+  apiKeyLabelTextI2I.textContent = cfg.label;
+  apiEnvNameI2I.textContent = cfg.envName;
+  apiKeyInputI2I.placeholder = cfg.placeholder;
+
+  if (provider === 'gemini') {
+    modelHintI2I.textContent = 'Gemini 图生图支持参考图+文本联合生成';
+  } else {
+    modelHintI2I.textContent = '图生图仅支持万相 2.6+ 图像模型';
+  }
+
+  const savedKey = localStorage.getItem(getApiKeyStorageKey('image2image', provider));
+  apiKeyInputI2I.value = savedKey || '';
+}
+
 function updateSizeOptions() {
   const model = modelSelect.value;
-  const sizes = MODEL_SIZES[model] || ['1024*1024'];
+  const sizes = MODEL_SIZES[model] || [];
   imageSize.innerHTML = '<option value="auto">自动 (模型默认)</option>';
-  sizes.forEach(size => {
+  sizes.forEach((size) => {
     const option = document.createElement('option');
     option.value = size;
     option.textContent = size;
     imageSize.appendChild(option);
   });
+  imageSize.disabled = sizes.length === 0;
+}
+
+function updateSizeOptionsI2I() {
+  const model = modelSelectI2I.value;
+  const sizes = MODEL_SIZES_I2I[model] || [];
+  imageSize.innerHTML = '<option value="auto">自动 (模型默认)</option>';
+  sizes.forEach((size) => {
+    const option = document.createElement('option');
+    option.value = size;
+    option.textContent = size;
+    imageSize.appendChild(option);
+  });
+  imageSize.disabled = sizes.length === 0;
+}
+
+function updateTextProviderState() {
+  const provider = providerSelect.value;
+  const savedModel = localStorage.getItem(getModelStorageKey('text2image', provider));
+  renderModelOptions(modelSelect, MODELS_T2I[provider], savedModel);
+  setTextApiKeyMeta(provider);
+  updateSizeOptions();
+  localStorage.setItem('provider', provider);
+}
+
+function updateImageProviderState() {
+  const provider = providerSelectI2I.value;
+  const savedModel = localStorage.getItem(getModelStorageKey('image2image', provider));
+  renderModelOptions(modelSelectI2I, MODELS_I2I[provider], savedModel);
+  setImageApiKeyMeta(provider);
+  if (currentMode === 'image2image') {
+    updateSizeOptionsI2I();
+  }
+  localStorage.setItem('providerI2I', provider);
 }
 
 // 从 localStorage 恢复用户设置
-if (localStorage.getItem('apiKey')) {
-  apiKeyInput.value = localStorage.getItem('apiKey');
-}
-if (localStorage.getItem('model')) {
-  modelSelect.value = localStorage.getItem('model');
-}
+providerSelect.value = localStorage.getItem('provider') || 'dashscope';
+providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
+
 if (localStorage.getItem('imageCount')) {
   imageCount.value = localStorage.getItem('imageCount');
 }
@@ -106,13 +280,23 @@ if (localStorage.getItem('watermark') !== null) {
   watermarkToggle.checked = localStorage.getItem('watermark') === 'true';
 }
 
-// 初始化尺寸选项
-updateSizeOptions();
+updateTextProviderState();
+updateImageProviderState();
 
-// 模型切换时更新尺寸选项并保存
+// 切换事件
+providerSelect.addEventListener('change', updateTextProviderState);
+providerSelectI2I.addEventListener('change', updateImageProviderState);
+
 modelSelect.addEventListener('change', () => {
+  const provider = providerSelect.value;
   updateSizeOptions();
-  localStorage.setItem('model', modelSelect.value);
+  localStorage.setItem(getModelStorageKey('text2image', provider), modelSelect.value);
+});
+
+modelSelectI2I.addEventListener('change', () => {
+  const provider = providerSelectI2I.value;
+  updateSizeOptionsI2I();
+  localStorage.setItem(getModelStorageKey('image2image', provider), modelSelectI2I.value);
 });
 
 // 保存参数偏好到 localStorage
@@ -134,6 +318,14 @@ toggleApiKeyBtn.addEventListener('click', () => {
   apiKeyInput.type = isPassword ? 'text' : 'password';
   toggleApiKeyBtn.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
 });
+
+if (toggleApiKeyBtnI2I) {
+  toggleApiKeyBtnI2I.addEventListener('click', () => {
+    const isPassword = apiKeyInputI2I.type === 'password';
+    apiKeyInputI2I.type = isPassword ? 'text' : 'password';
+    toggleApiKeyBtnI2I.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
+  });
+}
 
 /**
  * 显示提示信息
@@ -160,7 +352,7 @@ function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   placeholder.classList.toggle('d-none', isLoading);
   loading.classList.toggle('d-none', !isLoading);
   resultImages.classList.toggle('d-none', isLoading);
-  
+
   // 更新加载提示文本
   const loadingText = loading.querySelector('p');
   if (loadingText) {
@@ -193,12 +385,13 @@ function displayImages(imageUrls) {
 
 // 生成按钮点击事件
 generateBtn.addEventListener('click', async () => {
+  const provider = providerSelect.value;
   const apiKey = apiKeyInput.value.trim();
   const model = modelSelect.value;
   const prompt = promptInput.value.trim();
-  const n = parseInt(imageCount.value);
+  const n = parseInt(imageCount.value, 10);
   const size = imageSize.value === 'auto' ? undefined : imageSize.value;
-  const seed = seedInput.value ? parseInt(seedInput.value) : undefined;
+  const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
   const negativePromptVal = negativePrompt.value.trim() || undefined;
   const promptExtendVal = promptExtend.checked;
   const watermarkVal = watermarkToggle.checked;
@@ -208,8 +401,10 @@ generateBtn.addEventListener('click', async () => {
     return;
   }
 
-  if (apiKey) localStorage.setItem('apiKey', apiKey);
-  localStorage.setItem('model', model);
+  if (apiKey) {
+    localStorage.setItem(getApiKeyStorageKey('text2image', provider), apiKey);
+  }
+  localStorage.setItem(getModelStorageKey('text2image', provider), model);
   if (size) localStorage.setItem('imageSize', imageSize.value);
 
   alertContainer.innerHTML = '';
@@ -221,6 +416,7 @@ generateBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider,
         apiKey,
         model,
         prompt,
@@ -278,34 +474,6 @@ image2imageTab.addEventListener('click', () => {
   image2imageParams.classList.remove('d-none');
   updateSizeOptionsI2I();
 });
-
-// 图生图模型尺寸选项（仅支持多模态模型，不支持 t2i 文生图模型）
-const MODEL_SIZES_I2I = {
-  'wan2.7-image-pro': ['1K', '2K'],
-  'wan2.7-image': ['1K', '2K'],
-  'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-};
-
-function updateSizeOptionsI2I() {
-  const model = modelSelectI2I.value;
-  const sizes = MODEL_SIZES_I2I[model] || ['1024*1024'];
-  imageSize.innerHTML = '<option value="auto">自动 (模型默认)</option>';
-  sizes.forEach(size => {
-    const option = document.createElement('option');
-    option.value = size;
-    option.textContent = size;
-    imageSize.appendChild(option);
-  });
-}
-
-// 图生图 API Key 切换
-if (toggleApiKeyBtnI2I) {
-  toggleApiKeyBtnI2I.addEventListener('click', () => {
-    const isPassword = apiKeyInputI2I.type === 'password';
-    apiKeyInputI2I.type = isPassword ? 'text' : 'password';
-    toggleApiKeyBtnI2I.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
-  });
-}
 
 // 参考图强度滑块
 if (imageStrength) {
@@ -447,12 +615,13 @@ if (removeImageBtn) {
 
 // 图生图生成按钮点击
 generateBtnI2I.addEventListener('click', async () => {
-  const apiKey = apiKeyInputI2I.value.trim() || apiKeyInput.value.trim();
+  const provider = providerSelectI2I.value;
+  const apiKey = apiKeyInputI2I.value.trim();
   const model = modelSelectI2I.value;
   const prompt = promptInputI2I.value.trim();
-  const n = parseInt(imageCount.value);
+  const n = parseInt(imageCount.value, 10);
   const size = imageSize.value === 'auto' ? undefined : imageSize.value;
-  const seed = seedInput.value ? parseInt(seedInput.value) : undefined;
+  const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
   const negativePromptVal = negativePrompt.value.trim() || undefined;
   const promptExtendVal = promptExtend.checked;
   const watermarkVal = watermarkToggle.checked;
@@ -464,9 +633,9 @@ generateBtnI2I.addEventListener('click', async () => {
   }
 
   if (apiKey) {
-    localStorage.setItem('apiKey', apiKey);
-    localStorage.setItem('apiKeyI2I', apiKey);
+    localStorage.setItem(getApiKeyStorageKey('image2image', provider), apiKey);
   }
+  localStorage.setItem(getModelStorageKey('image2image', provider), model);
 
   alertContainer.innerHTML = '';
   setLoading(true, '正在上传图片，请稍候...');
@@ -474,6 +643,7 @@ generateBtnI2I.addEventListener('click', async () => {
 
   // 构建表单数据
   const formData = new FormData();
+  formData.append('provider', provider);
   formData.append('image', uploadedImageFile);
   formData.append('apiKey', apiKey);
   formData.append('model', model);
@@ -491,7 +661,7 @@ generateBtnI2I.addEventListener('click', async () => {
   try {
     // 使用 XMLHttpRequest 以便监听上传进度
     const xhr = new XMLHttpRequest();
-    
+
     // 上传进度
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
@@ -520,7 +690,7 @@ generateBtnI2I.addEventListener('click', async () => {
             // 服务器返回了非 JSON 响应（可能是 HTML 错误页面）
             throw new Error(`服务器错误 (HTTP ${xhr.status})`);
           }
-          
+
           const data = JSON.parse(xhr.responseText);
           const errorMsg = data.error?.message || data.error || '生成失败';
           throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
@@ -558,9 +728,4 @@ if (promptInputI2I) {
       generateBtnI2I.click();
     }
   });
-}
-
-// 从 localStorage 恢复图生图 API Key
-if (localStorage.getItem('apiKeyI2I')) {
-  apiKeyInputI2I.value = localStorage.getItem('apiKeyI2I');
 }

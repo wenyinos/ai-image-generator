@@ -119,13 +119,20 @@
             <div class="tab-content" id="modeTabContent">
               <!-- 文生图模式 -->
               <div class="tab-pane fade show active" id="text2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">输入描述，使用阿里云模型生成图片</p>
+                <p class="text-center text-muted mb-4">输入描述，支持 DashScope 与 Gemini 生成图片</p>
 
                 <div class="row g-3 mb-3">
-                  <div class="col-md-6">
+                  <div class="col-md-4">
+                    <label for="providerSelect" class="form-label fw-semibold">提供商</label>
+                    <select class="form-select" id="providerSelect">
+                      <option value="dashscope" selected>DashScope (阿里云百炼)</option>
+                      <option value="gemini">Gemini (Google)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
                     <label for="apiKeyInput" class="form-label fw-semibold">
-                      API Key（可选）
-                      <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key">
+                      <span id="apiKeyLabelText">DashScope API Key（可选）</span>
+                      <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key" id="apiKeyHelpLink">
                         <i class="bi bi-question-circle text-muted"></i>
                       </a>
                     </label>
@@ -135,15 +142,15 @@
                         <i class="bi bi-eye"></i>
                       </button>
                     </div>
-                    <div class="form-text">
-                      留空将使用服务端环境变量 <code>DASHSCOPE_API_KEY</code>（如已配置）。
+                    <div class="form-text" id="apiKeyHelpText">
+                      留空将使用服务端环境变量 <code id="apiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。
                       <br>
-                      <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none">
-                        <i class="bi bi-box-arrow-up-right"></i> 前往百炼控制台获取 API Key
+                      <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none" id="apiKeyConsoleLink">
+                        <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
                       </a>
                     </div>
                   </div>
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <label for="modelSelect" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="modelSelect">
                       <optgroup label="⭐ 万相 2.7 (最新)">
@@ -191,20 +198,31 @@
 
               <!-- 图生图模式 -->
               <div class="tab-pane fade" id="image2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">上传参考图，基于图片生成新图像</p>
+                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope 与 Gemini 图生图</p>
 
                 <div class="row g-3 mb-3">
-                  <div class="col-md-6">
-                    <label for="apiKeyInputI2I" class="form-label fw-semibold">API Key（可选）</label>
+                  <div class="col-md-4">
+                    <label for="providerSelectI2I" class="form-label fw-semibold">提供商</label>
+                    <select class="form-select" id="providerSelectI2I">
+                      <option value="dashscope" selected>DashScope (阿里云百炼)</option>
+                      <option value="gemini">Gemini (Google)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="apiKeyInputI2I" class="form-label fw-semibold">
+                      <span id="apiKeyLabelTextI2I">DashScope API Key（可选）</span>
+                    </label>
                     <div class="input-group">
                       <input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-...">
                       <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
                         <i class="bi bi-eye"></i>
                       </button>
                     </div>
-                    <div class="form-text">留空将使用服务端环境变量 <code>DASHSCOPE_API_KEY</code>（如已配置）。</div>
+                    <div class="form-text">
+                      留空将使用服务端环境变量 <code id="apiEnvNameI2I">DASHSCOPE_API_KEY</code>（如已配置）。
+                    </div>
                   </div>
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <label for="modelSelectI2I" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="modelSelectI2I">
                       <optgroup label="⭐ 万相 2.7 (推荐)">
@@ -215,7 +233,7 @@
                         <option value="wan2.6-image" selected>wan2.6-image (图文混排)</option>
                       </optgroup>
                     </select>
-                    <div class="form-text">图生图仅支持万相 2.6+ 图像模型</div>
+                    <div class="form-text" id="modelHintI2I">图生图仅支持万相 2.6+ 图像模型</div>
                   </div>
                 </div>
 
