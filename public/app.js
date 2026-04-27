@@ -53,6 +53,8 @@ const removeImageBtn = document.getElementById('removeImageBtn');
 // 当前模式
 let currentMode = 'text2image'; // 'text2image' 或 'image2image'
 let uploadedImageFile = null;
+const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
+const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
 
 const PROVIDER_CONFIG = {
   dashscope: {
@@ -104,7 +106,7 @@ const MODELS_T2I = {
   ],
   gemini: [
     { group: '✨ Gemini', options: [
-      { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
+      { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
     ] },
   ],
 };
@@ -121,7 +123,7 @@ const MODELS_I2I = {
   ],
   gemini: [
     { group: '✨ Gemini', options: [
-      { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
+      { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
     ] },
   ],
 };
@@ -151,15 +153,19 @@ const MODEL_SIZES = {
   // Z-Image
   'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
   // Gemini
-  'gemini-2.5-flash-image': [],
+  [GEMINI_MODEL_ID]: [],
 };
 
 const MODEL_SIZES_I2I = {
   'wan2.7-image-pro': ['1K', '2K'],
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'gemini-2.5-flash-image': [],
+  [GEMINI_MODEL_ID]: [],
 };
+
+function normalizeGeminiModel(model) {
+  return model === GEMINI_MODEL_LEGACY_ID ? GEMINI_MODEL_ID : model;
+}
 
 function getApiKeyStorageKey(mode, provider) {
   return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
@@ -245,7 +251,11 @@ function updateSizeOptionsI2I() {
 
 function updateTextProviderState() {
   const provider = providerSelect.value;
-  const savedModel = localStorage.getItem(getModelStorageKey('text2image', provider));
+  const modelStorageKey = getModelStorageKey('text2image', provider);
+  const savedModel = normalizeGeminiModel(localStorage.getItem(modelStorageKey));
+  if (provider === 'gemini' && savedModel === GEMINI_MODEL_ID) {
+    localStorage.setItem(modelStorageKey, GEMINI_MODEL_ID);
+  }
   renderModelOptions(modelSelect, MODELS_T2I[provider], savedModel);
   setTextApiKeyMeta(provider);
   updateSizeOptions();
@@ -254,7 +264,11 @@ function updateTextProviderState() {
 
 function updateImageProviderState() {
   const provider = providerSelectI2I.value;
-  const savedModel = localStorage.getItem(getModelStorageKey('image2image', provider));
+  const modelStorageKey = getModelStorageKey('image2image', provider);
+  const savedModel = normalizeGeminiModel(localStorage.getItem(modelStorageKey));
+  if (provider === 'gemini' && savedModel === GEMINI_MODEL_ID) {
+    localStorage.setItem(modelStorageKey, GEMINI_MODEL_ID);
+  }
   renderModelOptions(modelSelectI2I, MODELS_I2I[provider], savedModel);
   setImageApiKeyMeta(provider);
   if (currentMode === 'image2image') {

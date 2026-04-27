@@ -46,6 +46,9 @@ const handleMulterError = (err, req, res, next) => {
 const BASE_URL = 'https://dashscope.aliyuncs.com/api/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_MODEL_ALIASES = {
+  'gemini-2.5-flash-preview-image': 'gemini-2.5-flash-image',
+};
 
 // 使用同步调用协议的模型列表
 const SYNC_MODELS = new Set([
@@ -149,6 +152,11 @@ function normalizeProvider(provider) {
   return provider === 'gemini' ? 'gemini' : 'dashscope';
 }
 
+function normalizeGeminiModel(model) {
+  if (!model || typeof model !== 'string') return GEMINI_DEFAULT_MODEL;
+  return GEMINI_MODEL_ALIASES[model] || model;
+}
+
 function getApiKey(provider, providedApiKey) {
   const trimmed = typeof providedApiKey === 'string' ? providedApiKey.trim() : '';
   if (trimmed) return trimmed;
@@ -197,7 +205,7 @@ async function generateWithGemini({
   imageDataUrl,
 }) {
   const imageUrls = [];
-  const selectedModel = model || GEMINI_DEFAULT_MODEL;
+  const selectedModel = normalizeGeminiModel(model);
   const requestCount = Number.isInteger(n) ? n : 1;
   const parsedImage = imageDataUrl ? parseDataUrl(imageDataUrl) : null;
   const geminiTimeoutMs = Number.parseInt(process.env.GEMINI_TIMEOUT_MS || '180000', 10);
@@ -338,7 +346,9 @@ app.post('/api/generate-image', async (req, res) => {
   const resolvedApiKey = getApiKey(selectedProvider, apiKey);
   if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
-  const selectedModel = model || (selectedProvider === 'gemini' ? GEMINI_DEFAULT_MODEL : 'wan2.6-t2i');
+  const selectedModel = selectedProvider === 'gemini'
+    ? normalizeGeminiModel(model)
+    : (model || 'wan2.6-t2i');
   const config = getModelConfig(selectedModel);
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
@@ -554,7 +564,9 @@ app.post('/api/image-to-image', (req, res, next) => {
   const resolvedApiKey = getApiKey(selectedProvider, apiKey);
   if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
 
-  const selectedModel = model || (selectedProvider === 'gemini' ? GEMINI_DEFAULT_MODEL : 'wan2.6-image');
+  const selectedModel = selectedProvider === 'gemini'
+    ? normalizeGeminiModel(model)
+    : (model || 'wan2.6-image');
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
   // 验证模型是否支持图生图
