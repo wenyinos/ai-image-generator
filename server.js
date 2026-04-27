@@ -607,7 +607,16 @@ function buildBaseUrl(req) {
     ? req.headers['x-forwarded-proto'].split(',')[0].trim()
     : '';
   const protocol = forwardedProto || req.protocol || 'http';
-  const host = req.get('host');
+
+  const forwardedHostHeader = typeof req.headers['x-forwarded-host'] === 'string'
+    ? req.headers['x-forwarded-host'].split(',')[0].trim()
+    : '';
+  const forwardedHeader = typeof req.headers.forwarded === 'string'
+    ? req.headers.forwarded
+    : '';
+  const forwardedHostMatch = forwardedHeader.match(/host=([^;,\s]+)/i);
+  const forwardedHost = forwardedHostMatch ? forwardedHostMatch[1].replace(/^"|"$/g, '') : '';
+  const host = forwardedHostHeader || forwardedHost || req.get('host');
   if (!host) {
     throw new Error('Cannot determine request host for public image URL');
   }
