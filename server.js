@@ -22,6 +22,13 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const UPLOADS_RELATIVE_DIR = 'uploads';
 const UPLOADS_DIR = path.join(PUBLIC_DIR, UPLOADS_RELATIVE_DIR);
 const UPLOAD_FILE_CLEANUP_DELAY_MS = 5 * 60 * 1000;
+const FRONTEND_ACCESS_CONTROL_ENABLED = process.env.FRONTEND_ACCESS_CONTROL_ENABLED === '1' || process.env.FRONTEND_ACCESS_CONTROL_ENABLED === 'true';
+const FRONTEND_ACCESS_KEY = typeof process.env.FRONTEND_ACCESS_KEY === 'string' ? process.env.FRONTEND_ACCESS_KEY.trim() : '';
+const ACCESS_COOKIE_NAME = 'access_auth';
+const ACCESS_AUTH_WINDOW_MS = Number.parseInt(process.env.ACCESS_AUTH_WINDOW_MS || '300000', 10);
+const ACCESS_AUTH_MAX_ATTEMPTS = Number.parseInt(process.env.ACCESS_AUTH_MAX_ATTEMPTS || '8', 10);
+const ACCESS_AUTH_LOCK_MS = Number.parseInt(process.env.ACCESS_AUTH_LOCK_MS || '900000', 10);
+const ACCESS_COOKIE_SECRET = process.env.ACCESS_COOKIE_SECRET || `${process.pid}-${Date.now()}`;
 const MIME_EXTENSION_MAP = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',
@@ -760,6 +767,97 @@ function createRateLimiter({ windowMs, max, keyGenerator }) {
   };
 }
 
+function getClientIp(req) {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function parseCookies(req) {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader || typeof cookieHeader !== 'string') return {};
+  return cookieHeader.split(';').reduce((acc, item) => {
+    const [rawKey, ...rest] = item.split('=');
+    const key = rawKey ? rawKey.trim() : '';
+    if (!key) return acc;
+    acc[key] = decodeURIComponent(rest.join('=').trim());
+    return acc;
+  }, {});
+}
+
+function buildAccessCookieValue() {
+  return crypto
+    .createHmac('sha256', ACCESS_COOKIE_SECRET)
+    .update(`frontend-access:${FRONTEND_ACCESS_KEY}`)
+    .digest('hex');
+}
+
+function isAccessAuthorized(req) {
+  if (!FRONTEND_ACCESS_CONTROL_ENABLED) return true;
+  if (!FRONTEND_ACCESS_KEY) return true;
+  const cookies = parseCookies(req);
+  return cookies[ACCESS_COOKIE_NAME] === buildAccessCookieValue();
+}
+
+function setAccessCookie(res) {
+  const maxAge = 7 * 24 * 60 * 60;
+  const secureAttr = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${ACCESS_COOKIE_NAME}=${buildAccessCookieValue()}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureAttr}`);
+}
+
+function clearAccessCookie(res) {
+  const secureAttr = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${ACCESS_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureAttr}`);
+}
+
+const accessAuthHits = new Map();
+
+function checkAccessAuthThrottle(req) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const current = accessAuthHits.get(ip);
+  if (!current) {
+    const initial = { count: 0, resetAt: now + ACCESS_AUTH_WINDOW_MS, lockUntil: 0 };
+    accessAuthHits.set(ip, initial);
+    return { blocked: false, state: initial };
+  }
+  if (current.lockUntil && current.lockUntil > now) {
+    return { blocked: true, retryAfterSec: Math.ceil((current.lockUntil - now) / 1000), state: current };
+  }
+  if (current.resetAt <= now) {
+    current.count = 0;
+    current.resetAt = now + ACCESS_AUTH_WINDOW_MS;
+    current.lockUntil = 0;
+  }
+  return { blocked: false, state: current };
+}
+
+function markAccessAuthFailure(req) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const current = accessAuthHits.get(ip) || { count: 0, resetAt: now + ACCESS_AUTH_WINDOW_MS, lockUntil: 0 };
+  if (current.resetAt <= now) {
+    current.count = 0;
+    current.resetAt = now + ACCESS_AUTH_WINDOW_MS;
+    current.lockUntil = 0;
+  }
+  current.count += 1;
+  if (current.count >= ACCESS_AUTH_MAX_ATTEMPTS) {
+    current.lockUntil = now + ACCESS_AUTH_LOCK_MS;
+    current.count = 0;
+    current.resetAt = now + ACCESS_AUTH_WINDOW_MS;
+  }
+  accessAuthHits.set(ip, current);
+  return current;
+}
+
+function clearAccessAuthFailure(req) {
+  const ip = getClientIp(req);
+  accessAuthHits.delete(ip);
+}
+
 // 中间件
 const corsOriginsEnv = process.env.CORS_ORIGIN;
 const corsOrigins = corsOriginsEnv
@@ -782,6 +880,74 @@ if (Number.isFinite(apiRateLimitWindowMs) && Number.isFinite(apiRateLimitMax) &&
 }
 
 app.use(express.json({ limit: '50mb' })); // 增加 body 限制,因为 base64 图片 会很大
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/unlock', (req, res) => {
+  if (!FRONTEND_ACCESS_CONTROL_ENABLED || !FRONTEND_ACCESS_KEY || isAccessAuthorized(req)) {
+    return res.redirect('/');
+  }
+  return res.status(200).send(`<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>访问验证</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;background:#f4f6f8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.card{background:#fff;padding:24px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);width:min(92vw,360px)}input{width:100%;padding:10px;border:1px solid #d0d7de;border-radius:8px;margin:10px 0 14px}button{width:100%;padding:10px;border:0;border-radius:8px;background:#1677ff;color:#fff;cursor:pointer}.msg{color:#d1242f;font-size:13px;min-height:20px}</style></head>
+<body><form class="card" id="unlockForm"><h3 style="margin:0 0 6px">访问验证</h3><div style="font-size:13px;color:#57606a">请输入前端访问密钥</div><input type="password" name="accessKey" autocomplete="current-password" required /><div class="msg" id="msg"></div><button type="submit">验证并进入</button></form>
+<script>
+const form=document.getElementById('unlockForm');
+const msg=document.getElementById('msg');
+form.addEventListener('submit',async(e)=>{e.preventDefault();msg.textContent='';
+const fd=new FormData(form);
+const body=new URLSearchParams();body.set('accessKey',fd.get('accessKey')||'');
+try{
+  const res=await fetch('/api/access-auth',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+  const data=await res.json().catch(()=>({error:'验证失败'}));
+  if(!res.ok){msg.textContent=data.error||'验证失败';return;}
+  window.location.href='/';
+}catch(err){msg.textContent='网络错误，请重试';}
+});
+</script></body></html>`);
+});
+
+app.post('/api/access-auth', (req, res) => {
+  if (!FRONTEND_ACCESS_CONTROL_ENABLED || !FRONTEND_ACCESS_KEY) {
+    return res.json({ ok: true, enabled: false });
+  }
+  const throttle = checkAccessAuthThrottle(req);
+  if (throttle.blocked) {
+    res.setHeader('Retry-After', String(throttle.retryAfterSec));
+    return res.status(429).json({ error: `尝试次数过多，请 ${throttle.retryAfterSec} 秒后再试` });
+  }
+  const input = typeof req.body?.accessKey === 'string' ? req.body.accessKey.trim() : '';
+  if (!input || input !== FRONTEND_ACCESS_KEY) {
+    const state = markAccessAuthFailure(req);
+    const now = Date.now();
+    if (state.lockUntil && state.lockUntil > now) {
+      const retryAfterSec = Math.ceil((state.lockUntil - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSec));
+      return res.status(429).json({ error: `尝试次数过多，请 ${retryAfterSec} 秒后再试` });
+    }
+    return res.status(401).json({ error: '访问密钥错误' });
+  }
+  clearAccessAuthFailure(req);
+  setAccessCookie(res);
+  return res.json({ ok: true });
+});
+
+app.post('/api/access-logout', (req, res) => {
+  clearAccessCookie(res);
+  return res.json({ ok: true });
+});
+
+app.use((req, res, next) => {
+  if (!FRONTEND_ACCESS_CONTROL_ENABLED || !FRONTEND_ACCESS_KEY) return next();
+  if (req.path === '/unlock' || req.path === '/api/access-auth' || req.path === '/api/access-logout') return next();
+  if (req.path.startsWith(`/${UPLOADS_RELATIVE_DIR}/`)) return next();
+  if (isAccessAuthorized(req)) return next();
+
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ error: 'Unauthorized: 需要访问密钥' });
+  }
+  return res.redirect('/unlock');
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 // 首页路由
