@@ -422,6 +422,7 @@ async function generateWithVolcengine({
   scale,
   usePreLlm,
   seed,
+  resolution,
 }) {
   if (!credentials?.accessKey || !credentials?.secretKey) {
     throw new Error('Volcengine credentials are required. Use AK:SK or VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
@@ -474,6 +475,9 @@ async function generateWithVolcengine({
     submitBody.size = size;
   }
   if (typeof scale === 'number' && Number.isFinite(scale)) submitBody.scale = scale;
+  if (typeof resolution === 'string' && (resolution === '4k' || resolution === '8k')) {
+    submitBody.resolution = resolution;
+  }
   if (watermark === true) {
     submitBody.logo_info = JSON.stringify({ add_logo: true, position: 0, language: 0, opacity: 1 });
   }
@@ -1081,6 +1085,9 @@ app.post('/api/image-to-image', (req, res, next) => {
   const watermark = params.watermark || false;
   const hasImageStrength = params.image_strength !== undefined;
   const imageStrength = hasImageStrength ? params.image_strength : 0.5; // 参考图强度
+  const upscaleResolution = typeof params.upscale_resolution === 'string' ? params.upscale_resolution : undefined;
+  const upscaleScale = params.upscale_scale;
+  const inpaintingSeed = params.inpainting_seed;
 
   try {
     const negativeErr = validateStringMaxLen('negative_prompt', negativePrompt, 4000);
@@ -1176,8 +1183,11 @@ app.post('/api/image-to-image', (req, res, next) => {
       const volcengineScale = selectedModel === 'jimeng_seedream46_cvtob'
         ? Math.max(1, Math.min(100, Math.round(imageStrength * 100)))
         : (selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob'
-          ? Math.max(0, Math.min(100, Math.round(imageStrength * 100)))
+          ? Math.max(0, Math.min(100, Number.isFinite(upscaleScale) ? Math.round(upscaleScale) : Math.round(imageStrength * 100)))
           : (selectedModel === 'jimeng_i2i_v30' ? imageStrength : undefined));
+      const volcengineSeed = selectedModel === 'jimeng_image2image_dream_inpaint'
+        ? (Number.isInteger(inpaintingSeed) ? inpaintingSeed : seed)
+        : seed;
       const volcengineImageUrls = await generateWithVolcengine({
         credentials: volcengineCredentials,
         model: selectedModel,
@@ -1190,7 +1200,8 @@ app.post('/api/image-to-image', (req, res, next) => {
         imageUrls: parsedImageUrls,
         scale: volcengineScale,
         usePreLlm: promptExtend,
-        seed,
+        seed: volcengineSeed,
+        resolution: selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob' ? upscaleResolution : undefined,
       });
       if (uploadedImageMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedImageMeta.filePath);

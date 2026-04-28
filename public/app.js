@@ -49,6 +49,13 @@ const volcengineWatermarkToggle = document.getElementById('volcengineWatermarkTo
 const imageStrength = document.getElementById('imageStrength');
 const strengthValue = document.getElementById('strengthValue');
 const image2imageParams = document.getElementById('image2imageParams');
+const imageStrengthGroup = document.getElementById('imageStrengthGroup');
+const upscaleParamsGroup = document.getElementById('upscaleParamsGroup');
+const inpaintingParamsGroup = document.getElementById('inpaintingParamsGroup');
+const upscaleResolution = document.getElementById('upscaleResolution');
+const upscaleScale = document.getElementById('upscaleScale');
+const upscaleScaleValue = document.getElementById('upscaleScaleValue');
+const inpaintingSeed = document.getElementById('inpaintingSeed');
 
 // 图生图相关元素
 const apiKeyInputI2I = document.getElementById('apiKeyInputI2I');
@@ -418,10 +425,25 @@ function getActiveProvider() {
 
 function updateVolcengineUiState() {
   const isVolcengine = getActiveProvider() === 'volcengine';
+  const i2iModel = modelSelectI2I ? modelSelectI2I.value : '';
+  const isSpecialVolcI2I = currentMode === 'image2image' && isVolcengine
+    && (i2iModel === 'jimeng-upscale' || i2iModel === 'jimeng-inpainting');
   if (genericSizeGroup) genericSizeGroup.classList.toggle('d-none', isVolcengine);
   if (genericSeedGroup) genericSeedGroup.classList.toggle('d-none', isVolcengine);
-  if (volcengineParams) volcengineParams.classList.toggle('d-none', !isVolcengine);
+  if (volcengineParams) volcengineParams.classList.toggle('d-none', !isVolcengine || isSpecialVolcI2I);
   if (volcengineWatermarkGroup) volcengineWatermarkGroup.classList.toggle('d-none', !isVolcengine);
+}
+
+function updateI2ISpecialParamState() {
+  const provider = providerSelectI2I ? providerSelectI2I.value : '';
+  const model = modelSelectI2I ? modelSelectI2I.value : '';
+  const isVolcengine = provider === 'volcengine';
+  const isUpscale = isVolcengine && model === 'jimeng-upscale';
+  const isInpainting = isVolcengine && model === 'jimeng-inpainting';
+
+  if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting);
+  if (upscaleParamsGroup) upscaleParamsGroup.classList.toggle('d-none', !isUpscale);
+  if (inpaintingParamsGroup) inpaintingParamsGroup.classList.toggle('d-none', !isInpainting);
 }
 
 // 从 localStorage 恢复用户设置
@@ -444,12 +466,19 @@ if (localStorage.getItem('watermark') !== null) {
 updateTextProviderState();
 updateImageProviderState();
 updateVolcengineUiState();
+updateI2ISpecialParamState();
 
 // 切换事件
 providerSelect.addEventListener('change', updateTextProviderState);
-providerSelectI2I.addEventListener('change', updateImageProviderState);
+providerSelectI2I.addEventListener('change', () => {
+  updateImageProviderState();
+  updateI2ISpecialParamState();
+});
 providerSelect.addEventListener('change', updateVolcengineUiState);
-providerSelectI2I.addEventListener('change', updateVolcengineUiState);
+providerSelectI2I.addEventListener('change', () => {
+  updateVolcengineUiState();
+  updateI2ISpecialParamState();
+});
 
 modelSelect.addEventListener('change', () => {
   const provider = providerSelect.value;
@@ -462,6 +491,8 @@ modelSelectI2I.addEventListener('change', () => {
   updateSizeOptionsI2I();
   localStorage.setItem(getModelStorageKey('image2image', provider), modelSelectI2I.value);
   setImageApiKeyMeta(provider);
+  updateVolcengineUiState();
+  updateI2ISpecialParamState();
 });
 
 // 保存参数偏好到 localStorage
@@ -768,6 +799,11 @@ if (imageStrength) {
     strengthValue.textContent = imageStrength.value;
   });
 }
+if (upscaleScale) {
+  upscaleScale.addEventListener('input', () => {
+    if (upscaleScaleValue) upscaleScaleValue.textContent = upscaleScale.value;
+  });
+}
 
 // 图片上传功能
 uploadArea.addEventListener('click', () => {
@@ -988,6 +1024,14 @@ generateBtnI2I.addEventListener('click', async () => {
     ? (volcengineWatermarkToggle ? volcengineWatermarkToggle.checked : false)
     : watermarkToggle.checked;
   const imageStrengthVal = parseFloat(imageStrength.value);
+  const upscaleResolutionVal = upscaleResolution ? upscaleResolution.value : '4k';
+  const upscaleScaleVal = upscaleScale ? parseInt(upscaleScale.value, 10) : 50;
+  const inpaintingSeedVal = inpaintingSeed && inpaintingSeed.value !== ''
+    ? parseInt(inpaintingSeed.value, 10)
+    : undefined;
+  const modelSpecificSeed = provider === 'volcengine' && model === 'jimeng-inpainting'
+    ? inpaintingSeedVal
+    : seed;
 
   if (provider !== 'volcengine' && !uploadedImageFile) {
     showAlert('请上传参考图片');
@@ -1068,11 +1112,14 @@ generateBtnI2I.addEventListener('click', async () => {
     size,
     width: provider === 'volcengine' ? volcengineWidthVal : undefined,
     height: provider === 'volcengine' ? volcengineHeightVal : undefined,
-    seed,
+    seed: modelSpecificSeed,
     negative_prompt: negativePromptVal,
     prompt_extend: promptExtendVal,
     watermark: watermarkVal,
     image_strength: imageStrengthVal,
+    upscale_resolution: provider === 'volcengine' && model === 'jimeng-upscale' ? upscaleResolutionVal : undefined,
+    upscale_scale: provider === 'volcengine' && model === 'jimeng-upscale' ? upscaleScaleVal : undefined,
+    inpainting_seed: provider === 'volcengine' && model === 'jimeng-inpainting' ? inpaintingSeedVal : undefined,
   }));
 
   try {

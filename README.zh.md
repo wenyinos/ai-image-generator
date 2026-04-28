@@ -160,6 +160,15 @@ PUBLIC_BASE_URL=https://image.example.com
   - `image_urls` 必须且仅支持 1 张
   - 若传 `width/height`，单边范围需在 `512 ~ 2016`
   - `scale` 取值范围 `0 ~ 1`
+- `jimeng_i2i_seed3_tilesr_cvtob`（智能超清）：
+  - 仅支持 1 张输入图
+  - 专属参数：
+    - `resolution`：`4k` 或 `8k`
+    - `scale`：`0 ~ 100`
+- `jimeng_image2image_dream_inpaint`（交互编辑 inpainting）：
+  - 需 2 张输入图（原图 + mask）
+  - 支持专属 `seed`（`-1` 为随机）
+  - 前端已提供独立的第二本地上传位用于 Mask 图
 
 ## Nginx 反向代理建议
 

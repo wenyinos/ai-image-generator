@@ -165,6 +165,15 @@ If your app resolves host to `localhost` or private network, Volcengine will fai
   - requires **exactly 1** `image_urls` item
   - `width/height` valid range is `512 ~ 2016` (when both are set)
   - `scale` range is `0 ~ 1`
+- `jimeng_i2i_seed3_tilesr_cvtob` (upscale):
+  - requires **exactly 1** input image
+  - dedicated params:
+    - `resolution`: `4k` or `8k`
+    - `scale`: `0 ~ 100`
+- `jimeng_image2image_dream_inpaint` (inpainting):
+  - requires **exactly 2** input images (origin + mask)
+  - supports dedicated `seed` (`-1` for random)
+  - in UI, this model uses a dedicated second local upload slot for mask
 
 ## Nginx Reverse Proxy (Recommended)
 
