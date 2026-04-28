@@ -49,6 +49,25 @@ A production-oriented AI image generation web app with **text-to-image** and **i
   - `VOLCENGINE_SECRET_KEY`
   - optional `VOLCENGINE_SESSION_TOKEN`
 
+## Supported Jimeng Models
+
+### Text-to-Image (Volcengine)
+
+| UI Model ID | Upstream `req_key` | Notes |
+|---|---|---|
+| `jimeng-3.0` | `jimeng_t2i_v30` | Jimeng text-to-image 3.0 |
+| `jimeng-3.1` | `jimeng_t2i_v31` | Jimeng text-to-image 3.1 |
+| `jimeng-4.0` | `jimeng_t2i_v40` | Jimeng image generation 4.0 |
+| `jimeng-4.6` | `jimeng_seedream46_cvtob` | Jimeng image generation 4.6 |
+
+### Image-to-Image (Volcengine)
+
+| UI Model ID | Upstream `req_key` | Notes |
+|---|---|---|
+| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | Jimeng image-to-image 3.0 (exactly 1 input image URL) |
+| `jimeng-4.0` | `jimeng_t2i_v40` | Multi-reference image edit/generation |
+| `jimeng-4.6` | `jimeng_seedream46_cvtob` | Multi-reference image edit/generation |
+
 ## Quick Start
 
 ### 1. Prerequisites
@@ -103,6 +122,9 @@ Volcengine request tuning:
 - `VOLCENGINE_HOST` (default `visual.volcengineapi.com`)
 - `VOLCENGINE_REGION` (default `cn-north-1`)
 - `VOLCENGINE_SERVICE` (default `cv`)
+- `VOLCENGINE_JIMENG_30_REQ_KEY` (default `jimeng_t2i_v30`)
+- `VOLCENGINE_JIMENG_31_REQ_KEY` (default `jimeng_t2i_v31`)
+- `VOLCENGINE_JIMENG_I2I_30_REQ_KEY` (default `jimeng_i2i_v30`)
 - `VOLCENGINE_JIMENG_40_REQ_KEY` (default `jimeng_t2i_v40`)
 - `VOLCENGINE_JIMENG_46_REQ_KEY` (default `jimeng_seedream46_cvtob`)
 - `VOLCENGINE_MAX_POLL_ATTEMPTS` (default `90`)
@@ -131,6 +153,18 @@ PUBLIC_BASE_URL=https://image.example.com
 ```
 
 If your app resolves host to `localhost` or private network, Volcengine will fail to fetch the image.
+
+### Jimeng model-specific rules (implemented)
+
+- `jimeng_t2i_v30` / `jimeng_t2i_v31` (text-to-image):
+  - supports `seed = -1` (random)
+  - supports `use_pre_llm` (mapped from UI `prompt_extend`)
+  - if `width/height` is set, ratio should be `1:3 ~ 3:1`, and area should be `512*512 ~ 2048*2048`
+  - backend avoids sending `size` for these two models
+- `jimeng_i2i_v30` (image-to-image):
+  - requires **exactly 1** `image_urls` item
+  - `width/height` valid range is `512 ~ 2016` (when both are set)
+  - `scale` range is `0 ~ 1`
 
 ## Nginx Reverse Proxy (Recommended)
 

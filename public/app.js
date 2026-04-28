@@ -141,6 +141,8 @@ const MODELS_T2I = {
   ],
   volcengine: [
     { group: '🌋 即梦AI', options: [
+      { value: 'jimeng-3.0', label: '即梦AI-文生图3.0' },
+      { value: 'jimeng-3.1', label: '即梦AI-文生图3.1' },
       { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
       { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
     ] },
@@ -164,6 +166,7 @@ const MODELS_I2I = {
   ],
   volcengine: [
     { group: '🌋 即梦AI', options: [
+      { value: 'jimeng-3.0-i2i', label: '即梦AI-图生图3.0' },
       { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
       { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
     ] },
@@ -197,6 +200,9 @@ const MODEL_SIZES = {
   // Gemini
   [GEMINI_MODEL_ID]: [],
   // Volcengine Jimeng
+  'jimeng-3.0': ['1K', '2K', '4K'],
+  'jimeng-3.1': ['1K', '2K', '4K'],
+  'jimeng-3.0-i2i': ['1K', '2K', '4K'],
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
 };
@@ -206,6 +212,7 @@ const MODEL_SIZES_I2I = {
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   [GEMINI_MODEL_ID]: [],
+  'jimeng-3.0-i2i': ['1K', '2K', '4K'],
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
 };
@@ -502,14 +509,22 @@ function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   }
 }
 
-function validateVolcengineSizeAndRatio({ size, width, height }) {
-  const minArea = 1024 * 1024;
-  const maxArea = 4096 * 4096;
-  const minRatio = 1 / 16;
-  const maxRatio = 16;
+function validateVolcengineSizeAndRatio({ model, size, width, height }) {
+  const isJimengT2IV3 = model === 'jimeng-3.0' || model === 'jimeng-3.1';
+  const isJimengI2IV30 = model === 'jimeng-3.0-i2i';
+
+  const minArea = isJimengT2IV3 ? 512 * 512 : 1024 * 1024;
+  const maxArea = isJimengT2IV3 ? 2048 * 2048 : 4096 * 4096;
+  const minRatio = isJimengT2IV3 ? (1 / 3) : (1 / 16);
+  const maxRatio = isJimengT2IV3 ? 3 : 16;
+  const minEdge = isJimengI2IV30 ? 512 : 1;
+  const maxEdge = isJimengI2IV30 ? 2016 : Number.MAX_SAFE_INTEGER;
 
   if (size !== undefined) {
     if (!Number.isInteger(size) || size < minArea || size > maxArea) {
+      if (isJimengT2IV3) {
+        return `${model} 参数错误：size 需在 262144 到 4194304 之间。`;
+      }
       return 'Volcengine 参数错误：size 需在 1048576 到 16777216 之间。';
     }
   }
@@ -524,12 +539,24 @@ function validateVolcengineSizeAndRatio({ size, width, height }) {
     if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
       return 'Volcengine 参数错误：width/height 必须为正整数。';
     }
+    if ((width < minEdge || width > maxEdge) || (height < minEdge || height > maxEdge)) {
+      if (isJimengI2IV30) {
+        return 'jimeng-3.0-i2i 参数错误：width/height 需在 512 到 2016 之间。';
+      }
+      return 'Volcengine 参数错误：width/height 超出允许范围。';
+    }
     const area = width * height;
     if (area < minArea || area > maxArea) {
+      if (isJimengT2IV3) {
+        return `${model} 参数错误：width*height 需在 262144 到 4194304 之间。`;
+      }
       return 'Volcengine 参数错误：width*height 需在 1048576 到 16777216 之间。';
     }
     const ratio = width / height;
     if (ratio < minRatio || ratio > maxRatio) {
+      if (isJimengT2IV3) {
+        return `${model} 参数错误：宽高比需在 1/3 到 3 之间。`;
+      }
       return 'Volcengine 参数错误：宽高比需在 1/16 到 16 之间。';
     }
   }
@@ -539,7 +566,10 @@ function validateVolcengineSizeAndRatio({ size, width, height }) {
 
 function validateVolcengineImageUrls(urls, model) {
   if (!Array.isArray(urls)) return null;
-  const maxCount = model === 'jimeng-4.0' ? 10 : 14;
+  if (model === 'jimeng-3.0-i2i' && urls.length !== 1) {
+    return 'Volcengine 参数错误：jimeng-3.0-i2i 必须且仅支持 1 张参考图 URL。';
+  }
+  const maxCount = (model === 'jimeng-4.0' || model === 'jimeng-3.0-i2i') ? 10 : 14;
   if (urls.length > maxCount) {
     return `Volcengine 参数错误：${model} 最多支持 ${maxCount} 张参考图 URL。`;
   }
@@ -604,6 +634,7 @@ generateBtn.addEventListener('click', async () => {
 
   if (provider === 'volcengine') {
     const volcParamErr = validateVolcengineSizeAndRatio({
+      model,
       size,
       width: volcengineWidthVal,
       height: volcengineHeightVal,
@@ -894,6 +925,7 @@ generateBtnI2I.addEventListener('click', async () => {
       .map(v => v.trim())
       .filter(v => /^https?:\/\//i.test(v));
     const volcParamErr = validateVolcengineSizeAndRatio({
+      model,
       size,
       width: volcengineWidthVal,
       height: volcengineHeightVal,
@@ -910,6 +942,7 @@ generateBtnI2I.addEventListener('click', async () => {
     formData.append('imageUrls', JSON.stringify(urls));
   } else if (provider === 'volcengine') {
     const volcParamErr = validateVolcengineSizeAndRatio({
+      model,
       size,
       width: volcengineWidthVal,
       height: volcengineHeightVal,

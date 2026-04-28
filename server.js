@@ -68,6 +68,9 @@ const VOLCENGINE_REGION = process.env.VOLCENGINE_REGION || 'cn-north-1';
 const VOLCENGINE_SERVICE = process.env.VOLCENGINE_SERVICE || 'cv';
 const VOLCENGINE_VERSION = '2022-08-31';
 const VOLCENGINE_MODEL_ALIASES = {
+  'jimeng-3.0': process.env.VOLCENGINE_JIMENG_30_REQ_KEY || 'jimeng_t2i_v30',
+  'jimeng-3.1': process.env.VOLCENGINE_JIMENG_31_REQ_KEY || 'jimeng_t2i_v31',
+  'jimeng-3.0-i2i': process.env.VOLCENGINE_JIMENG_I2I_30_REQ_KEY || 'jimeng_i2i_v30',
   'jimeng-4.0': process.env.VOLCENGINE_JIMENG_40_REQ_KEY || 'jimeng_t2i_v40',
   'jimeng-4.6': process.env.VOLCENGINE_JIMENG_46_REQ_KEY || 'jimeng_seedream46_cvtob',
 };
@@ -415,12 +418,16 @@ async function generateWithVolcengine({
   watermark,
   imageUrls,
   scale,
+  usePreLlm,
+  seed,
 }) {
   if (!credentials?.accessKey || !credentials?.secretKey) {
     throw new Error('Volcengine credentials are required. Use AK:SK or VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
   }
 
   const reqKey = normalizeVolcengineModel(model);
+  const isJimengT2IV3 = reqKey === 'jimeng_t2i_v30' || reqKey === 'jimeng_t2i_v31';
+  const isJimengI2IV30 = reqKey === 'jimeng_i2i_v30';
   const promptText = (prompt && prompt.trim()) ? prompt.trim() : 'Generate an image';
   const maxAttempts = Number.parseInt(process.env.VOLCENGINE_MAX_POLL_ATTEMPTS || '90', 10);
   const pollIntervalMs = Number.parseInt(process.env.VOLCENGINE_POLL_INTERVAL_MS || '2000', 10);
@@ -430,11 +437,26 @@ async function generateWithVolcengine({
     req_key: reqKey,
     prompt: promptText,
   };
-  if (Array.isArray(imageUrls) && imageUrls.length) submitBody.image_urls = imageUrls;
+  if (isJimengI2IV30) {
+    if (!Array.isArray(imageUrls) || imageUrls.length !== 1) {
+      throw new Error('jimeng_i2i_v30 requires exactly 1 image URL');
+    }
+    submitBody.image_urls = [imageUrls[0]];
+  } else if (Array.isArray(imageUrls) && imageUrls.length) {
+    submitBody.image_urls = imageUrls;
+  }
+
+  if (Number.isInteger(seed)) {
+    submitBody.seed = seed;
+  }
+  if (isJimengT2IV3 && typeof usePreLlm === 'boolean') {
+    submitBody.use_pre_llm = usePreLlm;
+  }
+
   if (Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0) {
     submitBody.width = width;
     submitBody.height = height;
-  } else if (typeof size === 'number' && Number.isFinite(size)) {
+  } else if (!isJimengT2IV3 && typeof size === 'number' && Number.isFinite(size)) {
     submitBody.size = size;
   }
   if (typeof scale === 'number' && Number.isFinite(scale)) submitBody.scale = scale;
@@ -775,7 +797,8 @@ app.post('/api/generate-image', async (req, res) => {
   if (nErr) return res.status(400).json({ error: nErr });
 
   if (seed !== undefined) {
-    const seedErr = validateIntegerInRange('seed', seed, 0, 2147483647);
+    const seedMin = selectedProvider === 'volcengine' ? -1 : 0;
+    const seedErr = validateIntegerInRange('seed', seed, seedMin, 2147483647);
     if (seedErr) return res.status(400).json({ error: seedErr });
   }
 
@@ -807,6 +830,8 @@ app.post('/api/generate-image', async (req, res) => {
         width,
         height,
         watermark,
+        usePreLlm: promptExtend,
+        seed,
       });
       return res.json({ imageUrls });
     }
@@ -1049,7 +1074,8 @@ app.post('/api/image-to-image', (req, res, next) => {
     if (nErr) return res.status(400).json({ error: nErr });
 
     if (seed !== undefined) {
-      const seedErr = validateIntegerInRange('seed', seed, 0, 2147483647);
+      const seedMin = selectedProvider === 'volcengine' ? -1 : 0;
+      const seedErr = validateIntegerInRange('seed', seed, seedMin, 2147483647);
       if (seedErr) return res.status(400).json({ error: seedErr });
     }
 
@@ -1104,6 +1130,8 @@ app.post('/api/image-to-image', (req, res, next) => {
         scale: selectedModel === 'jimeng_seedream46_cvtob'
           ? Math.max(1, Math.min(100, Math.round(imageStrength * 100)))
           : imageStrength,
+        usePreLlm: promptExtend,
+        seed,
       });
       if (uploadedImageMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedImageMeta.filePath);

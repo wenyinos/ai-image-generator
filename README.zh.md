@@ -45,6 +45,25 @@
   - `VOLCENGINE_SECRET_KEY`
   - `VOLCENGINE_SESSION_TOKEN`（可选）
 
+## 支持的即梦模型
+
+### 文生图（Volcengine）
+
+| 前端模型 ID | 上游 `req_key` | 说明 |
+|---|---|---|
+| `jimeng-3.0` | `jimeng_t2i_v30` | 即梦文生图 3.0 |
+| `jimeng-3.1` | `jimeng_t2i_v31` | 即梦文生图 3.1 |
+| `jimeng-4.0` | `jimeng_t2i_v40` | 即梦图片生成 4.0 |
+| `jimeng-4.6` | `jimeng_seedream46_cvtob` | 即梦图片生成 4.6 |
+
+### 图生图（Volcengine）
+
+| 前端模型 ID | 上游 `req_key` | 说明 |
+|---|---|---|
+| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | 即梦图生图 3.0（仅支持 1 张参考图 URL） |
+| `jimeng-4.0` | `jimeng_t2i_v40` | 多参考图编辑/生成 |
+| `jimeng-4.6` | `jimeng_seedream46_cvtob` | 多参考图编辑/生成 |
+
 ## 快速开始
 
 ### 1. 环境准备
@@ -99,6 +118,9 @@ Provider 凭证：
 - `VOLCENGINE_HOST`（默认 `visual.volcengineapi.com`）
 - `VOLCENGINE_REGION`（默认 `cn-north-1`）
 - `VOLCENGINE_SERVICE`（默认 `cv`）
+- `VOLCENGINE_JIMENG_30_REQ_KEY`（默认 `jimeng_t2i_v30`）
+- `VOLCENGINE_JIMENG_31_REQ_KEY`（默认 `jimeng_t2i_v31`）
+- `VOLCENGINE_JIMENG_I2I_30_REQ_KEY`（默认 `jimeng_i2i_v30`）
 - `VOLCENGINE_JIMENG_40_REQ_KEY`（默认 `jimeng_t2i_v40`）
 - `VOLCENGINE_JIMENG_46_REQ_KEY`（默认 `jimeng_seedream46_cvtob`）
 - `VOLCENGINE_MAX_POLL_ATTEMPTS`（默认 `90`）
@@ -126,6 +148,18 @@ PUBLIC_BASE_URL=https://image.example.com
 ```
 
 若服务端识别到 `localhost` 或内网地址，火山无法回源拉图，会直接失败。
+
+### 即梦模型差异规则（已实现）
+
+- `jimeng_t2i_v30` / `jimeng_t2i_v31`（文生图）：
+  - 支持 `seed = -1`（随机）
+  - 支持 `use_pre_llm`（由前端 `prompt_extend` 映射）
+  - 若传 `width/height`，宽高比需在 `1:3 ~ 3:1`，面积需在 `512*512 ~ 2048*2048`
+  - 后端对这两个模型不传 `size`
+- `jimeng_i2i_v30`（图生图）：
+  - `image_urls` 必须且仅支持 1 张
+  - 若传 `width/height`，单边范围需在 `512 ~ 2016`
+  - `scale` 取值范围 `0 ~ 1`
 
 ## Nginx 反向代理建议
 
