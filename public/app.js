@@ -934,10 +934,13 @@ generateBtnI2I.addEventListener('click', async () => {
       showAlert(volcParamErr);
       return;
     }
-    const volcUrlErr = validateVolcengineImageUrls(urls, model);
-    if (volcUrlErr) {
-      showAlert(volcUrlErr);
-      return;
+    const shouldValidateUrls = urls.length > 0 || !uploadedImageFile;
+    if (shouldValidateUrls) {
+      const volcUrlErr = validateVolcengineImageUrls(urls, model);
+      if (volcUrlErr) {
+        showAlert(volcUrlErr);
+        return;
+      }
     }
     formData.append('imageUrls', JSON.stringify(urls));
   } else if (provider === 'volcengine') {
