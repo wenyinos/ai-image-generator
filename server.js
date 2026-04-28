@@ -22,6 +22,10 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const UPLOADS_RELATIVE_DIR = 'uploads';
 const UPLOADS_DIR = path.join(PUBLIC_DIR, UPLOADS_RELATIVE_DIR);
 const UPLOAD_FILE_CLEANUP_DELAY_MS = 5 * 60 * 1000;
+const UPLOAD_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const DASHSCOPE_MAX_POLL_ATTEMPTS = 90;
+const DASHSCOPE_POLL_INTERVAL_MS = 2000;
+const I2I_REQUEST_TIMEOUT_MS = 300000; // 5 分钟
 const FRONTEND_ACCESS_CONTROL_ENABLED = process.env.FRONTEND_ACCESS_CONTROL_ENABLED === '1' || process.env.FRONTEND_ACCESS_CONTROL_ENABLED === 'true';
 const FRONTEND_ACCESS_KEY = typeof process.env.FRONTEND_ACCESS_KEY === 'string' ? process.env.FRONTEND_ACCESS_KEY.trim() : '';
 const ACCESS_COOKIE_NAME = 'access_auth';
@@ -42,7 +46,7 @@ const MIME_EXTENSION_MAP = {
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 限制
+  limits: { fileSize: UPLOAD_FILE_MAX_SIZE },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -323,7 +327,7 @@ async function generateWithGemini({
 
     const generatedUrls = extractGeminiImageDataUrls(geminiData);
     if (!generatedUrls.length) {
-      throw new Error('Gemini response does not include image data');
+      throw new Error('Gemini 响应中未包含图片数据');
     }
     imageUrls.push(generatedUrls[0]);
   }
@@ -436,7 +440,7 @@ async function generateWithVolcengine({
   loraWeight,
 }) {
   if (!credentials?.accessKey || !credentials?.secretKey) {
-    throw new Error('Volcengine credentials are required. Use AK:SK or VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
+    throw new Error('Volcengine 凭证缺失，请使用 AK:SK 格式或配置 VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
   }
 
   const reqKey = normalizeVolcengineModel(model);
@@ -556,7 +560,7 @@ async function generateWithVolcengine({
     throw new Error(submitData?.message || submitData?.ResponseMetadata?.Error?.Message || `Volcengine submit failed (${submitRes.status})`);
   }
   const taskId = submitData?.data?.task_id;
-  if (!taskId) throw new Error('Volcengine submit success but task_id is missing');
+  if (!taskId) throw new Error('Volcengine 提交成功但未返回 task_id');
 
   const getResultQuery = { Action: 'CVSync2AsyncGetResult', Version: VOLCENGINE_VERSION };
   const getResultBody = {
@@ -595,7 +599,7 @@ async function generateWithVolcengine({
     const status = resultData?.data?.status;
     if (status === 'done') {
       const urls = extractVolcengineImageUrls(resultData);
-      if (!urls.length) throw new Error('Volcengine task done but no image_urls returned');
+      if (!urls.length) throw new Error('Volcengine 任务完成但未返回 image_urls');
       return urls;
     }
 
@@ -604,19 +608,19 @@ async function generateWithVolcengine({
     }
   }
 
-  throw new Error('Volcengine task polling timed out');
+  throw new Error('Volcengine 任务轮询超时');
 }
 
 function validateIntegerInRange(name, value, min, max) {
-  if (!Number.isInteger(value)) return `${name} must be an integer`;
-  if (value < min || value > max) return `${name} must be between ${min} and ${max}`;
+  if (!Number.isInteger(value)) return `${name} 必须是整数`;
+  if (value < min || value > max) return `${name} 必须在 ${min} 到 ${max} 之间`;
   return null;
 }
 
 function validateStringMaxLen(name, value, maxLen) {
   if (value === undefined || value === null) return null;
-  if (typeof value !== 'string') return `${name} must be a string`;
-  if (value.length > maxLen) return `${name} is too long (max ${maxLen})`;
+  if (typeof value !== 'string') return `${name} 必须是字符串`;
+  if (value.length > maxLen) return `${name} 过长（最大 ${maxLen} 个字符）`;
   return null;
 }
 
@@ -624,7 +628,7 @@ function validateSize(model, size) {
   const allowed = ALLOWED_SIZES_BY_MODEL[model];
   if (!allowed) return null;
   if (!allowed.includes(size)) {
-    return `Invalid size for model ${model}. Allowed: ${allowed.join(', ')}`;
+    return `模型 ${model} 不支持尺寸 ${size}，允许的尺寸：${allowed.join(', ')}`;
   }
   return null;
 }
@@ -670,7 +674,7 @@ function buildBaseUrl(req) {
   if (configuredBaseUrl) {
     const normalizedBaseUrl = configuredBaseUrl.replace(/\/+$/, '');
     if (!/^https?:\/\//i.test(normalizedBaseUrl)) {
-      throw new Error('PUBLIC_BASE_URL must start with http:// or https://');
+      throw new Error('PUBLIC_BASE_URL 必须以 http:// 或 https:// 开头');
     }
     return normalizedBaseUrl;
   }
@@ -690,7 +694,7 @@ function buildBaseUrl(req) {
   const forwardedHost = forwardedHostMatch ? forwardedHostMatch[1].replace(/^"|"$/g, '') : '';
   const host = forwardedHostHeader || forwardedHost || req.get('host');
   if (!host) {
-    throw new Error('Cannot determine request host for public image URL');
+    throw new Error('无法确定请求主机以构建公网图片 URL');
   }
   const hostName = host.split(':')[0].toLowerCase();
   const isPrivateHost = (
@@ -744,7 +748,7 @@ function scheduleUploadedFileCleanup(filePath, delayMs = UPLOAD_FILE_CLEANUP_DEL
 
 function createRateLimiter({ windowMs, max, keyGenerator }) {
   const hits = new Map();
-  const getKey = typeof keyGenerator === 'function' ? keyGenerator : (req) => req.ip;
+  const getKey = typeof keyGenerator === 'function' ? keyGenerator : (req) => getClientIp(req);
 
   // 定期清理过期条目，防止内存泄漏
   const cleanupInterval = setInterval(() => {
@@ -769,7 +773,7 @@ function createRateLimiter({ windowMs, max, keyGenerator }) {
     if (current.count > max) {
       const retryAfter = Math.ceil((current.resetAt - now) / 1000);
       res.setHeader('Retry-After', String(retryAfter));
-      return res.status(429).json({ error: 'Too many requests, please try again later' });
+      return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
     }
 
     return next();
@@ -1025,7 +1029,7 @@ app.use((req, res, next) => {
   if (isAccessAuthorized(req)) return next();
 
   if (req.path.startsWith('/api/')) {
-    return res.status(401).json({ error: 'Unauthorized: 需要访问密钥' });
+    return res.status(401).json({ error: '未授权：需要访问密钥' });
   }
   return res.redirect('/unlock');
 });
@@ -1050,16 +1054,16 @@ app.post('/api/generate-image', async (req, res) => {
     ? parseVolcengineCredentials(apiKey)
     : null;
   if (selectedProvider === 'volcengine' && apiKey && !volcengineCredentials) {
-    return res.status(400).json({ error: 'Volcengine credentials format invalid. Please use AK:SK' });
+    return res.status(400).json({ error: 'Volcengine 凭证格式无效，请使用 AK:SK 格式' });
   }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-    return res.status(400).json({ error: 'Prompt is required' });
+    return res.status(400).json({ error: '请输入图片描述' });
   }
   const resolvedApiKey = selectedProvider === 'volcengine'
     ? (volcengineCredentials ? `${volcengineCredentials.accessKey}:***` : '')
     : getApiKey(selectedProvider, apiKey);
-  if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
+  if (!resolvedApiKey) return res.status(400).json({ error: '请提供 API Key' });
 
   const selectedModel = selectedProvider === 'gemini'
     ? normalizeGeminiModel(model)
@@ -1165,7 +1169,7 @@ app.post('/api/generate-image', async (req, res) => {
 
       const imageUrls = extractImageUrls(syncData, selectedModel);
       if (!imageUrls.length) {
-        return res.status(500).json({ error: 'No image URL in response' });
+        return res.status(500).json({ error: '响应中未包含图片 URL' });
       }
 
       return res.json({ imageUrls });
@@ -1207,16 +1211,15 @@ app.post('/api/generate-image', async (req, res) => {
 
     const taskId = submitData.output?.task_id;
     if (!taskId) {
-      return res.status(500).json({ error: 'No task_id returned' });
+      return res.status(500).json({ error: '未返回 task_id' });
     }
 
     // 轮询任务状态
     let imageUrls = null;
     let attempts = 0;
-    const maxAttempts = 90;
 
-    while (attempts < maxAttempts) {
-      await new Promise(r => setTimeout(r, 2000));
+    while (attempts < DASHSCOPE_MAX_POLL_ATTEMPTS) {
+      await new Promise(r => setTimeout(r, DASHSCOPE_POLL_INTERVAL_MS));
 
       const pollRes = await fetchWithTimeout(
         `${BASE_URL}${TASK_ENDPOINT}${taskId}`,
@@ -1238,13 +1241,13 @@ app.post('/api/generate-image', async (req, res) => {
     }
 
     if (!imageUrls || !imageUrls.length) {
-      return res.status(504).json({ error: 'Task timeout' });
+      return res.status(504).json({ error: '任务超时' });
     }
 
     res.json({ imageUrls });
   } catch (err) {
     if (err?.name === 'AbortError' || err?.message?.includes('abort')) {
-      return res.status(504).json({ error: 'Upstream request timeout' });
+      return res.status(504).json({ error: '上游请求超时' });
     }
     res.status(500).json({ error: err.message });
   }
@@ -1272,34 +1275,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 120000) {
   }
 }
 
-// 启动时清理残留的过期上传文件
-async function cleanupStaleUploads() {
-  try {
-    const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true }).catch(() => []);
-    const now = Date.now();
-    for (const entry of entries) {
-      if (!entry.isFile()) continue;
-      const filePath = path.join(UPLOADS_DIR, entry.name);
-      try {
-        const stat = await fs.stat(filePath);
-        if (now - stat.mtimeMs > UPLOAD_FILE_CLEANUP_DELAY_MS) {
-          await fs.unlink(filePath);
-          if (DEBUG) console.log(`🧹 启动清理残留文件: ${filePath}`);
-        }
-      } catch (e) {
-        if (e?.code !== 'ENOENT') console.error(`清理文件失败: ${filePath}`, e);
-      }
-    }
-  } catch (e) {
-    // uploads 目录不存在时忽略
-  }
-}
-
-app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  await cleanupStaleUploads();
-});
-
 /**
  * 图生图接口
  * POST /api/image-to-image
@@ -1323,7 +1298,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     ? parseVolcengineCredentials(apiKey)
     : null;
   if (selectedProvider === 'volcengine' && apiKey && !volcengineCredentials) {
-    return res.status(400).json({ error: 'Volcengine credentials format invalid. Please use AK:SK' });
+    return res.status(400).json({ error: 'Volcengine 凭证格式无效，请使用 AK:SK 格式' });
   }
   const imageFile = req.files?.image?.[0];
   const imageMaskFile = req.files?.imageMask?.[0];
@@ -1334,7 +1309,7 @@ app.post('/api/image-to-image', (req, res, next) => {
   const resolvedApiKey = selectedProvider === 'volcengine'
     ? (volcengineCredentials ? `${volcengineCredentials.accessKey}:***` : '')
     : getApiKey(selectedProvider, apiKey);
-  if (!resolvedApiKey) return res.status(400).json({ error: 'API Key is required' });
+  if (!resolvedApiKey) return res.status(400).json({ error: '请提供 API Key' });
 
   const selectedModel = selectedProvider === 'gemini'
     ? normalizeGeminiModel(model)
@@ -1412,7 +1387,7 @@ app.post('/api/image-to-image', (req, res, next) => {
 
     if (imageStrength !== undefined) {
       if (typeof imageStrength !== 'number' || Number.isNaN(imageStrength) || imageStrength < 0 || imageStrength > 1) {
-        return res.status(400).json({ error: 'image_strength must be a number between 0 and 1' });
+        return res.status(400).json({ error: 'image_strength 必须是 0 到 1 之间的数字' });
       }
     }
 
@@ -1574,7 +1549,7 @@ app.post('/api/image-to-image', (req, res, next) => {
         },
         body: JSON.stringify(requestBody),
       },
-      300000 // 5 分钟超时,适合大图片和慢网络
+      I2I_REQUEST_TIMEOUT_MS
     );
 
     const syncData = await syncRes.json();
@@ -1592,7 +1567,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     if (!syncImageUrls.length) {
       console.error('❌ API返回中未找到图片URL');
       if (DEBUG) console.log('API响应:', JSON.stringify(syncData, null, 2));
-      return res.status(500).json({ error: 'No image URL in response' });
+      return res.status(500).json({ error: '响应中未包含图片 URL' });
     }
 
     if (DEBUG) console.log('✅ 生成图片数量:', syncImageUrls.length);
@@ -1624,4 +1599,37 @@ app.post('/api/image-to-image', (req, res, next) => {
     // 其他错误
     res.status(500).json({ error: `生成失败: ${err.message}` });
   }
+});
+
+// 健康检查端点
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', version: '1.0.0' });
+});
+
+// 启动时清理残留的过期上传文件
+async function cleanupStaleUploads() {
+  try {
+    const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true }).catch(() => []);
+    const now = Date.now();
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const filePath = path.join(UPLOADS_DIR, entry.name);
+      try {
+        const stat = await fs.stat(filePath);
+        if (now - stat.mtimeMs > UPLOAD_FILE_CLEANUP_DELAY_MS) {
+          await fs.unlink(filePath);
+          if (DEBUG) console.log(`🧹 启动清理残留文件: ${filePath}`);
+        }
+      } catch (e) {
+        if (e?.code !== 'ENOENT') console.error(`清理文件失败: ${filePath}`, e);
+      }
+    }
+  } catch (e) {
+    // uploads 目录不存在时忽略
+  }
+}
+
+app.listen(PORT, async () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  await cleanupStaleUploads();
 });

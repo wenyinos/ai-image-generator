@@ -565,14 +565,31 @@ bindPasswordToggle(toggleVolcengineAkBtnI2I, volcengineAkInputI2I);
 bindPasswordToggle(toggleVolcengineSkBtnI2I, volcengineSkInputI2I);
 
 /**
+ * 转义 HTML 特殊字符，防止 XSS
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  if (typeof str !== 'string') return String(str);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * 显示提示信息
  * @param {string} message - 提示内容
  * @param {string} type - 提示类型 (danger/success)
  */
 function showAlert(message, type = 'danger') {
+  const safeType = escapeHtml(type);
+  const safeMessage = escapeHtml(message);
   alertContainer.innerHTML = `
-    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-      ${message}
+    <div class="alert alert-${safeType} alert-dismissible fade show" role="alert">
+      ${safeMessage}
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   `;
