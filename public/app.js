@@ -398,6 +398,8 @@ function updateSizeOptions() {
 }
 
 function updateSizeOptionsI2I() {
+  // imageSize is shared between T2I and I2I modes; tab switch handlers call
+  // the appropriate update function, so this intentionally overwrites options.
   const model = modelSelectI2I.value;
   const sizes = MODEL_SIZES_I2I[model] || [];
   imageSize.innerHTML = '<option value="auto">自动 (模型默认)</option>';
@@ -495,13 +497,12 @@ updateVolcengineUiState();
 updateI2ISpecialParamState();
 
 // 切换事件
-providerSelect.addEventListener('change', updateTextProviderState);
+providerSelect.addEventListener('change', () => {
+  updateTextProviderState();
+  updateVolcengineUiState();
+});
 providerSelectI2I.addEventListener('change', () => {
   updateImageProviderState();
-  updateI2ISpecialParamState();
-});
-providerSelect.addEventListener('change', updateVolcengineUiState);
-providerSelectI2I.addEventListener('change', () => {
   updateVolcengineUiState();
   updateI2ISpecialParamState();
 });
@@ -690,12 +691,20 @@ function displayImages(imageUrls) {
     img.src = url;
     img.alt = `生成的图片 ${index + 1}`;
     img.loading = 'lazy';
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated-image-${index + 1}.png`;
+      a.click();
+    });
     resultImages.appendChild(img);
   });
 
   resultImages.classList.remove('d-none');
   downloadBtn.classList.remove('d-none');
   downloadLink.href = imageUrls[0];
+  downloadLink.download = 'generated-image-1.png';
 }
 
 // 生成按钮点击事件
@@ -877,16 +886,13 @@ uploadArea.addEventListener('drop', (e) => {
  */
 function compressImage(file, maxWidth = 1536, quality = 0.8) {
   return new Promise((resolve, reject) => {
-    // 如果图片尺寸已经小于 maxWidth,直接返回
     const img = new Image();
     img.onload = () => {
-      // 不需要压缩
       if (img.width <= maxWidth && file.size < 2 * 1024 * 1024) {
         resolve(file);
         return;
       }
 
-      // 计算新尺寸
       let newWidth = img.width;
       let newHeight = img.height;
       if (img.width > maxWidth) {
@@ -894,28 +900,31 @@ function compressImage(file, maxWidth = 1536, quality = 0.8) {
         newHeight = (img.height / img.width) * maxWidth;
       }
 
-      // 使用 canvas 压缩
       const canvas = document.createElement('canvas');
       canvas.width = newWidth;
       canvas.height = newHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
-      // 转换为 blob
+      // PNG 保留透明通道，JPEG 压缩体积更小
+      const isPng = file.type === 'image/png';
+      const outputType = isPng ? 'image/png' : 'image/jpeg';
+
       canvas.toBlob(
         (blob) => {
           if (!blob) {
             reject(new Error('图片压缩失败'));
             return;
           }
-          // 创建新的 File 对象
-          const compressedFile = new File([blob], file.name, {
-            type: 'image/jpeg',
+          const ext = isPng ? '.png' : '.jpg';
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          const compressedFile = new File([blob], `${baseName}${ext}`, {
+            type: outputType,
             lastModified: Date.now(),
           });
           resolve(compressedFile);
         },
-        'image/jpeg',
+        outputType,
         quality
       );
     };
@@ -1113,6 +1122,11 @@ generateBtnI2I.addEventListener('click', async () => {
 
   if (provider === 'volcengine' && ((volcAkI2I && !volcSkI2I) || (!volcAkI2I && volcSkI2I))) {
     showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
+    return;
+  }
+
+  if (provider === 'volcengine' && (Number.isNaN(imageStrengthVal) || imageStrengthVal < 0 || imageStrengthVal > 1)) {
+    showAlert('参考图强度需在 0 到 1 之间。');
     return;
   }
 

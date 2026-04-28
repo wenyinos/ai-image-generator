@@ -746,6 +746,15 @@ function createRateLimiter({ windowMs, max, keyGenerator }) {
   const hits = new Map();
   const getKey = typeof keyGenerator === 'function' ? keyGenerator : (req) => req.ip;
 
+  // 定期清理过期条目，防止内存泄漏
+  const cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of hits) {
+      if (entry.resetAt <= now) hits.delete(key);
+    }
+  }, windowMs * 2);
+  if (typeof cleanupInterval.unref === 'function') cleanupInterval.unref();
+
   return (req, res, next) => {
     const now = Date.now();
     const key = getKey(req);
@@ -813,6 +822,15 @@ function clearAccessCookie(res) {
 }
 
 const accessAuthHits = new Map();
+
+// 定期清理过期的访问控制记录
+const accessAuthCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of accessAuthHits) {
+    if (entry.lockUntil <= now && entry.resetAt <= now) accessAuthHits.delete(key);
+  }
+}, ACCESS_AUTH_WINDOW_MS * 2);
+if (typeof accessAuthCleanupInterval.unref === 'function') accessAuthCleanupInterval.unref();
 
 function checkAccessAuthThrottle(req) {
   const now = Date.now();
@@ -1254,8 +1272,32 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 120000) {
   }
 }
 
-app.listen(PORT, () => {
+// 启动时清理残留的过期上传文件
+async function cleanupStaleUploads() {
+  try {
+    const entries = await fs.readdir(UPLOADS_DIR, { withFileTypes: true }).catch(() => []);
+    const now = Date.now();
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const filePath = path.join(UPLOADS_DIR, entry.name);
+      try {
+        const stat = await fs.stat(filePath);
+        if (now - stat.mtimeMs > UPLOAD_FILE_CLEANUP_DELAY_MS) {
+          await fs.unlink(filePath);
+          if (DEBUG) console.log(`🧹 启动清理残留文件: ${filePath}`);
+        }
+      } catch (e) {
+        if (e?.code !== 'ENOENT') console.error(`清理文件失败: ${filePath}`, e);
+      }
+    }
+  } catch (e) {
+    // uploads 目录不存在时忽略
+  }
+}
+
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  await cleanupStaleUploads();
 });
 
 /**
