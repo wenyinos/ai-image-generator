@@ -939,12 +939,15 @@ const input=document.getElementById('accessKeyInput');
 const errMsg=document.getElementById('errMsg');
 const submitBtn=document.getElementById('submitBtn');
 const toggleBtn=document.getElementById('toggleKeyBtn');
-const SS_KEY='access_auth_key';
+var LS_KEY='access_auth_key';
+var TTL_MS=72*60*60*1000;
 function showError(msg){errMsg.textContent=msg;errMsg.classList.remove('d-none');}
 function hideError(){errMsg.textContent='';errMsg.classList.add('d-none');}
 function setLoading(loading){submitBtn.disabled=loading;submitBtn.innerHTML=loading?'<span class="spinner-border spinner-border-sm me-2"></span>验证中...':'<i class="bi bi-box-arrow-in-right"></i> 验证并进入';}
-toggleBtn.addEventListener('click',function(){const isPassword=input.type==='password';input.type=isPassword?'text':'password';this.querySelector('i').className=isPassword?'bi bi-eye-slash':'bi bi-eye';});
-var saved=sessionStorage.getItem(SS_KEY);
+function loadSavedKey(){try{var raw=localStorage.getItem(LS_KEY);if(!raw)return'';var obj=JSON.parse(raw);if(!obj||!obj.key||!obj.ts)return'';if(Date.now()-obj.ts>TTL_MS){localStorage.removeItem(LS_KEY);return'';}return obj.key;}catch(e){return'';}}
+function saveKey(key){try{localStorage.setItem(LS_KEY,JSON.stringify({key:key,ts:Date.now()}));}catch(e){}}
+toggleBtn.addEventListener('click',function(){var isPassword=input.type==='password';input.type=isPassword?'text':'password';this.querySelector('i').className=isPassword?'bi bi-eye-slash':'bi bi-eye';});
+var saved=loadSavedKey();
 if(saved){input.value=saved;}
 form.addEventListener('submit',async function(e){
 e.preventDefault();hideError();
@@ -956,7 +959,7 @@ var body=new URLSearchParams();body.set('accessKey',key);
 var res=await fetch('/api/access-auth',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
 var data=await res.json().catch(function(){return{error:'验证失败'};});
 if(!res.ok){showError(data.error||'验证失败');setLoading(false);return;}
-sessionStorage.setItem(SS_KEY,key);
+saveKey(key);
 window.location.href='/';
 }catch(err){showError('网络错误，请重试');setLoading(false);}
 });
