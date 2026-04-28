@@ -1,5 +1,9 @@
 # AI 图片生成器
 
+<p align="right">
+  <a href="README.md">🇬🇧 English</a>
+</p>
+
 一个面向生产部署的 AI 图片生成 Web 应用，支持**文生图**与**图生图**。
 
 - 前端：Bootstrap 5 + 原生 JavaScript
@@ -29,6 +33,7 @@
 - Provider 级超时配置
 - 内存型 API 频率限制
 - CORS 白名单
+- 可选前端访问密钥保护（防暴力破解 + Cookie 会话）
 
 ## Provider 与凭证
 
@@ -45,6 +50,29 @@
   - `VOLCENGINE_SECRET_KEY`
   - `VOLCENGINE_SESSION_TOKEN`（可选）
 
+## 支持的 DashScope / Gemini 模型
+
+| 模型 | 类型 | 同步/异步 | 说明 |
+|---|---|---|---|
+| `wan2.7-image-pro` | wan | 同步 | 最强，支持 4K |
+| `wan2.7-image` | wan | 同步 | 快速，支持 2K |
+| `wan2.6-image` | wan | 同步 | 图文混排 |
+| `wan2.6-t2i` | wan | 异步 | 标准 |
+| `wan2.5-t2i-preview` | wan | 异步 | 预览 |
+| `wan2.2-t2i-flash` | wan | 异步 | 极速 |
+| `wan2.2-t2i-plus` | wan | 异步 | 增强 |
+| `wanx2.1-t2i-turbo` | wan | 异步 | |
+| `wanx2.1-t2i-plus` | wan | 异步 | |
+| `wanx2.0-t2i-turbo` | wan | 异步 | |
+| `qwen-image-2.0-pro` | qwen | 同步 | 擅长文字渲染 |
+| `qwen-image-2.0` | qwen | 同步 | |
+| `qwen-image-max` | qwen | 异步 | 真实感 |
+| `qwen-image-plus` | qwen | 异步 | 艺术风格 |
+| `qwen-image` | qwen | 异步 | |
+| `z-image-turbo` | wan | 异步 | 轻量快速 |
+
+**Gemini**：`gemini-2.5-flash-image`（默认）
+
 ## 支持的即梦模型
 
 ### 文生图（Volcengine）
@@ -60,7 +88,11 @@
 
 | 前端模型 ID | 上游 `req_key` | 说明 |
 |---|---|---|
-| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | 即梦图生图 3.0（仅支持 1 张参考图 URL） |
+| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | 即梦图生图 3.0（仅支持 1 张参考图） |
+| `jimeng-material-product` | `jimeng_i2i_extract_tiled_images` | 素材提取 — 商品提取（仅支持 1 张参考图） |
+| `jimeng-material-pod` | `i2i_material_extraction` | 素材提取 — POD 按需定制（仅支持 1 张参考图） |
+| `jimeng-upscale` | `jimeng_i2i_seed3_tilesr_cvtob` | 智能超清（仅支持 1 张参考图） |
+| `jimeng-inpainting` | `jimeng_image2image_dream_inpaint` | 交互编辑 inpainting（需 2 张：原图 + mask） |
 | `jimeng-4.0` | `jimeng_t2i_v40` | 多参考图编辑/生成 |
 | `jimeng-4.6` | `jimeng_seedream46_cvtob` | 多参考图编辑/生成 |
 
@@ -121,10 +153,22 @@ Provider 凭证：
 - `VOLCENGINE_JIMENG_30_REQ_KEY`（默认 `jimeng_t2i_v30`）
 - `VOLCENGINE_JIMENG_31_REQ_KEY`（默认 `jimeng_t2i_v31`）
 - `VOLCENGINE_JIMENG_I2I_30_REQ_KEY`（默认 `jimeng_i2i_v30`）
+- `VOLCENGINE_JIMENG_MATERIAL_POD_REQ_KEY`（默认 `i2i_material_extraction`）
+- `VOLCENGINE_JIMENG_MATERIAL_PRODUCT_REQ_KEY`（默认 `jimeng_i2i_extract_tiled_images`）
+- `VOLCENGINE_JIMENG_UPSCALE_REQ_KEY`（默认 `jimeng_i2i_seed3_tilesr_cvtob`）
+- `VOLCENGINE_JIMENG_INPAINT_REQ_KEY`（默认 `jimeng_image2image_dream_inpaint`）
 - `VOLCENGINE_JIMENG_40_REQ_KEY`（默认 `jimeng_t2i_v40`）
 - `VOLCENGINE_JIMENG_46_REQ_KEY`（默认 `jimeng_seedream46_cvtob`）
 - `VOLCENGINE_MAX_POLL_ATTEMPTS`（默认 `90`）
 - `VOLCENGINE_POLL_INTERVAL_MS`（默认 `2000`）
+
+前端访问控制：
+- `FRONTEND_ACCESS_CONTROL_ENABLED`（`true/1` 开启）
+- `FRONTEND_ACCESS_KEY`（访问密钥）
+- `ACCESS_AUTH_WINDOW_MS`（防爆破窗口，默认 `300000`）
+- `ACCESS_AUTH_MAX_ATTEMPTS`（最大失败次数，默认 `8`）
+- `ACCESS_AUTH_LOCK_MS`（锁定时长，默认 `900000`）
+- `ACCESS_COOKIE_SECRET`（Cookie 签名密钥，不配则每次重启变化）
 
 网关：
 - `CORS_ORIGIN`（逗号分隔白名单）
@@ -169,6 +213,23 @@ PUBLIC_BASE_URL=https://image.example.com
   - 需 2 张输入图（原图 + mask）
   - 支持专属 `seed`（`-1` 为随机）
   - 前端已提供独立的第二本地上传位用于 Mask 图
+- `i2i_material_extraction` / `jimeng_i2i_extract_tiled_images`（素材提取）：
+  - 仅支持 1 张输入图
+  - 需要 `image_edit_prompt` 参数
+  - `jimeng_i2i_extract_tiled_images` 额外支持 `lora_weight`
+
+## 前端访问控制（可选）
+
+开启后，访客需先输入访问密钥才能使用。含暴力破解防护。
+
+```env
+FRONTEND_ACCESS_CONTROL_ENABLED=true
+FRONTEND_ACCESS_KEY=your_secret_key
+```
+
+- 未认证用户自动跳转 `/unlock`
+- `/uploads/*` 保持公开（火山引擎需回源拉图）
+- 基于 Cookie 的会话（HttpOnly，7 天有效）
 
 ## Nginx 反向代理建议
 
@@ -253,18 +314,29 @@ server {
 
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
+  - 响应: `{ imageUrls: string[] }`
 - `POST /api/image-to-image`
-  - multipart：`image` + 字段（`prompt`、`apiKey`、`model`、`provider`、`parameters`、可选 `imageUrls`）
+  - multipart：`image` + 可选 `imageMask` + 字段（`prompt`、`apiKey`、`model`、`provider`、`parameters`、可选 `imageUrls`）
+  - 响应: `{ imageUrls: string[] }`
+- `POST /api/access-auth`
+  - body: `{ accessKey }`（form 编码）
+  - 成功后返回 auth cookie
+- `POST /api/access-logout`
+  - 清除 auth cookie
+- `GET /unlock`
+  - 访问密钥输入页（前端访问控制开启时显示）
 
 ## 项目结构
 
 ```text
 ai-image-generator/
-├── server.js
+├── server.js              # Express 后端（全部 API 逻辑）
 ├── public/
-│   ├── index.html
-│   ├── app.js
-│   └── favicon/
+│   ├── index.html         # 单页 UI
+│   ├── app.js             # 前端逻辑（原生 JS）
+│   ├── favicon/
+│   └── uploads/           # 火山图生图临时文件（自动清理）
+├── jimeng-md/             # 即梦 API 参考文档（中文）
 ├── .env.example
 ├── README.md
 └── README.zh.md

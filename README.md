@@ -33,6 +33,7 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 - Request timeout controls per provider
 - Basic in-memory API rate limit
 - CORS allowlist support
+- Optional frontend access control with key-based auth, brute-force throttle, and cookie session
 
 ## Providers & Credentials
 
@@ -49,6 +50,29 @@ A production-oriented AI image generation web app with **text-to-image** and **i
   - `VOLCENGINE_SECRET_KEY`
   - optional `VOLCENGINE_SESSION_TOKEN`
 
+## Supported DashScope Models
+
+| Model | Type | Sync/Async | Notes |
+|---|---|---|---|
+| `wan2.7-image-pro` | wan | sync | Supports up to 4K |
+| `wan2.7-image` | wan | sync | Fast, up to 2K |
+| `wan2.6-image` | wan | sync | Image+text mixed |
+| `wan2.6-t2i` | wan | async | Standard |
+| `wan2.5-t2i-preview` | wan | async | Preview |
+| `wan2.2-t2i-flash` | wan | async | Fast |
+| `wan2.2-t2i-plus` | wan | async | Enhanced |
+| `wanx2.1-t2i-turbo` | wan | async | |
+| `wanx2.1-t2i-plus` | wan | async | |
+| `wanx2.0-t2i-turbo` | wan | async | |
+| `qwen-image-2.0-pro` | qwen | sync | Text rendering |
+| `qwen-image-2.0` | qwen | sync | |
+| `qwen-image-max` | qwen | async | Realistic |
+| `qwen-image-plus` | qwen | async | Artistic |
+| `qwen-image` | qwen | async | |
+| `z-image-turbo` | wan | async | Lightweight |
+
+**Gemini**: `gemini-2.5-flash-image` (default)
+
 ## Supported Jimeng Models
 
 ### Text-to-Image (Volcengine)
@@ -64,7 +88,11 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 
 | UI Model ID | Upstream `req_key` | Notes |
 |---|---|---|
-| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | Jimeng image-to-image 3.0 (exactly 1 input image URL) |
+| `jimeng-3.0-i2i` | `jimeng_i2i_v30` | Image-to-image 3.0 (exactly 1 input image) |
+| `jimeng-material-product` | `jimeng_i2i_extract_tiled_images` | Material extraction — product (exactly 1 input image) |
+| `jimeng-material-pod` | `i2i_material_extraction` | Material extraction — POD (exactly 1 input image) |
+| `jimeng-upscale` | `jimeng_i2i_seed3_tilesr_cvtob` | Upscale / super-resolution (exactly 1 input image) |
+| `jimeng-inpainting` | `jimeng_image2image_dream_inpaint` | Interactive inpainting (exactly 2 images: origin + mask) |
 | `jimeng-4.0` | `jimeng_t2i_v40` | Multi-reference image edit/generation |
 | `jimeng-4.6` | `jimeng_seedream46_cvtob` | Multi-reference image edit/generation |
 
@@ -125,10 +153,22 @@ Volcengine request tuning:
 - `VOLCENGINE_JIMENG_30_REQ_KEY` (default `jimeng_t2i_v30`)
 - `VOLCENGINE_JIMENG_31_REQ_KEY` (default `jimeng_t2i_v31`)
 - `VOLCENGINE_JIMENG_I2I_30_REQ_KEY` (default `jimeng_i2i_v30`)
+- `VOLCENGINE_JIMENG_MATERIAL_POD_REQ_KEY` (default `i2i_material_extraction`)
+- `VOLCENGINE_JIMENG_MATERIAL_PRODUCT_REQ_KEY` (default `jimeng_i2i_extract_tiled_images`)
+- `VOLCENGINE_JIMENG_UPSCALE_REQ_KEY` (default `jimeng_i2i_seed3_tilesr_cvtob`)
+- `VOLCENGINE_JIMENG_INPAINT_REQ_KEY` (default `jimeng_image2image_dream_inpaint`)
 - `VOLCENGINE_JIMENG_40_REQ_KEY` (default `jimeng_t2i_v40`)
 - `VOLCENGINE_JIMENG_46_REQ_KEY` (default `jimeng_seedream46_cvtob`)
 - `VOLCENGINE_MAX_POLL_ATTEMPTS` (default `90`)
 - `VOLCENGINE_POLL_INTERVAL_MS` (default `2000`)
+
+Frontend access control:
+- `FRONTEND_ACCESS_CONTROL_ENABLED` (`true/1` to enable)
+- `FRONTEND_ACCESS_KEY` (the key users must enter)
+- `ACCESS_AUTH_WINDOW_MS` (throttle window, default `300000`)
+- `ACCESS_AUTH_MAX_ATTEMPTS` (max failures before lock, default `8`)
+- `ACCESS_AUTH_LOCK_MS` (lock duration, default `900000`)
+- `ACCESS_COOKIE_SECRET` (HMAC signing key for auth cookie; auto-generated if unset)
 
 Gateway:
 - `CORS_ORIGIN` (comma-separated allowlist)
@@ -174,6 +214,23 @@ If your app resolves host to `localhost` or private network, Volcengine will fai
   - requires **exactly 2** input images (origin + mask)
   - supports dedicated `seed` (`-1` for random)
   - in UI, this model uses a dedicated second local upload slot for mask
+- `i2i_material_extraction` / `jimeng_i2i_extract_tiled_images` (material extraction):
+  - requires **exactly 1** input image
+  - requires `image_edit_prompt` parameter
+  - `jimeng_i2i_extract_tiled_images` also accepts `lora_weight`
+
+## Frontend Access Control (Optional)
+
+When enabled, visitors must enter an access key before reaching the app. Brute-force protection locks the IP after repeated failures.
+
+```env
+FRONTEND_ACCESS_CONTROL_ENABLED=true
+FRONTEND_ACCESS_KEY=your_secret_key
+```
+
+- Unauthenticated users are redirected to `/unlock`
+- `/uploads/*` stays public (Volcengine needs to fetch images)
+- Auth is cookie-based (HttpOnly, 7-day expiry)
 
 ## Nginx Reverse Proxy (Recommended)
 
@@ -258,18 +315,29 @@ server {
 
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
+  - response: `{ imageUrls: string[] }`
 - `POST /api/image-to-image`
-  - multipart: `image` + fields (`prompt`, `apiKey`, `model`, `provider`, `parameters`, optional `imageUrls`)
+  - multipart: `image` + optional `imageMask` + fields (`prompt`, `apiKey`, `model`, `provider`, `parameters`, optional `imageUrls`)
+  - response: `{ imageUrls: string[] }`
+- `POST /api/access-auth`
+  - body: `{ accessKey }` (form-encoded)
+  - Returns auth cookie on success
+- `POST /api/access-logout`
+  - Clears auth cookie
+- `GET /unlock`
+  - Access key entry page (shown when frontend access control is enabled)
 
 ## Project Structure
 
 ```text
 ai-image-generator/
-├── server.js
+├── server.js              # Express backend (all API logic)
 ├── public/
-│   ├── index.html
-│   ├── app.js
-│   └── favicon/
+│   ├── index.html         # Single-page UI
+│   ├── app.js             # Frontend logic (vanilla JS)
+│   ├── favicon/
+│   └── uploads/           # Temp files for Volcengine i2i (auto-cleaned)
+├── jimeng-md/             # Volcengine Jimeng API reference docs (Chinese)
 ├── .env.example
 ├── README.md
 └── README.zh.md
