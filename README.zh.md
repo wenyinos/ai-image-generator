@@ -230,6 +230,7 @@ FRONTEND_ACCESS_KEY=your_secret_key
 - 未认证用户自动跳转 `/unlock`
 - `/uploads/*` 保持公开（火山引擎需回源拉图）
 - 基于 Cookie 的会话（HttpOnly，7 天有效）
+- 密钥自动保存在浏览器 localStorage（72 小时有效），72 小时内再次访问无需手动输入
 
 ## Nginx 反向代理建议
 

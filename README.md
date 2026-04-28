@@ -231,6 +231,7 @@ FRONTEND_ACCESS_KEY=your_secret_key
 - Unauthenticated users are redirected to `/unlock`
 - `/uploads/*` stays public (Volcengine needs to fetch images)
 - Auth is cookie-based (HttpOnly, 7-day expiry)
+- Key is auto-saved in browser localStorage (72-hour TTL); re-visits within 72h skip manual input
 
 ## Nginx Reverse Proxy (Recommended)
 
