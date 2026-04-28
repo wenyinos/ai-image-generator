@@ -69,6 +69,12 @@ const imageUpload = document.getElementById('imageUpload');
 const imagePreview = document.getElementById('imagePreview');
 const previewImage = document.getElementById('previewImage');
 const removeImageBtn = document.getElementById('removeImageBtn');
+const maskUploadGroup = document.getElementById('maskUploadGroup');
+const maskUploadArea = document.getElementById('maskUploadArea');
+const maskImageUpload = document.getElementById('maskImageUpload');
+const maskImagePreview = document.getElementById('maskImagePreview');
+const maskPreviewImage = document.getElementById('maskPreviewImage');
+const removeMaskImageBtn = document.getElementById('removeMaskImageBtn');
 const volcengineLocalUploadHint = document.getElementById('volcengineLocalUploadHint');
 const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
@@ -76,6 +82,7 @@ const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 // 当前模式
 let currentMode = 'text2image'; // 'text2image' 或 'image2image'
 let uploadedImageFile = null;
+let uploadedMaskFile = null;
 const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
 const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
 
@@ -167,6 +174,8 @@ const MODELS_I2I = {
   volcengine: [
     { group: '🌋 即梦AI', options: [
       { value: 'jimeng-3.0-i2i', label: '即梦AI-图生图3.0' },
+      { value: 'jimeng-upscale', label: '即梦AI-智能超清' },
+      { value: 'jimeng-inpainting', label: '即梦AI-交互编辑inpainting' },
       { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
       { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
     ] },
@@ -213,6 +222,8 @@ const MODEL_SIZES_I2I = {
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   [GEMINI_MODEL_ID]: [],
   'jimeng-3.0-i2i': ['1K', '2K', '4K'],
+  'jimeng-upscale': [],
+  'jimeng-inpainting': [],
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
 };
@@ -327,6 +338,15 @@ function setImageApiKeyMeta(provider) {
       uploadArea.classList.remove('d-none');
     }
   }
+
+  const isInpainting = provider === 'volcengine' && modelSelectI2I.value === 'jimeng-inpainting';
+  if (maskUploadGroup) maskUploadGroup.classList.toggle('d-none', !isInpainting);
+  if (!isInpainting) {
+    uploadedMaskFile = null;
+    if (maskImageUpload) maskImageUpload.value = '';
+    if (maskImagePreview) maskImagePreview.classList.add('d-none');
+    if (maskUploadArea) maskUploadArea.classList.remove('d-none');
+  }
 }
 
 function updateSizeOptions() {
@@ -432,6 +452,7 @@ modelSelectI2I.addEventListener('change', () => {
   const provider = providerSelectI2I.value;
   updateSizeOptionsI2I();
   localStorage.setItem(getModelStorageKey('image2image', provider), modelSelectI2I.value);
+  setImageApiKeyMeta(provider);
 });
 
 // 保存参数偏好到 localStorage
@@ -568,6 +589,12 @@ function validateVolcengineImageUrls(urls, model) {
   if (!Array.isArray(urls)) return null;
   if (model === 'jimeng-3.0-i2i' && urls.length !== 1) {
     return 'Volcengine 参数错误：jimeng-3.0-i2i 必须且仅支持 1 张参考图 URL。';
+  }
+  if (model === 'jimeng-upscale' && urls.length !== 1) {
+    return 'Volcengine 参数错误：jimeng-upscale 必须且仅支持 1 张参考图 URL。';
+  }
+  if (model === 'jimeng-inpainting' && urls.length !== 2) {
+    return 'Volcengine 参数错误：jimeng-inpainting 需要 2 张参考图 URL（原图+mask图）。';
   }
   const maxCount = (model === 'jimeng-4.0' || model === 'jimeng-3.0-i2i') ? 10 : 14;
   if (urls.length > maxCount) {
@@ -854,6 +881,31 @@ async function handleImageFile(file) {
   }
 }
 
+async function handleMaskImageFile(file) {
+  if (file.size > 10 * 1024 * 1024) {
+    showAlert('Mask 图片文件大小不能超过10MB');
+    return;
+  }
+
+  try {
+    if (file.size > 1 * 1024 * 1024) {
+      uploadedMaskFile = await compressImage(file, 1536, 0.8);
+    } else {
+      uploadedMaskFile = file;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      maskPreviewImage.src = e.target.result;
+      maskImagePreview.classList.remove('d-none');
+      maskUploadArea.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showAlert(`Mask 图片处理失败: ${err.message}`);
+  }
+}
+
 // 移除图片
 if (removeImageBtn) {
   removeImageBtn.addEventListener('click', () => {
@@ -861,6 +913,46 @@ if (removeImageBtn) {
     imageUpload.value = '';
     imagePreview.classList.add('d-none');
     uploadArea.classList.remove('d-none');
+  });
+}
+
+if (maskUploadArea) {
+  maskUploadArea.addEventListener('click', () => {
+    maskImageUpload.click();
+  });
+
+  maskUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    maskUploadArea.classList.add('dragover');
+  });
+
+  maskUploadArea.addEventListener('dragleave', () => {
+    maskUploadArea.classList.remove('dragover');
+  });
+
+  maskUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    maskUploadArea.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleMaskImageFile(file);
+    }
+  });
+}
+
+if (maskImageUpload) {
+  maskImageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleMaskImageFile(file);
+  });
+}
+
+if (removeMaskImageBtn) {
+  removeMaskImageBtn.addEventListener('click', () => {
+    uploadedMaskFile = null;
+    if (maskImageUpload) maskImageUpload.value = '';
+    if (maskImagePreview) maskImagePreview.classList.add('d-none');
+    if (maskUploadArea) maskUploadArea.classList.remove('d-none');
   });
 }
 
@@ -892,6 +984,10 @@ generateBtnI2I.addEventListener('click', async () => {
     showAlert('请上传参考图片');
     return;
   }
+  if (provider === 'volcengine' && model === 'jimeng-inpainting' && !uploadedMaskFile) {
+    showAlert('jimeng-inpainting 需要上传第二张 Mask 图片。');
+    return;
+  }
 
   if (provider === 'volcengine' && ((volcAkI2I && !volcSkI2I) || (!volcAkI2I && volcSkI2I))) {
     showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
@@ -915,6 +1011,9 @@ generateBtnI2I.addEventListener('click', async () => {
   formData.append('provider', provider);
   if (uploadedImageFile) {
     formData.append('image', uploadedImageFile);
+  }
+  if (provider === 'volcengine' && model === 'jimeng-inpainting' && uploadedMaskFile) {
+    formData.append('imageMask', uploadedMaskFile);
   }
   formData.append('apiKey', apiKey);
   formData.append('model', model);

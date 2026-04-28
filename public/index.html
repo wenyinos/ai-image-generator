@@ -302,6 +302,22 @@
                   </div>
                 </div>
 
+                <div class="mb-3 d-none" id="maskUploadGroup">
+                  <label class="form-label fw-semibold">Mask 图片（仅 inpainting）</label>
+                  <div class="upload-area" id="maskUploadArea">
+                    <i class="bi bi-brush fs-1 text-muted"></i>
+                    <p class="mb-0 mt-2">点击上传或拖拽 Mask 图片到这里</p>
+                    <small class="text-muted">需与原图尺寸一致，白色区域为重绘区</small>
+                    <input type="file" id="maskImageUpload" accept="image/*" style="display: none;">
+                  </div>
+                  <div id="maskImagePreview" class="text-center d-none">
+                    <img id="maskPreviewImage" class="upload-preview" alt="Mask 预览">
+                    <button class="btn btn-sm btn-outline-danger mt-2" id="removeMaskImageBtn" type="button">
+                      <i class="bi bi-trash"></i> 移除 Mask
+                    </button>
+                  </div>
+                </div>
+
                 <div class="mb-3 d-none" id="volcengineImageUrlsGroup">
                   <label for="volcengineImageUrls" class="form-label fw-semibold">参考图片 URL（可选）</label>
                   <textarea

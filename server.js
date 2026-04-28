@@ -71,6 +71,8 @@ const VOLCENGINE_MODEL_ALIASES = {
   'jimeng-3.0': process.env.VOLCENGINE_JIMENG_30_REQ_KEY || 'jimeng_t2i_v30',
   'jimeng-3.1': process.env.VOLCENGINE_JIMENG_31_REQ_KEY || 'jimeng_t2i_v31',
   'jimeng-3.0-i2i': process.env.VOLCENGINE_JIMENG_I2I_30_REQ_KEY || 'jimeng_i2i_v30',
+  'jimeng-upscale': process.env.VOLCENGINE_JIMENG_UPSCALE_REQ_KEY || 'jimeng_i2i_seed3_tilesr_cvtob',
+  'jimeng-inpainting': process.env.VOLCENGINE_JIMENG_INPAINT_REQ_KEY || 'jimeng_image2image_dream_inpaint',
   'jimeng-4.0': process.env.VOLCENGINE_JIMENG_40_REQ_KEY || 'jimeng_t2i_v40',
   'jimeng-4.6': process.env.VOLCENGINE_JIMENG_46_REQ_KEY || 'jimeng_seedream46_cvtob',
 };
@@ -428,6 +430,8 @@ async function generateWithVolcengine({
   const reqKey = normalizeVolcengineModel(model);
   const isJimengT2IV3 = reqKey === 'jimeng_t2i_v30' || reqKey === 'jimeng_t2i_v31';
   const isJimengI2IV30 = reqKey === 'jimeng_i2i_v30';
+  const isJimengUpscale = reqKey === 'jimeng_i2i_seed3_tilesr_cvtob';
+  const isJimengInpainting = reqKey === 'jimeng_image2image_dream_inpaint';
   const promptText = (prompt && prompt.trim()) ? prompt.trim() : 'Generate an image';
   const maxAttempts = Number.parseInt(process.env.VOLCENGINE_MAX_POLL_ATTEMPTS || '90', 10);
   const pollIntervalMs = Number.parseInt(process.env.VOLCENGINE_POLL_INTERVAL_MS || '2000', 10);
@@ -442,6 +446,16 @@ async function generateWithVolcengine({
       throw new Error('jimeng_i2i_v30 requires exactly 1 image URL');
     }
     submitBody.image_urls = [imageUrls[0]];
+  } else if (isJimengUpscale) {
+    if (!Array.isArray(imageUrls) || imageUrls.length !== 1) {
+      throw new Error('jimeng_i2i_seed3_tilesr_cvtob requires exactly 1 image URL');
+    }
+    submitBody.image_urls = [imageUrls[0]];
+  } else if (isJimengInpainting) {
+    if (!Array.isArray(imageUrls) || imageUrls.length !== 2) {
+      throw new Error('jimeng_image2image_dream_inpaint requires exactly 2 image URLs (origin + mask)');
+    }
+    submitBody.image_urls = [imageUrls[0], imageUrls[1]];
   } else if (Array.isArray(imageUrls) && imageUrls.length) {
     submitBody.image_urls = imageUrls;
   }
@@ -992,7 +1006,10 @@ app.listen(PORT, () => {
  * 响应: { imageUrls: string[] }
  */
 app.post('/api/image-to-image', (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'imageMask', maxCount: 1 },
+  ])(req, res, (err) => {
     if (err) {
       return handleMulterError(err, req, res, next);
     }
@@ -1007,7 +1024,8 @@ app.post('/api/image-to-image', (req, res, next) => {
   if (selectedProvider === 'volcengine' && apiKey && !volcengineCredentials) {
     return res.status(400).json({ error: 'Volcengine credentials format invalid. Please use AK:SK' });
   }
-  const imageFile = req.file;
+  const imageFile = req.files?.image?.[0];
+  const imageMaskFile = req.files?.imageMask?.[0];
 
   if (selectedProvider !== 'volcengine' && !imageFile) {
     return res.status(400).json({ error: '参考图片是必需的' });
@@ -1105,6 +1123,9 @@ app.post('/api/image-to-image', (req, res, next) => {
       const uploadedImageMeta = imageFile
         ? await saveUploadedImageAsPublicUrl(req, imageFile)
         : { publicUrl: '', filePath: '' };
+      const uploadedMaskMeta = imageMaskFile
+        ? await saveUploadedImageAsPublicUrl(req, imageMaskFile)
+        : { publicUrl: '', filePath: '' };
       let parsedImageUrls = [];
       if (imageUrls) {
         try {
@@ -1126,7 +1147,37 @@ app.post('/api/image-to-image', (req, res, next) => {
         } else {
           return res.status(400).json({ error: 'jimeng-3.0-i2i 需要且仅支持 1 张参考图（本地上传或1条HTTP URL）' });
         }
+      } else if (selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob') {
+        // 智能超清仅支持1张图
+        if (uploadedImageMeta.publicUrl) {
+          parsedImageUrls = [uploadedImageMeta.publicUrl];
+        } else if (parsedImageUrls.length > 0) {
+          parsedImageUrls = [parsedImageUrls[0]];
+        } else {
+          return res.status(400).json({ error: 'jimeng-upscale 需要且仅支持 1 张参考图（本地上传或1条HTTP URL）' });
+        }
+      } else if (selectedModel === 'jimeng_image2image_dream_inpaint') {
+        // inpainting 需要2张图：原图 + mask
+        if (uploadedImageMeta.publicUrl && uploadedMaskMeta.publicUrl) {
+          parsedImageUrls = [uploadedImageMeta.publicUrl, uploadedMaskMeta.publicUrl];
+        } else {
+          if (uploadedImageMeta.publicUrl) {
+            parsedImageUrls = [uploadedImageMeta.publicUrl, ...parsedImageUrls];
+          }
+          if (uploadedMaskMeta.publicUrl) {
+            parsedImageUrls = [parsedImageUrls[0], uploadedMaskMeta.publicUrl].filter(Boolean);
+          }
+        }
+        if (parsedImageUrls.length < 2) {
+          return res.status(400).json({ error: 'jimeng-inpainting 需要 2 张参考图（原图+mask）。请上传原图与Mask图，或补足URL。' });
+        }
+        parsedImageUrls = parsedImageUrls.slice(0, 2);
       }
+      const volcengineScale = selectedModel === 'jimeng_seedream46_cvtob'
+        ? Math.max(1, Math.min(100, Math.round(imageStrength * 100)))
+        : (selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob'
+          ? Math.max(0, Math.min(100, Math.round(imageStrength * 100)))
+          : (selectedModel === 'jimeng_i2i_v30' ? imageStrength : undefined));
       const volcengineImageUrls = await generateWithVolcengine({
         credentials: volcengineCredentials,
         model: selectedModel,
@@ -1137,14 +1188,15 @@ app.post('/api/image-to-image', (req, res, next) => {
         height,
         watermark,
         imageUrls: parsedImageUrls,
-        scale: selectedModel === 'jimeng_seedream46_cvtob'
-          ? Math.max(1, Math.min(100, Math.round(imageStrength * 100)))
-          : imageStrength,
+        scale: volcengineScale,
         usePreLlm: promptExtend,
         seed,
       });
       if (uploadedImageMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedImageMeta.filePath);
+      }
+      if (uploadedMaskMeta.filePath) {
+        scheduleUploadedFileCleanup(uploadedMaskMeta.filePath);
       }
       return res.json({ imageUrls: volcengineImageUrls });
     }
