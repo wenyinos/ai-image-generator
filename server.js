@@ -1117,6 +1117,16 @@ app.post('/api/image-to-image', (req, res, next) => {
       if (uploadedImageMeta.publicUrl) {
         parsedImageUrls.unshift(uploadedImageMeta.publicUrl);
       }
+      if (selectedModel === 'jimeng_i2i_v30') {
+        // 文档要求图生图3.0仅允许1张参考图：优先本地上传，其次远程URL首张
+        if (uploadedImageMeta.publicUrl) {
+          parsedImageUrls = [uploadedImageMeta.publicUrl];
+        } else if (parsedImageUrls.length > 0) {
+          parsedImageUrls = [parsedImageUrls[0]];
+        } else {
+          return res.status(400).json({ error: 'jimeng-3.0-i2i 需要且仅支持 1 张参考图（本地上传或1条HTTP URL）' });
+        }
+      }
       const volcengineImageUrls = await generateWithVolcengine({
         credentials: volcengineCredentials,
         model: selectedModel,
