@@ -310,8 +310,17 @@ function setImageApiKeyMeta(provider) {
 
   if (provider === 'gemini') {
     modelHintI2I.textContent = 'Gemini 图生图支持参考图+文本联合生成';
+  } else if (provider === 'volcengine') {
+    const i2iModel = modelSelectI2I.value;
+    if (i2iModel === 'jimeng-upscale') {
+      modelHintI2I.textContent = '智能超清：上传 1 张原图；可选 4K/8K，scale 越高细节增强越明显。';
+    } else if (i2iModel === 'jimeng-inpainting') {
+      modelHintI2I.textContent = '交互编辑：上传 2 张图（原图 + Mask）；Mask 白色区域为重绘区，prompt 可填“删除”或编辑指令。';
+    } else {
+      modelHintI2I.textContent = '即梦图生图：支持本地上传参考图，也支持 image_urls（HTTP/HTTPS）输入。';
+    }
   } else {
-    modelHintI2I.textContent = '图生图仅支持万相 2.6+ 图像模型';
+    modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
   }
 
   const savedKey = localStorage.getItem(getApiKeyStorageKey('image2image', provider));
