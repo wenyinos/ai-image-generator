@@ -424,6 +424,48 @@
                   <input type="number" class="form-control" id="inpaintingSeed" value="101" min="-1" max="2147483647">
                   <div class="form-text">-1 表示随机；固定正整数可复现相近结果。</div>
                 </div>
+                <div class="col-12 d-none" id="materialProductParamsGroup">
+                  <label for="materialProductEditPrompt" class="form-label">商品提取指令（必填）</label>
+                  <textarea class="form-control mb-2" id="materialProductEditPrompt" rows="2" placeholder="例如：提取主体商品，去除背景与多余元素"></textarea>
+                  <div class="row g-2">
+                    <div class="col-md-4">
+                      <label for="materialProductSeed" class="form-label">随机种子（可选）</label>
+                      <input type="number" class="form-control" id="materialProductSeed" placeholder="留空随机" min="-1" max="2147483647">
+                    </div>
+                    <div class="col-md-4">
+                      <label for="materialProductWidth" class="form-label">宽 width（可选）</label>
+                      <input type="number" class="form-control" id="materialProductWidth" placeholder="例如 1024" min="1" max="8192">
+                    </div>
+                    <div class="col-md-4">
+                      <label for="materialProductHeight" class="form-label">高 height（可选）</label>
+                      <input type="number" class="form-control" id="materialProductHeight" placeholder="例如 1024" min="1" max="8192">
+                    </div>
+                  </div>
+                  <div class="form-text">说明：上传 1 张商品图；指令写“提取主体/去背景/保留边缘”更稳定。</div>
+                </div>
+                <div class="col-12 d-none" id="materialPodParamsGroup">
+                  <label for="materialPodEditPrompt" class="form-label">POD提取指令（必填）</label>
+                  <textarea class="form-control mb-2" id="materialPodEditPrompt" rows="2" placeholder="例如：提取图案主体，边缘干净，便于印刷"></textarea>
+                  <div class="row g-2">
+                    <div class="col-md-3">
+                      <label for="materialPodSeed" class="form-label">随机种子（可选）</label>
+                      <input type="number" class="form-control" id="materialPodSeed" placeholder="留空随机" min="-1" max="2147483647">
+                    </div>
+                    <div class="col-md-3">
+                      <label for="materialPodWidth" class="form-label">宽 width（可选）</label>
+                      <input type="number" class="form-control" id="materialPodWidth" placeholder="例如 1024" min="1" max="8192">
+                    </div>
+                    <div class="col-md-3">
+                      <label for="materialPodHeight" class="form-label">高 height（可选）</label>
+                      <input type="number" class="form-control" id="materialPodHeight" placeholder="例如 1024" min="1" max="8192">
+                    </div>
+                    <div class="col-md-3">
+                      <label for="materialPodLoraWeight" class="form-label">lora_weight（可选）</label>
+                      <input type="number" class="form-control" id="materialPodLoraWeight" placeholder="例如 0.7" min="0" max="1" step="0.01">
+                    </div>
+                  </div>
+                  <div class="form-text">说明：上传 1 张图；POD 场景建议填清晰的提取目标，并按需调低/调高 lora_weight。</div>
+                </div>
               </div>
 
               <div class="collapse mt-3" id="advancedParams">

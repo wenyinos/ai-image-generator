@@ -56,6 +56,17 @@ const upscaleResolution = document.getElementById('upscaleResolution');
 const upscaleScale = document.getElementById('upscaleScale');
 const upscaleScaleValue = document.getElementById('upscaleScaleValue');
 const inpaintingSeed = document.getElementById('inpaintingSeed');
+const materialProductParamsGroup = document.getElementById('materialProductParamsGroup');
+const materialPodParamsGroup = document.getElementById('materialPodParamsGroup');
+const materialProductEditPrompt = document.getElementById('materialProductEditPrompt');
+const materialProductSeed = document.getElementById('materialProductSeed');
+const materialProductWidth = document.getElementById('materialProductWidth');
+const materialProductHeight = document.getElementById('materialProductHeight');
+const materialPodEditPrompt = document.getElementById('materialPodEditPrompt');
+const materialPodSeed = document.getElementById('materialPodSeed');
+const materialPodWidth = document.getElementById('materialPodWidth');
+const materialPodHeight = document.getElementById('materialPodHeight');
+const materialPodLoraWeight = document.getElementById('materialPodLoraWeight');
 
 // 图生图相关元素
 const apiKeyInputI2I = document.getElementById('apiKeyInputI2I');
@@ -181,6 +192,8 @@ const MODELS_I2I = {
   volcengine: [
     { group: '🌋 即梦AI', options: [
       { value: 'jimeng-3.0-i2i', label: '即梦AI-图生图3.0' },
+      { value: 'jimeng-material-product', label: '即梦AI-素材提取(商品提取)' },
+      { value: 'jimeng-material-pod', label: '即梦AI-素材提取(POD按需定制)' },
       { value: 'jimeng-upscale', label: '即梦AI-智能超清' },
       { value: 'jimeng-inpainting', label: '即梦AI-交互编辑inpainting' },
       { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
@@ -229,6 +242,8 @@ const MODEL_SIZES_I2I = {
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   [GEMINI_MODEL_ID]: [],
   'jimeng-3.0-i2i': ['1K', '2K', '4K'],
+  'jimeng-material-product': ['1K', '2K', '4K'],
+  'jimeng-material-pod': ['1K', '2K', '4K'],
   'jimeng-upscale': [],
   'jimeng-inpainting': [],
   'jimeng-4.0': ['1K', '2K', '4K'],
@@ -323,6 +338,10 @@ function setImageApiKeyMeta(provider) {
       modelHintI2I.textContent = '智能超清：上传 1 张原图；可选 4K/8K，scale 越高细节增强越明显。';
     } else if (i2iModel === 'jimeng-inpainting') {
       modelHintI2I.textContent = '交互编辑：上传 2 张图（原图 + Mask）；Mask 白色区域为重绘区，prompt 可填“删除”或编辑指令。';
+    } else if (i2iModel === 'jimeng-material-product') {
+      modelHintI2I.textContent = '素材提取(商品提取)：上传 1 张图；prompt 作为提取/编辑指令。';
+    } else if (i2iModel === 'jimeng-material-pod') {
+      modelHintI2I.textContent = '素材提取(POD按需定制)：上传 1 张图；可配 seed/宽高/lora_weight。';
     } else {
       modelHintI2I.textContent = '即梦图生图：支持本地上传参考图，也支持 image_urls（HTTP/HTTPS）输入。';
     }
@@ -427,7 +446,10 @@ function updateVolcengineUiState() {
   const isVolcengine = getActiveProvider() === 'volcengine';
   const i2iModel = modelSelectI2I ? modelSelectI2I.value : '';
   const isSpecialVolcI2I = currentMode === 'image2image' && isVolcengine
-    && (i2iModel === 'jimeng-upscale' || i2iModel === 'jimeng-inpainting');
+    && (i2iModel === 'jimeng-upscale'
+      || i2iModel === 'jimeng-inpainting'
+      || i2iModel === 'jimeng-material-product'
+      || i2iModel === 'jimeng-material-pod');
   if (genericSizeGroup) genericSizeGroup.classList.toggle('d-none', isVolcengine);
   if (genericSeedGroup) genericSeedGroup.classList.toggle('d-none', isVolcengine);
   if (volcengineParams) volcengineParams.classList.toggle('d-none', !isVolcengine || isSpecialVolcI2I);
@@ -440,10 +462,14 @@ function updateI2ISpecialParamState() {
   const isVolcengine = provider === 'volcengine';
   const isUpscale = isVolcengine && model === 'jimeng-upscale';
   const isInpainting = isVolcengine && model === 'jimeng-inpainting';
+  const isMaterialProduct = isVolcengine && model === 'jimeng-material-product';
+  const isMaterialPod = isVolcengine && model === 'jimeng-material-pod';
 
-  if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting);
+  if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting || isMaterialProduct || isMaterialPod);
   if (upscaleParamsGroup) upscaleParamsGroup.classList.toggle('d-none', !isUpscale);
   if (inpaintingParamsGroup) inpaintingParamsGroup.classList.toggle('d-none', !isInpainting);
+  if (materialProductParamsGroup) materialProductParamsGroup.classList.toggle('d-none', !isMaterialProduct);
+  if (materialPodParamsGroup) materialPodParamsGroup.classList.toggle('d-none', !isMaterialPod);
 }
 
 // 从 localStorage 恢复用户设置
@@ -632,6 +658,12 @@ function validateVolcengineImageUrls(urls, model) {
   }
   if (model === 'jimeng-upscale' && urls.length !== 1) {
     return 'Volcengine 参数错误：jimeng-upscale 必须且仅支持 1 张参考图 URL。';
+  }
+  if (model === 'jimeng-material-product' && urls.length !== 1) {
+    return 'Volcengine 参数错误：jimeng-material-product 必须且仅支持 1 张参考图 URL。';
+  }
+  if (model === 'jimeng-material-pod' && urls.length !== 1) {
+    return 'Volcengine 参数错误：jimeng-material-pod 必须且仅支持 1 张参考图 URL。';
   }
   if (model === 'jimeng-inpainting' && urls.length !== 2) {
     return 'Volcengine 参数错误：jimeng-inpainting 需要 2 张参考图 URL（原图+mask图）。';
@@ -1029,9 +1061,46 @@ generateBtnI2I.addEventListener('click', async () => {
   const inpaintingSeedVal = inpaintingSeed && inpaintingSeed.value !== ''
     ? parseInt(inpaintingSeed.value, 10)
     : undefined;
+  const materialProductSeedVal = materialProductSeed && materialProductSeed.value !== ''
+    ? parseInt(materialProductSeed.value, 10)
+    : undefined;
+  const materialProductWidthVal = materialProductWidth && materialProductWidth.value !== ''
+    ? parseInt(materialProductWidth.value, 10)
+    : undefined;
+  const materialProductHeightVal = materialProductHeight && materialProductHeight.value !== ''
+    ? parseInt(materialProductHeight.value, 10)
+    : undefined;
+  const materialPodSeedVal = materialPodSeed && materialPodSeed.value !== ''
+    ? parseInt(materialPodSeed.value, 10)
+    : undefined;
+  const materialPodWidthVal = materialPodWidth && materialPodWidth.value !== ''
+    ? parseInt(materialPodWidth.value, 10)
+    : undefined;
+  const materialPodHeightVal = materialPodHeight && materialPodHeight.value !== ''
+    ? parseInt(materialPodHeight.value, 10)
+    : undefined;
+  const materialPodLoraWeightVal = materialPodLoraWeight && materialPodLoraWeight.value !== ''
+    ? parseFloat(materialPodLoraWeight.value)
+    : undefined;
   const modelSpecificSeed = provider === 'volcengine' && model === 'jimeng-inpainting'
     ? inpaintingSeedVal
     : seed;
+  const isMaterialProduct = provider === 'volcengine' && model === 'jimeng-material-product';
+  const isMaterialPod = provider === 'volcengine' && model === 'jimeng-material-pod';
+  const materialEditPromptVal = isMaterialProduct
+    ? ((materialProductEditPrompt && materialProductEditPrompt.value.trim()) || prompt || undefined)
+    : ((materialPodEditPrompt && materialPodEditPrompt.value.trim()) || prompt || undefined);
+  const materialLoraWeightVal = isMaterialPod ? materialPodLoraWeightVal : undefined;
+  const modelSpecificWidth = isMaterialProduct
+    ? materialProductWidthVal
+    : (isMaterialPod ? materialPodWidthVal : volcengineWidthVal);
+  const modelSpecificHeight = isMaterialProduct
+    ? materialProductHeightVal
+    : (isMaterialPod ? materialPodHeightVal : volcengineHeightVal);
+  const modelSpecificSeedFinal = isMaterialProduct
+    ? materialProductSeedVal
+    : (isMaterialPod ? materialPodSeedVal : modelSpecificSeed);
+  const modelSpecificSize = (isMaterialProduct || isMaterialPod) ? undefined : size;
 
   if (provider !== 'volcengine' && !uploadedImageFile) {
     showAlert('请上传参考图片');
@@ -1078,11 +1147,11 @@ generateBtnI2I.addEventListener('click', async () => {
       .filter(v => /^https?:\/\//i.test(v));
     const volcParamErr = validateVolcengineSizeAndRatio({
       model,
-      size,
-      width: volcengineWidthVal,
-      height: volcengineHeightVal,
+      size: modelSpecificSize,
+      width: modelSpecificWidth,
+      height: modelSpecificHeight,
     });
-    if (volcParamErr) {
+    if (!isMaterialProduct && !isMaterialPod && volcParamErr) {
       showAlert(volcParamErr);
       return;
     }
@@ -1098,21 +1167,33 @@ generateBtnI2I.addEventListener('click', async () => {
   } else if (provider === 'volcengine') {
     const volcParamErr = validateVolcengineSizeAndRatio({
       model,
-      size,
-      width: volcengineWidthVal,
-      height: volcengineHeightVal,
+      size: modelSpecificSize,
+      width: modelSpecificWidth,
+      height: modelSpecificHeight,
     });
-    if (volcParamErr) {
+    if (!isMaterialProduct && !isMaterialPod && volcParamErr) {
       showAlert(volcParamErr);
       return;
     }
   }
+  if ((isMaterialProduct || isMaterialPod) && !materialEditPromptVal) {
+    showAlert('素材提取模型必须填写提取指令（image_edit_prompt）。');
+    return;
+  }
+  if ((isMaterialProduct || isMaterialPod) && ((modelSpecificWidth !== undefined) !== (modelSpecificHeight !== undefined))) {
+    showAlert('素材提取模型的 width 和 height 需要同时填写或同时留空。');
+    return;
+  }
+  if (isMaterialPod && materialLoraWeightVal !== undefined && (Number.isNaN(materialLoraWeightVal) || materialLoraWeightVal < 0 || materialLoraWeightVal > 1)) {
+    showAlert('POD 的 lora_weight 需在 0 到 1 之间。');
+    return;
+  }
   formData.append('parameters', JSON.stringify({
     n,
-    size,
-    width: provider === 'volcengine' ? volcengineWidthVal : undefined,
-    height: provider === 'volcengine' ? volcengineHeightVal : undefined,
-    seed: modelSpecificSeed,
+    size: modelSpecificSize,
+    width: provider === 'volcengine' ? modelSpecificWidth : undefined,
+    height: provider === 'volcengine' ? modelSpecificHeight : undefined,
+    seed: modelSpecificSeedFinal,
     negative_prompt: negativePromptVal,
     prompt_extend: promptExtendVal,
     watermark: watermarkVal,
@@ -1120,6 +1201,9 @@ generateBtnI2I.addEventListener('click', async () => {
     upscale_resolution: provider === 'volcengine' && model === 'jimeng-upscale' ? upscaleResolutionVal : undefined,
     upscale_scale: provider === 'volcengine' && model === 'jimeng-upscale' ? upscaleScaleVal : undefined,
     inpainting_seed: provider === 'volcengine' && model === 'jimeng-inpainting' ? inpaintingSeedVal : undefined,
+    image_edit_prompt: isMaterialProduct || isMaterialPod ? materialEditPromptVal : undefined,
+    edit_prompt: isMaterialProduct ? materialEditPromptVal : undefined,
+    lora_weight: isMaterialPod ? materialLoraWeightVal : undefined,
   }));
 
   try {

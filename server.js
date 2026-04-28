@@ -71,6 +71,8 @@ const VOLCENGINE_MODEL_ALIASES = {
   'jimeng-3.0': process.env.VOLCENGINE_JIMENG_30_REQ_KEY || 'jimeng_t2i_v30',
   'jimeng-3.1': process.env.VOLCENGINE_JIMENG_31_REQ_KEY || 'jimeng_t2i_v31',
   'jimeng-3.0-i2i': process.env.VOLCENGINE_JIMENG_I2I_30_REQ_KEY || 'jimeng_i2i_v30',
+  'jimeng-material-pod': process.env.VOLCENGINE_JIMENG_MATERIAL_POD_REQ_KEY || 'i2i_material_extraction',
+  'jimeng-material-product': process.env.VOLCENGINE_JIMENG_MATERIAL_PRODUCT_REQ_KEY || 'jimeng_i2i_extract_tiled_images',
   'jimeng-upscale': process.env.VOLCENGINE_JIMENG_UPSCALE_REQ_KEY || 'jimeng_i2i_seed3_tilesr_cvtob',
   'jimeng-inpainting': process.env.VOLCENGINE_JIMENG_INPAINT_REQ_KEY || 'jimeng_image2image_dream_inpaint',
   'jimeng-4.0': process.env.VOLCENGINE_JIMENG_40_REQ_KEY || 'jimeng_t2i_v40',
@@ -423,6 +425,8 @@ async function generateWithVolcengine({
   usePreLlm,
   seed,
   resolution,
+  imageEditPrompt,
+  loraWeight,
 }) {
   if (!credentials?.accessKey || !credentials?.secretKey) {
     throw new Error('Volcengine credentials are required. Use AK:SK or VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
@@ -433,6 +437,8 @@ async function generateWithVolcengine({
   const isJimengI2IV30 = reqKey === 'jimeng_i2i_v30';
   const isJimengUpscale = reqKey === 'jimeng_i2i_seed3_tilesr_cvtob';
   const isJimengInpainting = reqKey === 'jimeng_image2image_dream_inpaint';
+  const isJimengMaterialPod = reqKey === 'i2i_material_extraction';
+  const isJimengMaterialProduct = reqKey === 'jimeng_i2i_extract_tiled_images';
   const promptText = (prompt && prompt.trim()) ? prompt.trim() : 'Generate an image';
   const maxAttempts = Number.parseInt(process.env.VOLCENGINE_MAX_POLL_ATTEMPTS || '90', 10);
   const pollIntervalMs = Number.parseInt(process.env.VOLCENGINE_POLL_INTERVAL_MS || '2000', 10);
@@ -457,6 +463,11 @@ async function generateWithVolcengine({
       throw new Error('jimeng_image2image_dream_inpaint requires exactly 2 image URLs (origin + mask)');
     }
     submitBody.image_urls = [imageUrls[0], imageUrls[1]];
+  } else if (isJimengMaterialPod || isJimengMaterialProduct) {
+    if (!Array.isArray(imageUrls) || imageUrls.length !== 1) {
+      throw new Error(`${reqKey} requires exactly 1 image URL`);
+    }
+    submitBody.image_urls = [imageUrls[0]];
   } else if (Array.isArray(imageUrls) && imageUrls.length) {
     submitBody.image_urls = imageUrls;
   }
@@ -477,6 +488,20 @@ async function generateWithVolcengine({
   if (typeof scale === 'number' && Number.isFinite(scale)) submitBody.scale = scale;
   if (typeof resolution === 'string' && (resolution === '4k' || resolution === '8k')) {
     submitBody.resolution = resolution;
+  }
+  if (isJimengMaterialPod || isJimengMaterialProduct) {
+    const normalizedEditPrompt = typeof imageEditPrompt === 'string' ? imageEditPrompt.trim() : '';
+    if (!normalizedEditPrompt) {
+      throw new Error(`${reqKey} requires image_edit_prompt`);
+    }
+    submitBody.image_edit_prompt = normalizedEditPrompt;
+    if (isJimengMaterialProduct) {
+      // 文档与示例字段名存在差异，双写保证兼容
+      submitBody.edit_prompt = normalizedEditPrompt;
+    }
+    if (typeof loraWeight === 'number' && Number.isFinite(loraWeight)) {
+      submitBody.lora_weight = loraWeight;
+    }
   }
   if (watermark === true) {
     submitBody.logo_info = JSON.stringify({ add_logo: true, position: 0, language: 0, opacity: 1 });
@@ -1088,6 +1113,10 @@ app.post('/api/image-to-image', (req, res, next) => {
   const upscaleResolution = typeof params.upscale_resolution === 'string' ? params.upscale_resolution : undefined;
   const upscaleScale = params.upscale_scale;
   const inpaintingSeed = params.inpainting_seed;
+  const imageEditPrompt = typeof params.image_edit_prompt === 'string'
+    ? params.image_edit_prompt
+    : (typeof params.edit_prompt === 'string' ? params.edit_prompt : prompt);
+  const loraWeight = typeof params.lora_weight === 'number' ? params.lora_weight : undefined;
 
   try {
     const negativeErr = validateStringMaxLen('negative_prompt', negativePrompt, 4000);
@@ -1179,6 +1208,14 @@ app.post('/api/image-to-image', (req, res, next) => {
           return res.status(400).json({ error: 'jimeng-inpainting 需要 2 张参考图（原图+mask）。请上传原图与Mask图，或补足URL。' });
         }
         parsedImageUrls = parsedImageUrls.slice(0, 2);
+      } else if (selectedModel === 'i2i_material_extraction' || selectedModel === 'jimeng_i2i_extract_tiled_images') {
+        if (uploadedImageMeta.publicUrl) {
+          parsedImageUrls = [uploadedImageMeta.publicUrl];
+        } else if (parsedImageUrls.length > 0) {
+          parsedImageUrls = [parsedImageUrls[0]];
+        } else {
+          return res.status(400).json({ error: `${selectedModel} 需要且仅支持 1 张参考图（本地上传或1条HTTP URL）` });
+        }
       }
       const volcengineScale = selectedModel === 'jimeng_seedream46_cvtob'
         ? Math.max(1, Math.min(100, Math.round(imageStrength * 100)))
@@ -1202,6 +1239,8 @@ app.post('/api/image-to-image', (req, res, next) => {
         usePreLlm: promptExtend,
         seed: volcengineSeed,
         resolution: selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob' ? upscaleResolution : undefined,
+        imageEditPrompt,
+        loraWeight,
       });
       if (uploadedImageMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedImageMeta.filePath);
