@@ -22,6 +22,8 @@
 - 支持拖拽/点击上传，前端自动压缩（上传上限 10MB）
 - 上传进度实时显示
 - 支持参考图强度滑块（`image_strength`）
+- PNG 透明通道在压缩时保留
+- 点击生成的图片可逐张下载
 - 火山引擎支持两种参考图来源：
   - 本地上传（服务端落盘后转为 HTTP URL）
   - 外部 HTTP(S) 图片 URL 输入
@@ -30,8 +32,9 @@
 ### 安全与稳定性
 - API Key 支持前端输入，也支持服务端 `.env` 回退
 - 火山 AK/SK 鉴权签名流程
+- XSS 安全的错误信息显示（HTML 转义输出）
 - Provider 级超时配置
-- 内存型 API 频率限制
+- 内存型 API 频率限制（反向代理下正确识别客户端 IP）
 - CORS 白名单
 - 可选前端访问密钥保护（防暴力破解 + Cookie 会话）
 
@@ -313,6 +316,8 @@ server {
 
 ## API 接口
 
+- `GET /health`
+  - 响应: `{ status: 'ok', version: '1.0.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`

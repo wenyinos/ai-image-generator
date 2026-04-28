@@ -22,6 +22,8 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 - Drag & drop upload with client-side compression (max 10MB upload)
 - Upload progress indicator
 - Reference strength slider (`image_strength`)
+- PNG transparency preserved during compression
+- Click generated images to download individually
 - Volcengine supports:
   - uploaded local image (server stores temp file and exposes HTTP URL)
   - external HTTP(S) image URLs input
@@ -30,8 +32,9 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 ### Security & Reliability
 - Optional API key input from UI, with server-side `.env` fallback
 - Volcengine AK/SK parsing and signature request flow
+- XSS-safe error display (HTML-escaped output)
 - Request timeout controls per provider
-- Basic in-memory API rate limit
+- Basic in-memory API rate limit (respects `X-Forwarded-For` behind reverse proxy)
 - CORS allowlist support
 - Optional frontend access control with key-based auth, brute-force throttle, and cookie session
 
@@ -314,6 +317,8 @@ server {
 
 ## API Endpoints
 
+- `GET /health`
+  - response: `{ status: 'ok', version: '1.0.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }`
