@@ -887,23 +887,84 @@ app.get('/unlock', (req, res) => {
     return res.redirect('/');
   }
   return res.status(200).send(`<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>访问验证</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;background:#f4f6f8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.card{background:#fff;padding:24px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);width:min(92vw,360px)}input{width:100%;padding:10px;border:1px solid #d0d7de;border-radius:8px;margin:10px 0 14px}button{width:100%;padding:10px;border:0;border-radius:8px;background:#1677ff;color:#fff;cursor:pointer}.msg{color:#d1242f;font-size:13px;min-height:20px}</style></head>
-<body><form class="card" id="unlockForm"><h3 style="margin:0 0 6px">访问验证</h3><div style="font-size:13px;color:#57606a">请输入前端访问密钥</div><input type="password" name="accessKey" autocomplete="current-password" required /><div class="msg" id="msg"></div><button type="submit">验证并进入</button></form>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>访问验证 - AI 图片生成器</title>
+<link rel="icon" href="favicon/favicon.ico" type="image/x-icon">
+<link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh}
+.main-card{border:none;border-radius:1rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+<div class="container py-5">
+<div class="row justify-content-center align-items-center" style="min-height:80vh">
+<div class="col-sm-10 col-md-8 col-lg-6 col-xl-5">
+<div class="card main-card">
+<div class="card-body p-4 p-md-5">
+<form id="unlockForm" autocomplete="on">
+<h3 class="fw-bold mb-2"><i class="bi bi-shield-lock"></i> 访问验证</h3>
+<p class="text-muted mb-4">请输入前端访问密钥以继续使用</p>
+<div class="mb-3">
+<label for="accessKeyInput" class="form-label">访问密钥</label>
+<div class="input-group">
+<input type="password" class="form-control form-control-lg" id="accessKeyInput" name="accessKey" autocomplete="current-password" placeholder="请输入访问密钥" required />
+<button class="btn btn-outline-secondary" type="button" id="toggleKeyBtn"><i class="bi bi-eye"></i></button>
+</div>
+</div>
+<div class="alert alert-danger d-none py-2 mb-3" id="errMsg" role="alert"></div>
+<div class="d-grid">
+<button class="btn btn-primary btn-lg" type="submit" id="submitBtn"><i class="bi bi-box-arrow-in-right"></i> 验证并进入</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+<footer class="text-center text-white py-4">
+<small>&copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.</small>
+</footer>
+</div>
 <script>
+(function(){
 const form=document.getElementById('unlockForm');
-const msg=document.getElementById('msg');
-form.addEventListener('submit',async(e)=>{e.preventDefault();msg.textContent='';
-const fd=new FormData(form);
-const body=new URLSearchParams();body.set('accessKey',fd.get('accessKey')||'');
+const input=document.getElementById('accessKeyInput');
+const errMsg=document.getElementById('errMsg');
+const submitBtn=document.getElementById('submitBtn');
+const toggleBtn=document.getElementById('toggleKeyBtn');
+const SS_KEY='access_auth_key';
+function showError(msg){errMsg.textContent=msg;errMsg.classList.remove('d-none');}
+function hideError(){errMsg.textContent='';errMsg.classList.add('d-none');}
+function setLoading(loading){submitBtn.disabled=loading;submitBtn.innerHTML=loading?'<span class="spinner-border spinner-border-sm me-2"></span>验证中...':'<i class="bi bi-box-arrow-in-right"></i> 验证并进入';}
+toggleBtn.addEventListener('click',function(){const isPassword=input.type==='password';input.type=isPassword?'text':'password';this.querySelector('i').className=isPassword?'bi bi-eye-slash':'bi bi-eye';});
+var saved=sessionStorage.getItem(SS_KEY);
+if(saved){input.value=saved;}
+form.addEventListener('submit',async function(e){
+e.preventDefault();hideError();
+var key=(input.value||'').trim();
+if(!key){showError('请输入访问密钥');return;}
+setLoading(true);
 try{
-  const res=await fetch('/api/access-auth',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-  const data=await res.json().catch(()=>({error:'验证失败'}));
-  if(!res.ok){msg.textContent=data.error||'验证失败';return;}
-  window.location.href='/';
-}catch(err){msg.textContent='网络错误，请重试';}
+var body=new URLSearchParams();body.set('accessKey',key);
+var res=await fetch('/api/access-auth',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+var data=await res.json().catch(function(){return{error:'验证失败'};});
+if(!res.ok){showError(data.error||'验证失败');setLoading(false);return;}
+sessionStorage.setItem(SS_KEY,key);
+window.location.href='/';
+}catch(err){showError('网络错误，请重试');setLoading(false);}
 });
-</script></body></html>`);
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>`);
 });
 
 app.post('/api/access-auth', (req, res) => {
