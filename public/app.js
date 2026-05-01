@@ -638,11 +638,18 @@ function showAlert(message, type = 'danger') {
  * @param {string} message - 可选的加载提示消息
  */
 function setLoading(isLoading, message = '正在生成图片，请稍候...') {
+  const imageContainer = document.getElementById('imageContainer');
+  
   generateBtn.disabled = isLoading;
   generateBtnI2I.disabled = isLoading;
   placeholder.classList.toggle('d-none', isLoading);
   loading.classList.toggle('d-none', !isLoading);
   resultImages.classList.toggle('d-none', isLoading);
+  
+  // 加载时隐藏灰色背景框
+  if (isLoading) {
+    imageContainer.classList.add('has-images');
+  }
 
   // 更新加载提示文本
   const loadingText = loading.querySelector('p');
@@ -735,24 +742,54 @@ function validateVolcengineImageUrls(urls, model) {
  * @param {string[]} imageUrls - 图片 URL 数组
  */
 function displayImages(imageUrls) {
+  // 隐藏 placeholder，显示图片容器
+  const imageContainer = document.getElementById('imageContainer');
+  imageContainer.classList.add('has-images');
+
   resultImages.innerHTML = '';
   const count = imageUrls.length;
   const gridClass = count <= 4 ? `grid-${count}` : 'grid-4';
   resultImages.className = `result-images-grid ${gridClass}`;
 
+  // 初始化预览模态框
+  const previewModal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+  const modalImage = document.getElementById('modalPreviewImage');
+  const modalDownloadLink = document.getElementById('modalDownloadLink');
+
   imageUrls.forEach((url, index) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'image-wrapper';
+
     const img = document.createElement('img');
-    img.src = url;
     img.alt = `生成的图片 ${index + 1}`;
     img.loading = 'lazy';
-    img.style.cursor = 'pointer';
-    img.addEventListener('click', () => {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `generated-image-${index + 1}.png`;
-      a.click();
-    });
-    resultImages.appendChild(img);
+
+    // 图片加载错误处理
+    img.onerror = () => {
+      wrapper.innerHTML = `
+        <div class="d-flex flex-column align-items-center justify-content-center bg-light rounded" style="min-height: 200px;">
+          <i class="bi bi-image text-muted fs-1"></i>
+          <small class="text-muted mt-2">图片加载失败</small>
+          <a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+            <i class="bi bi-box-arrow-up-right"></i> 在新窗口打开
+          </a>
+        </div>
+      `;
+    };
+
+    // 图片加载成功后添加点击预览
+    img.onload = () => {
+      img.addEventListener('click', () => {
+        modalImage.src = url;
+        modalDownloadLink.href = url;
+        modalDownloadLink.download = `generated-image-${index + 1}.png`;
+        previewModal.show();
+      });
+    };
+
+    img.src = url;
+    wrapper.appendChild(img);
+    resultImages.appendChild(wrapper);
   });
 
   resultImages.classList.remove('d-none');

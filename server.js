@@ -924,7 +924,7 @@ app.use((req, res, next) => {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-    "img-src 'self' data: blob: https://*.aliyuncs.com https://*.volcengine.com https://*.googleapis.com",
+    "img-src 'self' data: blob: https: http:",
     "font-src 'self' https://cdn.jsdelivr.net",
     "connect-src 'self'",
     "frame-ancestors 'none'",

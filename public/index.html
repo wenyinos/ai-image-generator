@@ -21,13 +21,18 @@
       box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
     .image-container {
-      min-height: 300px;
+      min-height: 120px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: #f8f9fa;
       border-radius: 0.5rem;
       overflow: hidden;
+      transition: min-height 0.3s ease;
+    }
+    .image-container.has-images {
+      min-height: auto;
+      background: transparent;
     }
     .image-container img {
       max-width: 100%;
@@ -36,21 +41,27 @@
     .result-images-grid {
       display: grid;
       gap: 0.5rem;
-      padding: 0.5rem;
+      width: 100%;
     }
     .result-images-grid.grid-1 { grid-template-columns: 1fr; }
     .result-images-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
     .result-images-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
     .result-images-grid.grid-4 { grid-template-columns: repeat(2, 1fr); }
-    .result-images-grid img {
+    .result-images-grid .image-wrapper {
+      overflow: hidden;
+      border-radius: 0.25rem;
+    }
+    .result-images-grid .image-wrapper img {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
       border-radius: 0.25rem;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .result-images-grid img:hover {
+    .result-images-grid .image-wrapper img:hover {
       transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     .placeholder-text {
       color: #6c757d;
@@ -89,6 +100,28 @@
     .nav-tabs .nav-link.active {
       color: #667eea;
       font-weight: 600;
+    }
+    .image-wrapper {
+      overflow: hidden;
+      border-radius: 0.25rem;
+    }
+    .image-wrapper img {
+      width: 100%;
+      height: auto;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .image-wrapper img:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    #imagePreviewModal .modal-content {
+      border: none;
+      border-radius: 0.5rem;
+    }
+    #imagePreviewModal .modal-body img {
+      border-radius: 0 0 0.5rem 0.5rem;
     }
   </style>
 </head>
@@ -555,6 +588,26 @@
         </div>
       </div>
     </div>
+
+    <!-- 图片预览模态框 -->
+    <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark">
+          <div class="modal-header border-0">
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center p-0">
+            <img id="modalPreviewImage" src="" alt="预览图片" style="max-width: 100%; max-height: 85vh; object-fit: contain;">
+          </div>
+          <div class="modal-footer border-0 justify-content-center">
+            <a id="modalDownloadLink" href="" download="" class="btn btn-outline-light">
+              <i class="bi bi-download"></i> 下载图片
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer class="text-center text-white py-4 mt-4">
       <small>
         &copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.
