@@ -742,9 +742,11 @@ function validateVolcengineImageUrls(urls, model) {
  * @param {string[]} imageUrls - 图片 URL 数组
  */
 function displayImages(imageUrls) {
-  // 隐藏 placeholder，显示图片容器
+  // 隐藏 placeholder 和加载状态，显示图片容器
   const imageContainer = document.getElementById('imageContainer');
   imageContainer.classList.add('has-images');
+  placeholder.classList.add('d-none');
+  loading.classList.add('d-none');
 
   resultImages.innerHTML = '';
   const count = imageUrls.length;
