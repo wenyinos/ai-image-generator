@@ -32,7 +32,17 @@ const ACCESS_COOKIE_NAME = 'access_auth';
 const ACCESS_AUTH_WINDOW_MS = Number.parseInt(process.env.ACCESS_AUTH_WINDOW_MS || '300000', 10);
 const ACCESS_AUTH_MAX_ATTEMPTS = Number.parseInt(process.env.ACCESS_AUTH_MAX_ATTEMPTS || '8', 10);
 const ACCESS_AUTH_LOCK_MS = Number.parseInt(process.env.ACCESS_AUTH_LOCK_MS || '900000', 10);
-const ACCESS_COOKIE_SECRET = process.env.ACCESS_COOKIE_SECRET || `${process.pid}-${Date.now()}`;
+// 安全改进: 生产环境必须设置 ACCESS_COOKIE_SECRET
+const ACCESS_COOKIE_SECRET = (() => {
+  const secret = process.env.ACCESS_COOKIE_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    console.error('⚠️ 安全警告: 生产环境必须设置 ACCESS_COOKIE_SECRET 环境变量');
+    process.exit(1);
+  }
+  // 开发环境使用随机生成的密钥
+  return crypto.randomBytes(32).toString('hex');
+})();
 const MIME_EXTENSION_MAP = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',
@@ -895,6 +905,33 @@ app.use(cors({
   },
 }));
 
+// 安全头中间件
+app.use((req, res, next) => {
+  // 防止 MIME 类型嗅探
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // 防止点击劫持
+  res.setHeader('X-Frame-Options', 'DENY');
+  // XSS 防护
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // 控制 referrer 信息
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // 生产环境启用 HSTS
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  // 内容安全策略 - 限制资源加载来源
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "img-src 'self' data: blob: https://*.aliyuncs.com https://*.volcengine.com https://*.googleapis.com",
+    "font-src 'self' https://cdn.jsdelivr.net",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+  ].join('; '));
+  next();
+});
+
 const apiRateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
 const apiRateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '30', 10);
 if (Number.isFinite(apiRateLimitWindowMs) && Number.isFinite(apiRateLimitMax) && apiRateLimitWindowMs > 0 && apiRateLimitMax > 0) {
@@ -1041,6 +1078,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
+// 允许的 provider 和 model 白名单
+const ALLOWED_PROVIDERS = ['dashscope', 'gemini', 'volcengine'];
+const ALLOWED_MODELS = Object.keys(MODEL_CONFIG);
+
 /**
  * 图片生成接口 (文生图)
  * POST /api/generate-image
@@ -1049,7 +1090,13 @@ app.get('/', (req, res) => {
  */
 app.post('/api/generate-image', async (req, res) => {
   const { prompt, apiKey, model, parameters = {}, provider } = req.body;
+  
+  // 安全改进: 验证 provider 白名单
   const selectedProvider = normalizeProvider(provider);
+  if (!ALLOWED_PROVIDERS.includes(selectedProvider)) {
+    return res.status(400).json({ error: '无效的 provider' });
+  }
+  
   const volcengineCredentials = selectedProvider === 'volcengine'
     ? parseVolcengineCredentials(apiKey)
     : null;
@@ -1070,6 +1117,12 @@ app.post('/api/generate-image', async (req, res) => {
     : (selectedProvider === 'volcengine'
       ? normalizeVolcengineModel(model)
       : (model || 'wan2.6-t2i'));
+  
+  // 安全改进: 验证 model 白名单
+  if (selectedProvider === 'dashscope' && !ALLOWED_MODELS.includes(selectedModel)) {
+    return res.status(400).json({ error: '无效的模型' });
+  }
+  
   const config = getModelConfig(selectedModel);
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
@@ -1293,7 +1346,13 @@ app.post('/api/image-to-image', (req, res, next) => {
   });
 }, async (req, res) => {
   const { prompt, apiKey, model, parameters, provider, imageUrls } = req.body;
+  
+  // 安全改进: 验证 provider 白名单
   const selectedProvider = normalizeProvider(provider);
+  if (!ALLOWED_PROVIDERS.includes(selectedProvider)) {
+    return res.status(400).json({ error: '无效的 provider' });
+  }
+  
   const volcengineCredentials = selectedProvider === 'volcengine'
     ? parseVolcengineCredentials(apiKey)
     : null;
@@ -1316,6 +1375,12 @@ app.post('/api/image-to-image', (req, res, next) => {
     : (selectedProvider === 'volcengine'
       ? normalizeVolcengineModel(model)
       : (model || 'wan2.6-image'));
+  
+  // 安全改进: 验证 model 白名单
+  if (selectedProvider === 'dashscope' && !ALLOWED_MODELS.includes(selectedModel)) {
+    return res.status(400).json({ error: '无效的模型' });
+  }
+  
   const authHeader = { 'Authorization': `Bearer ${resolvedApiKey}` };
 
   // 验证模型是否支持图生图
@@ -1528,14 +1593,13 @@ app.post('/api/image-to-image', (req, res, next) => {
       parameters: syncParams,
     };
 
-    // 调试日志
+    // 调试日志 - 安全改进: 不记录敏感数据
     if (DEBUG) {
       console.log('=== 图生图请求调试 ===');
       console.log('模型:', selectedModel);
       console.log('图片大小:', imageFile.size, '字节');
       console.log('图片类型:', imageFile.mimetype);
-      console.log('Base64长度:', imageDataUrl.length);
-      console.log('请求参数:', JSON.stringify(syncParams, null, 2));
+      console.log('参数数量:', Object.keys(syncParams).length);
       console.log('=====================');
     }
 
@@ -1557,7 +1621,8 @@ app.post('/api/image-to-image', (req, res, next) => {
     if (!syncRes.ok) {
       console.error('❌ 图生图API错误:');
       console.error('HTTP状态码:', syncRes.status);
-      if (DEBUG) console.error('错误响应:', JSON.stringify(syncData, null, 2));
+      // 安全改进: 不记录完整响应，只记录错误消息
+      if (DEBUG) console.error('错误消息:', syncData.message || '未知错误');
       return res.status(syncRes.status).json({ error: syncData.message || syncData });
     }
 
@@ -1566,7 +1631,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     const syncImageUrls = extractImageUrls(syncData, selectedModel);
     if (!syncImageUrls.length) {
       console.error('❌ API返回中未找到图片URL');
-      if (DEBUG) console.log('API响应:', JSON.stringify(syncData, null, 2));
+      // 安全改进: 不记录完整响应
       return res.status(500).json({ error: '响应中未包含图片 URL' });
     }
 

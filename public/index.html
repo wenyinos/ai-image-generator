@@ -151,6 +151,12 @@
                           <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
                         </a>
                       </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="rememberApiKey" checked>
+                        <label class="form-check-label" for="rememberApiKey">
+                          <small>记住 API Key <span class="text-muted">（保存在浏览器本地）</span></small>
+                        </label>
+                      </div>
                     </div>
 
                     <div id="volcengineCredGroup" class="d-none">
@@ -174,6 +180,12 @@
                         <a href="https://console.volcengine.com/iam/keymanage" target="_blank" class="text-decoration-none">
                           <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
                         </a>
+                      </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="rememberVolcengine" checked>
+                        <label class="form-check-label" for="rememberVolcengine">
+                          <small>记住 AK/SK <span class="text-muted">（保存在浏览器本地）</span></small>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -250,6 +262,12 @@
                       <div class="form-text">
                         留空将使用服务端环境变量 <code id="apiEnvNameI2I">DASHSCOPE_API_KEY</code>（如已配置）。
                       </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="rememberApiKeyI2I" checked>
+                        <label class="form-check-label" for="rememberApiKeyI2I">
+                          <small>记住 API Key <span class="text-muted">（保存在浏览器本地）</span></small>
+                        </label>
+                      </div>
                     </div>
 
                     <div id="volcengineCredGroupI2I" class="d-none">
@@ -269,6 +287,12 @@
                       </div>
                       <div class="form-text">
                         留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。
+                      </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="rememberVolcengineI2I" checked>
+                        <label class="form-check-label" for="rememberVolcengineI2I">
+                          <small>记住 AK/SK <span class="text-muted">（保存在浏览器本地）</span></small>
+                        </label>
                       </div>
                     </div>
                   </div>

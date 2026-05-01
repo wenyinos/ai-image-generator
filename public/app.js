@@ -104,6 +104,12 @@ let uploadedMaskFile = null;
 const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
 const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
 
+// "记住我"复选框
+const rememberApiKey = document.getElementById('rememberApiKey');
+const rememberVolcengine = document.getElementById('rememberVolcengine');
+const rememberApiKeyI2I = document.getElementById('rememberApiKeyI2I');
+const rememberVolcengineI2I = document.getElementById('rememberVolcengineI2I');
+
 const PROVIDER_CONFIG = {
   dashscope: {
     label: 'DashScope API Key（可选）',
@@ -270,6 +276,35 @@ function getModelStorageKey(mode, provider) {
   return mode === 'image2image' ? `modelI2I_${provider}` : `model_${provider}`;
 }
 
+/**
+ * 根据"记住我"状态获取存储对象
+ * @param {boolean} remember - 是否勾选"记住我"
+ * @returns {Storage} localStorage 或 sessionStorage
+ */
+function getStorage(remember) {
+  return remember ? localStorage : sessionStorage;
+}
+
+/**
+ * 保存凭证到存储
+ * @param {string} key - 存储键
+ * @param {string} value - 存储值
+ * @param {boolean} remember - 是否持久保存
+ */
+function saveCredential(key, value, remember) {
+  const storage = getStorage(remember);
+  storage.setItem(key, value);
+}
+
+/**
+ * 从存储读取凭证（优先从 localStorage 读取）
+ * @param {string} key - 存储键
+ * @returns {string} 存储的值
+ */
+function loadCredential(key) {
+  return localStorage.getItem(key) || sessionStorage.getItem(key) || '';
+}
+
 function renderModelOptions(selectElement, groups, selectedValue) {
   selectElement.innerHTML = '';
   groups.forEach((group) => {
@@ -294,8 +329,9 @@ function setTextApiKeyMeta(provider) {
   if (provider === 'volcengine') {
     standardApiKeyGroup.classList.add('d-none');
     volcengineCredGroup.classList.remove('d-none');
-    volcengineAkInput.value = localStorage.getItem(getVolcengineAkStorageKey('text2image')) || '';
-    volcengineSkInput.value = localStorage.getItem(getVolcengineSkStorageKey('text2image')) || '';
+    // 读取凭证（优先从 localStorage）
+    volcengineAkInput.value = loadCredential(getVolcengineAkStorageKey('text2image'));
+    volcengineSkInput.value = loadCredential(getVolcengineSkStorageKey('text2image'));
     return;
   }
 
@@ -309,16 +345,17 @@ function setTextApiKeyMeta(provider) {
   apiKeyHelpLink.href = cfg.helpLink;
   apiKeyConsoleLink.href = cfg.consoleLink;
 
-  const savedKey = localStorage.getItem(getApiKeyStorageKey('text2image', provider));
-  apiKeyInput.value = savedKey || '';
+  // 读取 API Key（优先从 localStorage）
+  apiKeyInput.value = loadCredential(getApiKeyStorageKey('text2image', provider));
 }
 
 function setImageApiKeyMeta(provider) {
   if (provider === 'volcengine') {
     standardApiKeyGroupI2I.classList.add('d-none');
     volcengineCredGroupI2I.classList.remove('d-none');
-    volcengineAkInputI2I.value = localStorage.getItem(getVolcengineAkStorageKey('image2image')) || '';
-    volcengineSkInputI2I.value = localStorage.getItem(getVolcengineSkStorageKey('image2image')) || '';
+    // 读取凭证（优先从 localStorage）
+    volcengineAkInputI2I.value = loadCredential(getVolcengineAkStorageKey('image2image'));
+    volcengineSkInputI2I.value = loadCredential(getVolcengineSkStorageKey('image2image'));
     modelHintI2I.textContent = '即梦AI 4.0/4.6 支持参考图与多图生成';
   } else {
     standardApiKeyGroupI2I.classList.remove('d-none');
@@ -349,8 +386,8 @@ function setImageApiKeyMeta(provider) {
     modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
   }
 
-  const savedKey = localStorage.getItem(getApiKeyStorageKey('image2image', provider));
-  apiKeyInputI2I.value = savedKey || '';
+  // 读取 API Key（优先从 localStorage）
+  apiKeyInputI2I.value = loadCredential(getApiKeyStorageKey('image2image', provider));
 
   if (provider === 'volcengine') {
     volcengineImageUrlsGroup.classList.remove('d-none');
@@ -770,11 +807,14 @@ generateBtn.addEventListener('click', async () => {
     }
   }
 
+  // 根据"记住我"状态存储凭证
   if (provider === 'volcengine') {
-    localStorage.setItem(getVolcengineAkStorageKey('text2image'), (volcengineAkInput.value || '').trim());
-    localStorage.setItem(getVolcengineSkStorageKey('text2image'), (volcengineSkInput.value || '').trim());
+    const rememberVolc = rememberVolcengine?.checked ?? true;
+    saveCredential(getVolcengineAkStorageKey('text2image'), (volcengineAkInput.value || '').trim(), rememberVolc);
+    saveCredential(getVolcengineSkStorageKey('text2image'), (volcengineSkInput.value || '').trim(), rememberVolc);
   } else if (apiKey) {
-    localStorage.setItem(getApiKeyStorageKey('text2image', provider), apiKey);
+    const remember = rememberApiKey?.checked ?? true;
+    saveCredential(getApiKeyStorageKey('text2image', provider), apiKey, remember);
   }
   localStorage.setItem(getModelStorageKey('text2image', provider), model);
   if (genericSize) localStorage.setItem('imageSize', imageSize.value);
@@ -1147,11 +1187,14 @@ generateBtnI2I.addEventListener('click', async () => {
     return;
   }
 
+  // 根据"记住我"状态存储凭证
+  const rememberI2I = rememberApiKeyI2I?.checked ?? true;
   if (provider === 'volcengine') {
-    localStorage.setItem(getVolcengineAkStorageKey('image2image'), (volcengineAkInputI2I.value || '').trim());
-    localStorage.setItem(getVolcengineSkStorageKey('image2image'), (volcengineSkInputI2I.value || '').trim());
+    const rememberVolc = rememberVolcengineI2I?.checked ?? true;
+    saveCredential(getVolcengineAkStorageKey('image2image'), (volcengineAkInputI2I.value || '').trim(), rememberVolc);
+    saveCredential(getVolcengineSkStorageKey('image2image'), (volcengineSkInputI2I.value || '').trim(), rememberVolc);
   } else if (apiKey) {
-    localStorage.setItem(getApiKeyStorageKey('image2image', provider), apiKey);
+    saveCredential(getApiKeyStorageKey('image2image', provider), apiKey, rememberI2I);
   }
   localStorage.setItem(getModelStorageKey('image2image', provider), model);
 
