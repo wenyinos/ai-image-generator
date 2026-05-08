@@ -13,36 +13,271 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const crypto = require('crypto');
+const fsSync = require('fs');
 const fs = require('fs/promises');
+const originalEmitWarning = process.emitWarning;
+process.emitWarning = function emitWarningExceptNodeSqlite(warning, ...args) {
+  const message = typeof warning === 'string' ? warning : warning?.message;
+  const type = typeof warning === 'string' ? args[0] : warning?.name;
+  if (type === 'ExperimentalWarning' && message?.includes('SQLite is an experimental feature')) return;
+  return originalEmitWarning.call(this, warning, ...args);
+};
+let DatabaseSync;
+try {
+  ({ DatabaseSync } = require('node:sqlite'));
+} finally {
+  process.emitWarning = originalEmitWarning;
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_RELATIVE_DIR = 'uploads';
 const UPLOADS_DIR = path.join(PUBLIC_DIR, UPLOADS_RELATIVE_DIR);
+const VIDEO_TASK_DB_PATH = process.env.VIDEO_TASK_DB_PATH || path.join(DATA_DIR, 'video-tasks.sqlite');
+const ACCESS_COOKIE_SECRET_PATH = process.env.ACCESS_COOKIE_SECRET_PATH || path.join(path.dirname(VIDEO_TASK_DB_PATH), 'access-cookie-secret');
 const UPLOAD_FILE_CLEANUP_DELAY_MS = 5 * 60 * 1000;
 const UPLOAD_FILE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const DASHSCOPE_MAX_POLL_ATTEMPTS = 90;
-const DASHSCOPE_POLL_INTERVAL_MS = 2000;
-const I2I_REQUEST_TIMEOUT_MS = 300000; // 5 分钟
+const GENERATION_MAX_POLL_ATTEMPTS = Number.parseInt(process.env.GENERATION_MAX_POLL_ATTEMPTS || '90', 10);
+const GENERATION_POLL_INTERVAL_MS = Number.parseInt(process.env.GENERATION_POLL_INTERVAL_MS || '5000', 10);
+const GENERATION_REQUEST_TIMEOUT_MS = Number.parseInt(process.env.GENERATION_REQUEST_TIMEOUT_MS || '450000', 10);
+const VIDEO_GENERATION_MAX_POLL_ATTEMPTS = Number.parseInt(process.env.VIDEO_GENERATION_MAX_POLL_ATTEMPTS || '288', 10);
+const VIDEO_GENERATION_REQUEST_TIMEOUT_MS = Number.parseInt(process.env.VIDEO_GENERATION_REQUEST_TIMEOUT_MS || '1800000', 10);
+const DASHSCOPE_MAX_POLL_ATTEMPTS = GENERATION_MAX_POLL_ATTEMPTS;
+const DASHSCOPE_POLL_INTERVAL_MS = GENERATION_POLL_INTERVAL_MS;
+const DASHSCOPE_VIDEO_MAX_POLL_ATTEMPTS = VIDEO_GENERATION_MAX_POLL_ATTEMPTS;
+const DASHSCOPE_VIDEO_POLL_INTERVAL_MS = GENERATION_POLL_INTERVAL_MS;
+const I2I_REQUEST_TIMEOUT_MS = GENERATION_REQUEST_TIMEOUT_MS;
+const FREE_TIER_QUOTA_ERROR_CODE = 'AllocationQuota.FreeTierOnly';
+const FREE_TIER_QUOTA_ERROR_MESSAGE = '此模型额度已用尽，请更换其他模型';
 const FRONTEND_ACCESS_CONTROL_ENABLED = process.env.FRONTEND_ACCESS_CONTROL_ENABLED === '1' || process.env.FRONTEND_ACCESS_CONTROL_ENABLED === 'true';
 const FRONTEND_ACCESS_KEY = typeof process.env.FRONTEND_ACCESS_KEY === 'string' ? process.env.FRONTEND_ACCESS_KEY.trim() : '';
 const ACCESS_COOKIE_NAME = 'access_auth';
 const ACCESS_AUTH_WINDOW_MS = Number.parseInt(process.env.ACCESS_AUTH_WINDOW_MS || '300000', 10);
 const ACCESS_AUTH_MAX_ATTEMPTS = Number.parseInt(process.env.ACCESS_AUTH_MAX_ATTEMPTS || '8', 10);
 const ACCESS_AUTH_LOCK_MS = Number.parseInt(process.env.ACCESS_AUTH_LOCK_MS || '900000', 10);
-// 安全改进: 生产环境必须设置 ACCESS_COOKIE_SECRET
 const ACCESS_COOKIE_SECRET = (() => {
-  const secret = process.env.ACCESS_COOKIE_SECRET;
-  if (secret) return secret;
-  if (process.env.NODE_ENV === 'production') {
-    console.error('⚠️ 安全警告: 生产环境必须设置 ACCESS_COOKIE_SECRET 环境变量');
+  const envSecret = typeof process.env.ACCESS_COOKIE_SECRET === 'string' ? process.env.ACCESS_COOKIE_SECRET.trim() : '';
+  if (envSecret) return envSecret;
+
+  try {
+    fsSync.mkdirSync(path.dirname(ACCESS_COOKIE_SECRET_PATH), { recursive: true });
+    if (fsSync.existsSync(ACCESS_COOKIE_SECRET_PATH)) {
+      const savedSecret = fsSync.readFileSync(ACCESS_COOKIE_SECRET_PATH, 'utf8').trim();
+      if (savedSecret) return savedSecret;
+    }
+    const generatedSecret = crypto.randomBytes(32).toString('hex');
+    fsSync.writeFileSync(ACCESS_COOKIE_SECRET_PATH, `${generatedSecret}\n`, { mode: 0o600 });
+    return generatedSecret;
+  } catch (err) {
+    console.error(`⚠️ 无法保存 ACCESS_COOKIE_SECRET 到 ${ACCESS_COOKIE_SECRET_PATH}: ${err.message}`);
     process.exit(1);
   }
-  // 开发环境使用随机生成的密钥
-  return crypto.randomBytes(32).toString('hex');
 })();
+fsSync.mkdirSync(path.dirname(VIDEO_TASK_DB_PATH), { recursive: true });
+const videoTaskDb = new DatabaseSync(VIDEO_TASK_DB_PATH);
+videoTaskDb.exec(`
+  CREATE TABLE IF NOT EXISTS video_tasks (
+    task_id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    status TEXT NOT NULL,
+    prompt TEXT,
+    duration INTEGER,
+    resolution TEXT,
+    ratio TEXT,
+    video_url TEXT,
+    usage_json TEXT,
+    error_message TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+`);
+videoTaskDb.exec(`
+  CREATE TABLE IF NOT EXISTS image_tasks (
+    id TEXT PRIMARY KEY,
+    task_id TEXT,
+    mode TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    status TEXT NOT NULL,
+    prompt TEXT,
+    image_urls_json TEXT,
+    usage_json TEXT,
+    error_message TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+`);
+const videoTaskUpsertStmt = videoTaskDb.prepare(`
+  INSERT INTO video_tasks (
+    task_id, provider, model, mode, status, prompt, duration, resolution, ratio,
+    video_url, usage_json, error_message, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(task_id) DO UPDATE SET
+    provider = COALESCE(NULLIF(excluded.provider, ''), video_tasks.provider),
+    model = COALESCE(NULLIF(excluded.model, ''), video_tasks.model),
+    mode = COALESCE(NULLIF(excluded.mode, ''), video_tasks.mode),
+    status = COALESCE(excluded.status, video_tasks.status),
+    prompt = COALESCE(excluded.prompt, video_tasks.prompt),
+    duration = COALESCE(excluded.duration, video_tasks.duration),
+    resolution = COALESCE(excluded.resolution, video_tasks.resolution),
+    ratio = COALESCE(excluded.ratio, video_tasks.ratio),
+    video_url = COALESCE(excluded.video_url, video_tasks.video_url),
+    usage_json = COALESCE(excluded.usage_json, video_tasks.usage_json),
+    error_message = COALESCE(excluded.error_message, video_tasks.error_message),
+    updated_at = excluded.updated_at
+`);
+const imageTaskUpsertStmt = videoTaskDb.prepare(`
+  INSERT INTO image_tasks (
+    id, task_id, mode, provider, model, status, prompt,
+    image_urls_json, usage_json, error_message, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(id) DO UPDATE SET
+    task_id = COALESCE(excluded.task_id, image_tasks.task_id),
+    mode = COALESCE(NULLIF(excluded.mode, ''), image_tasks.mode),
+    provider = COALESCE(NULLIF(excluded.provider, ''), image_tasks.provider),
+    model = COALESCE(NULLIF(excluded.model, ''), image_tasks.model),
+    status = COALESCE(excluded.status, image_tasks.status),
+    prompt = COALESCE(excluded.prompt, image_tasks.prompt),
+    image_urls_json = COALESCE(excluded.image_urls_json, image_tasks.image_urls_json),
+    usage_json = COALESCE(excluded.usage_json, image_tasks.usage_json),
+    error_message = COALESCE(excluded.error_message, image_tasks.error_message),
+    updated_at = excluded.updated_at
+`);
+
+function formatUpstreamError(error, fallback = '生成失败') {
+  const codes = [];
+  const messages = [];
+  const collectCode = (value) => {
+    if (typeof value === 'string' && value.trim()) codes.push(value.trim());
+  };
+  const collectMessage = (value) => {
+    if (typeof value === 'string' && value.trim()) messages.push(value.trim());
+  };
+  if (typeof error === 'string') {
+    collectMessage(error);
+  } else if (error && typeof error === 'object') {
+    collectCode(error.code);
+    collectCode(error.Code);
+    collectCode(error.output?.code);
+    collectCode(error.error?.code);
+    collectCode(error.ResponseMetadata?.Error?.Code);
+    collectMessage(error.message);
+    collectMessage(error.Message);
+    collectMessage(error.output?.message);
+    collectMessage(error.error?.message);
+    collectMessage(error.ResponseMetadata?.Error?.Message);
+  }
+  const values = [...codes, ...messages];
+  if (values.some(value => value.includes(FREE_TIER_QUOTA_ERROR_CODE))) {
+    return FREE_TIER_QUOTA_ERROR_MESSAGE;
+  }
+  const stripPrefix = value => String(value || '').replace(/^(?:生成失败[:：]\s*)+/, '').trim();
+  const code = stripPrefix(codes.find(Boolean) || '');
+  const message = stripPrefix(messages.find(value => stripPrefix(value) !== code) || fallback);
+  if (code && message && message !== code) return `生成失败：${code} - ${message}`;
+  if (code) return `生成失败：${code}`;
+  return message && message !== '生成失败' ? `生成失败：${message}` : '生成失败';
+}
+
+function saveVideoTaskRecord(record) {
+  if (!record?.taskId) return;
+  const now = Date.now();
+  videoTaskUpsertStmt.run(
+    record.taskId,
+    record.provider || 'dashscope',
+    record.model || '',
+    record.mode || '',
+    record.status || record.taskStatus || 'PENDING',
+    record.prompt || null,
+    Number.isInteger(record.duration) ? record.duration : null,
+    record.resolution || null,
+    record.ratio || null,
+    record.videoUrl || null,
+    record.usage ? JSON.stringify(record.usage) : null,
+    record.errorMessage || record.message || null,
+    record.createdAt || now,
+    now
+  );
+}
+
+function mapVideoTaskRecord(row) {
+  let usage = null;
+  try {
+    usage = row.usage_json ? JSON.parse(row.usage_json) : null;
+  } catch (e) {
+    usage = null;
+  }
+  return {
+    taskId: row.task_id,
+    provider: row.provider,
+    model: row.model,
+    mode: row.mode,
+    status: row.status,
+    prompt: row.prompt || '',
+    duration: row.duration,
+    resolution: row.resolution || '',
+    ratio: row.ratio || '',
+    videoUrl: row.video_url || '',
+    usage,
+    error: row.error_message || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function saveImageTaskRecord(record) {
+  const id = record?.id || record?.taskId || crypto.randomUUID();
+  const now = Date.now();
+  imageTaskUpsertStmt.run(
+    id,
+    record.taskId || null,
+    record.mode || 'text2image',
+    record.provider || 'dashscope',
+    record.model || '',
+    record.status || record.taskStatus || 'SUCCEEDED',
+    record.prompt || null,
+    Array.isArray(record.imageUrls) ? JSON.stringify(record.imageUrls) : null,
+    record.usage ? JSON.stringify(record.usage) : null,
+    record.errorMessage || record.message || null,
+    record.createdAt || now,
+    now
+  );
+  return id;
+}
+
+function mapImageTaskRecord(row) {
+  let imageUrls = [];
+  let usage = null;
+  try {
+    imageUrls = row.image_urls_json ? JSON.parse(row.image_urls_json) : [];
+  } catch (e) {
+    imageUrls = [];
+  }
+  try {
+    usage = row.usage_json ? JSON.parse(row.usage_json) : null;
+  } catch (e) {
+    usage = null;
+  }
+  return {
+    id: row.id,
+    taskId: row.task_id || '',
+    mode: row.mode,
+    provider: row.provider,
+    model: row.model,
+    status: row.status,
+    prompt: row.prompt || '',
+    imageUrls,
+    usage,
+    error: row.error_message || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 const MIME_EXTENSION_MAP = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',
@@ -112,7 +347,30 @@ const SYNC_MODELS = new Set([
 // API 端点路径
 const SYNC_ENDPOINT = '/services/aigc/multimodal-generation/generation';
 const ASYNC_ENDPOINT = '/services/aigc/text2image/image-synthesis';
+const VIDEO_ENDPOINT = '/services/aigc/video-generation/video-synthesis';
 const TASK_ENDPOINT = '/tasks/';
+
+const VIDEO_MODELS = {
+  text2video: [
+    { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v（推荐）' },
+    { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
+    { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
+    { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
+    { value: 'wan2.5-t2v-preview', label: 'wan2.5-t2v-preview' },
+    { value: 'wan2.2-t2v-plus', label: 'wan2.2-t2v-plus' },
+    { value: 'wan2.2-t2v-flash', label: 'wan2.2-t2v-flash' },
+    { value: 'wanx2.1-t2v-turbo', label: 'wanx2.1-t2v-turbo' },
+  ],
+  image2video: [
+    { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v（推荐）' },
+    { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
+    { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
+    { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
+    { value: 'wan2.5-i2v-preview', label: 'wan2.5-i2v-preview' },
+    { value: 'wan2.2-i2v-plus', label: 'wan2.2-i2v-plus' },
+    { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
+  ],
+};
 
 // 模型默认配置 (尺寸和类型)
 const MODEL_CONFIG = {
@@ -196,6 +454,52 @@ function extractImageUrls(data, model) {
   }
   const results = data.output?.results || [];
   return results.filter(r => r.url).map(r => r.url);
+}
+
+function extractVideoUrl(data) {
+  const output = data?.output || {};
+  if (typeof output.video_url === 'string' && output.video_url.trim()) return output.video_url.trim();
+  const resultUrl = output.results?.find?.(item => typeof item?.url === 'string')?.url;
+  return resultUrl ? resultUrl.trim() : '';
+}
+
+function mergeVideoModels(mode, ids) {
+  const seen = new Set();
+  const merged = [];
+  [...VIDEO_MODELS[mode], ...ids.map(id => ({ value: id, label: id }))].forEach((item) => {
+    if (!item.value || seen.has(item.value)) return;
+    seen.add(item.value);
+    merged.push(item);
+  });
+  return merged;
+}
+
+async function getDashscopeVideoModels(apiKey) {
+  const authKey = getApiKey('dashscope', apiKey);
+  const fallback = {
+    text2video: VIDEO_MODELS.text2video,
+    image2video: VIDEO_MODELS.image2video,
+  };
+  if (!authKey) return { source: 'fallback', models: fallback };
+
+  try {
+    const modelsRes = await fetchWithTimeout(
+      `${BASE_URL.replace('/api/v1', '/compatible-mode/v1')}/models`,
+      { headers: { Authorization: `Bearer ${authKey}` } },
+      8000
+    );
+    const modelsData = await modelsRes.json();
+    const ids = (modelsData.data || []).map(item => item.id).filter(Boolean);
+    return {
+      source: modelsRes.ok ? 'dashscope' : 'fallback',
+      models: {
+        text2video: mergeVideoModels('text2video', ids.filter(id => /(t2v|text2video)/i.test(id))),
+        image2video: mergeVideoModels('image2video', ids.filter(id => /(i2v|image2video)/i.test(id))),
+      },
+    };
+  } catch (err) {
+    return { source: 'fallback', models: fallback };
+  }
 }
 
 function normalizeProvider(provider) {
@@ -299,7 +603,7 @@ async function generateWithGemini({
   const selectedModel = normalizeGeminiModel(model);
   const requestCount = Number.isInteger(n) ? n : 1;
   const parsedImage = imageDataUrl ? parseDataUrl(imageDataUrl) : null;
-  const geminiTimeoutMs = Number.parseInt(process.env.GEMINI_TIMEOUT_MS || '180000', 10);
+  const geminiTimeoutMs = Number.parseInt(process.env.GEMINI_TIMEOUT_MS || String(GENERATION_REQUEST_TIMEOUT_MS), 10);
 
   for (let i = 0; i < requestCount; i += 1) {
     const parts = [];
@@ -448,6 +752,7 @@ async function generateWithVolcengine({
   resolution,
   imageEditPrompt,
   loraWeight,
+  returnTask,
 }) {
   if (!credentials?.accessKey || !credentials?.secretKey) {
     throw new Error('Volcengine 凭证缺失，请使用 AK:SK 格式或配置 VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
@@ -461,9 +766,9 @@ async function generateWithVolcengine({
   const isJimengMaterialPod = reqKey === 'i2i_material_extraction';
   const isJimengMaterialProduct = reqKey === 'jimeng_i2i_extract_tiled_images';
   const promptText = (prompt && prompt.trim()) ? prompt.trim() : 'Generate an image';
-  const maxAttempts = Number.parseInt(process.env.VOLCENGINE_MAX_POLL_ATTEMPTS || '90', 10);
-  const pollIntervalMs = Number.parseInt(process.env.VOLCENGINE_POLL_INTERVAL_MS || '2000', 10);
-  const volcengineTimeoutMs = Number.parseInt(process.env.VOLCENGINE_TIMEOUT_MS || '120000', 10);
+  const maxAttempts = Number.parseInt(process.env.VOLCENGINE_MAX_POLL_ATTEMPTS || String(GENERATION_MAX_POLL_ATTEMPTS), 10);
+  const pollIntervalMs = Number.parseInt(process.env.VOLCENGINE_POLL_INTERVAL_MS || String(GENERATION_POLL_INTERVAL_MS), 10);
+  const volcengineTimeoutMs = Number.parseInt(process.env.VOLCENGINE_TIMEOUT_MS || String(GENERATION_REQUEST_TIMEOUT_MS), 10);
 
   const submitBody = {
     req_key: reqKey,
@@ -571,6 +876,7 @@ async function generateWithVolcengine({
   }
   const taskId = submitData?.data?.task_id;
   if (!taskId) throw new Error('Volcengine 提交成功但未返回 task_id');
+  if (returnTask) return { taskId, taskStatus: 'PENDING', model: reqKey };
 
   const getResultQuery = { Action: 'CVSync2AsyncGetResult', Version: VOLCENGINE_VERSION };
   const getResultBody = {
@@ -619,6 +925,50 @@ async function generateWithVolcengine({
   }
 
   throw new Error('Volcengine 任务轮询超时');
+}
+
+function normalizeVolcengineTaskStatus(status) {
+  if (status === 'done') return 'SUCCEEDED';
+  if (status === 'failed') return 'FAILED';
+  if (status === 'running' || status === 'processing') return 'RUNNING';
+  return 'PENDING';
+}
+
+async function fetchVolcengineTaskResult({ credentials, model, taskId }) {
+  if (!credentials?.accessKey || !credentials?.secretKey) {
+    throw new Error('Volcengine 凭证缺失，请使用 AK:SK 格式或配置 VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY');
+  }
+  if (!taskId || typeof taskId !== 'string') throw new Error('缺少 taskId');
+  const reqKey = normalizeVolcengineModel(model);
+  const body = {
+    req_key: reqKey,
+    task_id: taskId,
+    req_json: JSON.stringify({ return_url: true }),
+  };
+  const bodyText = JSON.stringify(body);
+  const query = { Action: 'CVSync2AsyncGetResult', Version: VOLCENGINE_VERSION };
+  const auth = volcengineSign({
+    accessKey: credentials.accessKey,
+    secretKey: credentials.secretKey,
+    sessionToken: credentials.sessionToken || '',
+    bodyText,
+    queryParams: query,
+    host: VOLCENGINE_HOST,
+    service: VOLCENGINE_SERVICE,
+    region: VOLCENGINE_REGION,
+  });
+  const queryString = volcengineCanonicalQuery(query);
+  const timeoutMs = Number.parseInt(process.env.VOLCENGINE_TIMEOUT_MS || String(GENERATION_REQUEST_TIMEOUT_MS), 10);
+  const resultRes = await fetchWithTimeout(
+    `https://${VOLCENGINE_HOST}/?${queryString}`,
+    { method: 'POST', headers: auth.headers, body: bodyText },
+    timeoutMs
+  );
+  const resultData = await resultRes.json();
+  if (!resultRes.ok || resultData?.code !== 10000) {
+    throw new Error(resultData?.message || resultData?.ResponseMetadata?.Error?.Message || `Volcengine get result failed (${resultRes.status})`);
+  }
+  return { reqKey, resultData };
 }
 
 function validateIntegerInRange(name, value, min, max) {
@@ -717,7 +1067,7 @@ function buildBaseUrl(req) {
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostName)
   );
   if (isPrivateHost) {
-    throw new Error('当前服务地址是本地/内网地址，火山引擎无法访问。请配置 PUBLIC_BASE_URL 为公网可访问地址。');
+    throw new Error('当前服务地址是本地/内网地址，上游生成服务无法访问上传图片。请配置 PUBLIC_BASE_URL 为公网可访问地址。');
   }
   return `${protocol}://${host}`;
 }
@@ -726,13 +1076,14 @@ async function saveUploadedImageAsPublicUrl(req, imageFile) {
   if (!imageFile?.buffer || !Buffer.isBuffer(imageFile.buffer)) {
     return { publicUrl: '', filePath: '' };
   }
+  const publicBaseUrl = buildBaseUrl(req);
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
   const fileExt = MIME_EXTENSION_MAP[imageFile.mimetype] || '.png';
   const fileName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${fileExt}`;
   const filePath = path.join(UPLOADS_DIR, fileName);
   await fs.writeFile(filePath, imageFile.buffer);
   return {
-    publicUrl: `${buildBaseUrl(req)}/${UPLOADS_RELATIVE_DIR}/${fileName}`,
+    publicUrl: `${publicBaseUrl}/${UPLOADS_RELATIVE_DIR}/${fileName}`,
     filePath,
   };
 }
@@ -1082,6 +1433,316 @@ app.get('/', (req, res) => {
 const ALLOWED_PROVIDERS = ['dashscope', 'gemini', 'volcengine'];
 const ALLOWED_MODELS = Object.keys(MODEL_CONFIG);
 
+app.post('/api/video-models', async (req, res) => {
+  const models = await getDashscopeVideoModels(req.body?.apiKey);
+  res.json(models);
+});
+
+app.get('/api/video-task-records', (req, res) => {
+  const limit = Math.max(1, Math.min(200, Number.parseInt(req.query.limit || '100', 10) || 100));
+  const rows = videoTaskDb
+    .prepare('SELECT * FROM video_tasks ORDER BY created_at DESC LIMIT ?')
+    .all(limit);
+  res.json({ records: rows.map(mapVideoTaskRecord) });
+});
+
+app.delete('/api/video-task-records', (req, res) => {
+  videoTaskDb.prepare('DELETE FROM video_tasks').run();
+  res.json({ ok: true });
+});
+
+app.post('/api/video-task-records/import', (req, res) => {
+  const records = Array.isArray(req.body?.records) ? req.body.records : [];
+  let imported = 0;
+  records.slice(0, 200).forEach((record) => {
+    if (!record?.taskId || typeof record.taskId !== 'string') return;
+    saveVideoTaskRecord({
+      taskId: record.taskId,
+      provider: record.provider || 'dashscope',
+      model: record.model || '',
+      mode: record.mode || '',
+      status: record.status || 'PENDING',
+      prompt: record.prompt || '',
+      duration: Number.isInteger(record.duration) ? record.duration : null,
+      resolution: record.resolution || '',
+      ratio: record.ratio || '',
+      videoUrl: record.videoUrl || '',
+      usage: record.usage || null,
+      errorMessage: record.error || '',
+      createdAt: Number.isInteger(record.createdAt) ? record.createdAt : Date.now(),
+    });
+    imported += 1;
+  });
+  res.json({ imported });
+});
+
+app.get('/api/image-task-records', (req, res) => {
+  const limit = Math.max(1, Math.min(200, Number.parseInt(req.query.limit || '100', 10) || 100));
+  const mode = req.query.mode === 'image2image' ? 'image2image' : 'text2image';
+  const rows = videoTaskDb
+    .prepare('SELECT * FROM image_tasks WHERE mode = ? ORDER BY created_at DESC LIMIT ?')
+    .all(mode, limit);
+  res.json({ records: rows.map(mapImageTaskRecord) });
+});
+
+app.post('/api/dashscope-task-status', async (req, res) => {
+  const { apiKey, taskId, model, resultType } = req.body || {};
+  const resolvedApiKey = getApiKey('dashscope', apiKey);
+  if (!resolvedApiKey) return res.status(400).json({ error: '请提供 DashScope API Key' });
+  if (!taskId || typeof taskId !== 'string') return res.status(400).json({ error: '缺少 taskId' });
+
+  try {
+    const pollRes = await fetchWithTimeout(`${BASE_URL}${TASK_ENDPOINT}${taskId}`, {
+      headers: { Authorization: `Bearer ${resolvedApiKey}` },
+    }, GENERATION_REQUEST_TIMEOUT_MS);
+    const pollData = await pollRes.json();
+    if (!pollRes.ok) return res.status(pollRes.status).json({ error: formatUpstreamError(pollData, '查询任务失败') });
+
+    const output = pollData.output || {};
+    const status = output.task_status || 'UNKNOWN';
+    const isTaskFailure = status === 'FAILED' || status === 'CANCELED' || status === 'UNKNOWN';
+    const message = isTaskFailure
+      ? formatUpstreamError(pollData, output.message || `任务状态异常：${status}`)
+      : (output.message || '');
+    const payload = {
+      provider: 'dashscope',
+      taskId,
+      taskStatus: status,
+      requestId: pollData.request_id || '',
+      submitTime: output.submit_time || '',
+      scheduledTime: output.scheduled_time || '',
+      endTime: output.end_time || '',
+      message,
+      usage: pollData.usage || null,
+    };
+    if (status === 'SUCCEEDED') {
+      if (resultType === 'video') {
+        payload.videoUrl = extractVideoUrl(pollData);
+      } else {
+        payload.imageUrls = extractImageUrls(pollData, model);
+      }
+    }
+    if (resultType === 'video') {
+      saveVideoTaskRecord({
+        taskId,
+        provider: 'dashscope',
+        model,
+        status,
+        videoUrl: payload.videoUrl,
+        usage: payload.usage,
+        message,
+      });
+    } else {
+      saveImageTaskRecord({
+        id: taskId,
+        taskId,
+        mode: req.body?.mode || 'text2image',
+        provider: 'dashscope',
+        model,
+        status,
+        imageUrls: payload.imageUrls,
+        usage: payload.usage,
+        message,
+      });
+    }
+    res.json(payload);
+  } catch (err) {
+    res.status(500).json({ error: formatUpstreamError(err.message) });
+  }
+});
+
+app.post('/api/volcengine-task-status', async (req, res) => {
+  const { apiKey, taskId, model } = req.body || {};
+  const credentials = parseVolcengineCredentials(apiKey);
+  if (apiKey && !credentials) return res.status(400).json({ error: 'Volcengine 凭证格式无效，请使用 AK:SK 格式' });
+  if (!credentials) return res.status(400).json({ error: '请提供 Volcengine AK/SK' });
+
+  try {
+    const { resultData } = await fetchVolcengineTaskResult({ credentials, model, taskId });
+    const rawStatus = resultData?.data?.status || '';
+    const taskStatus = normalizeVolcengineTaskStatus(rawStatus);
+    const payload = {
+      provider: 'volcengine',
+      taskId,
+      taskStatus,
+      rawStatus,
+      requestId: resultData?.request_id || resultData?.ResponseMetadata?.RequestId || '',
+      message: resultData?.data?.msg || resultData?.message || '',
+    };
+    if (taskStatus === 'SUCCEEDED') payload.imageUrls = extractVolcengineImageUrls(resultData);
+    saveImageTaskRecord({
+      id: taskId,
+      taskId,
+      mode: req.body?.mode || 'text2image',
+      provider: 'volcengine',
+      model,
+      status: taskStatus,
+      imageUrls: payload.imageUrls,
+      message: payload.message,
+    });
+    res.json(payload);
+  } catch (err) {
+    res.status(500).json({ error: formatUpstreamError(err.message) });
+  }
+});
+
+app.post('/api/generate-video', (req, res, next) => {
+  upload.fields([
+    { name: 'firstFrame', maxCount: 1 },
+    { name: 'lastFrame', maxCount: 1 },
+  ])(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next);
+    next();
+  });
+}, async (req, res) => {
+  const { apiKey, model, mode, prompt, parameters } = req.body;
+  const progressMode = req.body.progressMode === true || req.body.progressMode === 'true';
+  const selectedMode = mode === 'image2video' ? 'image2video' : 'text2video';
+  const selectedModel = typeof model === 'string' && model.trim()
+    ? model.trim()
+    : VIDEO_MODELS[selectedMode][0].value;
+  const resolvedApiKey = getApiKey('dashscope', apiKey);
+  if (!resolvedApiKey) return res.status(400).json({ error: '请提供 DashScope API Key' });
+  if (selectedMode === 'text2video' && (!prompt || !prompt.trim())) {
+    return res.status(400).json({ error: '请输入视频描述' });
+  }
+
+  let params;
+  try {
+    params = parameters ? JSON.parse(parameters) : {};
+  } catch (e) {
+    params = {};
+  }
+
+  const promptErr = validateStringMaxLen('prompt', prompt, 5000);
+  if (promptErr) return res.status(400).json({ error: promptErr });
+  const negativeErr = validateStringMaxLen('negative_prompt', params.negative_prompt, 500);
+  if (negativeErr) return res.status(400).json({ error: negativeErr });
+  const duration = params.duration === undefined ? 5 : params.duration;
+  const minDuration = selectedModel.startsWith('happyhorse-1.0-') ? 3 : 2;
+  const durationErr = validateIntegerInRange('duration', duration, minDuration, 15);
+  if (durationErr) return res.status(400).json({ error: durationErr });
+  if (params.seed !== undefined) {
+    const seedErr = validateIntegerInRange('seed', params.seed, 0, 2147483647);
+    if (seedErr) return res.status(400).json({ error: seedErr });
+  }
+
+  const firstFrame = req.files?.firstFrame?.[0];
+  const lastFrame = req.files?.lastFrame?.[0];
+  const imageDataUrl = firstFrame ? `data:${firstFrame.mimetype};base64,${firstFrame.buffer.toString('base64')}` : '';
+  const lastFrameDataUrl = lastFrame ? `data:${lastFrame.mimetype};base64,${lastFrame.buffer.toString('base64')}` : '';
+  if (selectedMode === 'image2video' && !imageDataUrl) {
+    return res.status(400).json({ error: '图生视频需要上传首帧图片' });
+  }
+
+  const input = {};
+  if (prompt && prompt.trim()) input.prompt = prompt.trim();
+  if (params.negative_prompt) input.negative_prompt = params.negative_prompt;
+  let uploadedVideoFrameMeta = null;
+  if (selectedMode === 'image2video' && selectedModel === 'happyhorse-1.0-i2v') {
+    try {
+      uploadedVideoFrameMeta = await saveUploadedImageAsPublicUrl(req, firstFrame);
+      if (uploadedVideoFrameMeta.filePath) {
+        scheduleUploadedFileCleanup(uploadedVideoFrameMeta.filePath, VIDEO_GENERATION_REQUEST_TIMEOUT_MS + UPLOAD_FILE_CLEANUP_DELAY_MS);
+      }
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    input.media = [{ type: 'first_frame', url: uploadedVideoFrameMeta.publicUrl }];
+  } else if (selectedMode === 'image2video' && selectedModel.startsWith('wan2.7-i2v')) {
+    input.media = [{ type: 'first_frame', url: imageDataUrl }];
+    if (lastFrameDataUrl) input.media.push({ type: 'last_frame', url: lastFrameDataUrl });
+  } else if (selectedMode === 'image2video') {
+    input.img_url = imageDataUrl;
+  }
+
+  const requestParams = {
+    resolution: params.resolution || '720P',
+    duration,
+    prompt_extend: params.prompt_extend !== false,
+    watermark: params.watermark === true,
+  };
+  if (selectedMode === 'text2video' && params.ratio) {
+    if (selectedModel.startsWith('wan2.7-t2v') || selectedModel === 'happyhorse-1.0-t2v') {
+      requestParams.ratio = params.ratio;
+    } else {
+      const sizes = {
+        '720P': { '16:9': '1280*720', '9:16': '720*1280', '1:1': '960*960', '4:3': '1088*832', '3:4': '832*1088' },
+        '1080P': { '16:9': '1920*1080', '9:16': '1080*1920', '1:1': '1440*1440', '4:3': '1632*1248', '3:4': '1248*1632' },
+      };
+      requestParams.size = sizes[requestParams.resolution]?.[params.ratio] || '1280*720';
+      delete requestParams.resolution;
+    }
+  }
+  if (params.seed !== undefined) requestParams.seed = params.seed;
+
+  try {
+    const submitRes = await fetchWithTimeout(
+      `${BASE_URL}${VIDEO_ENDPOINT}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resolvedApiKey}`,
+          'Content-Type': 'application/json',
+          'X-DashScope-Async': 'enable',
+        },
+        body: JSON.stringify({ model: selectedModel, input, parameters: requestParams }),
+      },
+      VIDEO_GENERATION_REQUEST_TIMEOUT_MS
+    );
+    const submitData = await submitRes.json();
+    if (!submitRes.ok) return res.status(submitRes.status).json({ error: formatUpstreamError(submitData) });
+    const taskId = submitData.output?.task_id;
+    if (!taskId) return res.status(500).json({ error: '未返回 task_id' });
+    saveVideoTaskRecord({
+      taskId,
+      provider: 'dashscope',
+      model: selectedModel,
+      mode: selectedMode,
+      status: submitData.output?.task_status || 'PENDING',
+      prompt: prompt?.trim() || '',
+      duration,
+      resolution: requestParams.resolution || params.resolution || '',
+      ratio: requestParams.ratio || params.ratio || '',
+    });
+    if (progressMode) {
+      return res.json({
+        provider: 'dashscope',
+        resultType: 'video',
+        taskId,
+        taskStatus: submitData.output?.task_status || 'PENDING',
+        model: selectedModel,
+      });
+    }
+
+    for (let attempt = 0; attempt < DASHSCOPE_VIDEO_MAX_POLL_ATTEMPTS; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, DASHSCOPE_VIDEO_POLL_INTERVAL_MS));
+      const pollRes = await fetchWithTimeout(`${BASE_URL}${TASK_ENDPOINT}${taskId}`, {
+        headers: { Authorization: `Bearer ${resolvedApiKey}` },
+      }, VIDEO_GENERATION_REQUEST_TIMEOUT_MS);
+      const pollData = await pollRes.json();
+      const status = pollData.output?.task_status;
+      if (status === 'SUCCEEDED') {
+        const videoUrl = extractVideoUrl(pollData);
+        if (!videoUrl) return res.status(500).json({ error: '响应中未包含视频 URL' });
+        saveVideoTaskRecord({ taskId, status, videoUrl, usage: pollData.usage || null });
+        return res.json({ videoUrl, taskId, usage: pollData.usage || null });
+      }
+      if (status === 'FAILED' || status === 'CANCELED' || status === 'UNKNOWN') {
+        const errorMessage = formatUpstreamError(pollData, `视频任务失败：${status}`);
+        saveVideoTaskRecord({ taskId, status, message: errorMessage });
+        return res.status(500).json({ error: errorMessage });
+      }
+    }
+    return res.status(504).json({ error: '视频任务超时' });
+  } catch (err) {
+    if (err?.name === 'AbortError' || err?.message?.includes('abort')) {
+      return res.status(504).json({ error: '上游请求超时' });
+    }
+    return res.status(500).json({ error: formatUpstreamError(err.message) });
+  }
+});
+
 /**
  * 图片生成接口 (文生图)
  * POST /api/generate-image
@@ -1089,7 +1750,8 @@ const ALLOWED_MODELS = Object.keys(MODEL_CONFIG);
  * 响应: { imageUrls: string[] }
  */
 app.post('/api/generate-image', async (req, res) => {
-  const { prompt, apiKey, model, parameters = {}, provider } = req.body;
+  const { prompt, apiKey, model, parameters = {}, provider, progressMode } = req.body;
+  const wantsProgress = progressMode === true || progressMode === 'true';
   
   // 安全改进: 验证 provider 白名单
   const selectedProvider = normalizeProvider(provider);
@@ -1155,7 +1817,7 @@ app.post('/api/generate-image', async (req, res) => {
     if (sizeErr) return res.status(400).json({ error: sizeErr });
   }
 
-  const dashscopeTimeoutMs = Number.parseInt(process.env.DASHSCOPE_TIMEOUT_MS || '120000', 10);
+  const dashscopeTimeoutMs = Number.parseInt(process.env.DASHSCOPE_TIMEOUT_MS || String(GENERATION_REQUEST_TIMEOUT_MS), 10);
 
   try {
     if (selectedProvider === 'gemini') {
@@ -1165,11 +1827,12 @@ app.post('/api/generate-image', async (req, res) => {
         prompt,
         n,
       });
+      saveImageTaskRecord({ mode: 'text2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls });
       return res.json({ imageUrls });
     }
 
     if (selectedProvider === 'volcengine') {
-      const imageUrls = await generateWithVolcengine({
+      const volcengineResult = await generateWithVolcengine({
         credentials: volcengineCredentials,
         model: selectedModel,
         prompt,
@@ -1180,8 +1843,28 @@ app.post('/api/generate-image', async (req, res) => {
         watermark,
         usePreLlm: promptExtend,
         seed,
+        returnTask: wantsProgress,
       });
-      return res.json({ imageUrls });
+      if (wantsProgress) {
+        saveImageTaskRecord({
+          id: volcengineResult.taskId,
+          taskId: volcengineResult.taskId,
+          mode: 'text2image',
+          provider: 'volcengine',
+          model: selectedModel,
+          status: volcengineResult.taskStatus,
+          prompt,
+        });
+        return res.json({
+          provider: 'volcengine',
+          resultType: 'image',
+          taskId: volcengineResult.taskId,
+          taskStatus: volcengineResult.taskStatus,
+          model: selectedModel,
+        });
+      }
+      saveImageTaskRecord({ mode: 'text2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls: volcengineResult });
+      return res.json({ imageUrls: volcengineResult });
     }
 
     // 同步模型调用
@@ -1217,7 +1900,7 @@ app.post('/api/generate-image', async (req, res) => {
       const syncData = await syncRes.json();
 
       if (!syncRes.ok) {
-        return res.status(syncRes.status).json({ error: syncData.message || syncData });
+        return res.status(syncRes.status).json({ error: formatUpstreamError(syncData) });
       }
 
       const imageUrls = extractImageUrls(syncData, selectedModel);
@@ -1225,6 +1908,7 @@ app.post('/api/generate-image', async (req, res) => {
         return res.status(500).json({ error: '响应中未包含图片 URL' });
       }
 
+      saveImageTaskRecord({ mode: 'text2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls });
       return res.json({ imageUrls });
     }
 
@@ -1259,12 +1943,30 @@ app.post('/api/generate-image', async (req, res) => {
     const submitData = await submitRes.json();
 
     if (!submitRes.ok) {
-      return res.status(submitRes.status).json({ error: submitData.message || submitData });
+      return res.status(submitRes.status).json({ error: formatUpstreamError(submitData) });
     }
 
     const taskId = submitData.output?.task_id;
     if (!taskId) {
       return res.status(500).json({ error: '未返回 task_id' });
+    }
+    if (wantsProgress) {
+      saveImageTaskRecord({
+        id: taskId,
+        taskId,
+        mode: 'text2image',
+        provider: 'dashscope',
+        model: selectedModel,
+        status: submitData.output?.task_status || 'PENDING',
+        prompt,
+      });
+      return res.json({
+        provider: 'dashscope',
+        resultType: 'image',
+        taskId,
+        taskStatus: submitData.output?.task_status || 'PENDING',
+        model: selectedModel,
+      });
     }
 
     // 轮询任务状态
@@ -1285,9 +1987,12 @@ app.post('/api/generate-image', async (req, res) => {
 
       if (status === 'SUCCEEDED') {
         imageUrls = extractImageUrls(pollData, selectedModel);
+        saveImageTaskRecord({ id: taskId, taskId, mode: 'text2image', provider: 'dashscope', model: selectedModel, status, prompt, imageUrls, usage: pollData.usage || null });
         break;
       } else if (status === 'FAILED') {
-        return res.status(500).json({ error: pollData.output?.message || 'Task failed' });
+        const errorMessage = formatUpstreamError(pollData, 'Task failed');
+        saveImageTaskRecord({ id: taskId, taskId, mode: 'text2image', provider: 'dashscope', model: selectedModel, status, prompt, message: errorMessage });
+        return res.status(500).json({ error: errorMessage });
       }
 
       attempts++;
@@ -1302,7 +2007,7 @@ app.post('/api/generate-image', async (req, res) => {
     if (err?.name === 'AbortError' || err?.message?.includes('abort')) {
       return res.status(504).json({ error: '上游请求超时' });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: formatUpstreamError(err.message) });
   }
 });
 
@@ -1346,6 +2051,7 @@ app.post('/api/image-to-image', (req, res, next) => {
   });
 }, async (req, res) => {
   const { prompt, apiKey, model, parameters, provider, imageUrls } = req.body;
+  const progressMode = req.body.progressMode === true || req.body.progressMode === 'true';
   
   // 安全改进: 验证 provider 白名单
   const selectedProvider = normalizeProvider(provider);
@@ -1464,6 +2170,7 @@ app.post('/api/image-to-image', (req, res, next) => {
         n,
         imageDataUrl,
       });
+      saveImageTaskRecord({ mode: 'image2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls });
       return res.json({ imageUrls });
     }
 
@@ -1537,7 +2244,7 @@ app.post('/api/image-to-image', (req, res, next) => {
       const volcengineSeed = selectedModel === 'jimeng_image2image_dream_inpaint'
         ? (Number.isInteger(inpaintingSeed) ? inpaintingSeed : seed)
         : seed;
-      const volcengineImageUrls = await generateWithVolcengine({
+      const volcengineResult = await generateWithVolcengine({
         credentials: volcengineCredentials,
         model: selectedModel,
         prompt,
@@ -1553,14 +2260,37 @@ app.post('/api/image-to-image', (req, res, next) => {
         resolution: selectedModel === 'jimeng_i2i_seed3_tilesr_cvtob' ? upscaleResolution : undefined,
         imageEditPrompt,
         loraWeight,
+        returnTask: progressMode,
       });
+      if (progressMode) {
+        const cleanupDelayMs = GENERATION_REQUEST_TIMEOUT_MS + UPLOAD_FILE_CLEANUP_DELAY_MS;
+        if (uploadedImageMeta.filePath) scheduleUploadedFileCleanup(uploadedImageMeta.filePath, cleanupDelayMs);
+        if (uploadedMaskMeta.filePath) scheduleUploadedFileCleanup(uploadedMaskMeta.filePath, cleanupDelayMs);
+        saveImageTaskRecord({
+          id: volcengineResult.taskId,
+          taskId: volcengineResult.taskId,
+          mode: 'image2image',
+          provider: 'volcengine',
+          model: selectedModel,
+          status: volcengineResult.taskStatus,
+          prompt,
+        });
+        return res.json({
+          provider: 'volcengine',
+          resultType: 'image',
+          taskId: volcengineResult.taskId,
+          taskStatus: volcengineResult.taskStatus,
+          model: selectedModel,
+        });
+      }
       if (uploadedImageMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedImageMeta.filePath);
       }
       if (uploadedMaskMeta.filePath) {
         scheduleUploadedFileCleanup(uploadedMaskMeta.filePath);
       }
-      return res.json({ imageUrls: volcengineImageUrls });
+      saveImageTaskRecord({ mode: 'image2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls: volcengineResult });
+      return res.json({ imageUrls: volcengineResult });
     }
 
     // 图生图使用同步API (多模态生成端点)
@@ -1622,8 +2352,9 @@ app.post('/api/image-to-image', (req, res, next) => {
       console.error('❌ 图生图API错误:');
       console.error('HTTP状态码:', syncRes.status);
       // 安全改进: 不记录完整响应，只记录错误消息
-      if (DEBUG) console.error('错误消息:', syncData.message || '未知错误');
-      return res.status(syncRes.status).json({ error: syncData.message || syncData });
+      const errorMessage = formatUpstreamError(syncData);
+      if (DEBUG) console.error('错误消息:', errorMessage);
+      return res.status(syncRes.status).json({ error: errorMessage });
     }
 
     if (DEBUG) console.log('✅ 图生图API调用成功');
@@ -1636,6 +2367,7 @@ app.post('/api/image-to-image', (req, res, next) => {
     }
 
     if (DEBUG) console.log('✅ 生成图片数量:', syncImageUrls.length);
+    saveImageTaskRecord({ mode: 'image2image', provider: selectedProvider, model: selectedModel, status: 'SUCCEEDED', prompt, imageUrls: syncImageUrls });
     res.json({ imageUrls: syncImageUrls });
   } catch (err) {
     console.error('❌ 图生图异常:', err);
@@ -1662,7 +2394,8 @@ app.post('/api/image-to-image', (req, res, next) => {
     }
     
     // 其他错误
-    res.status(500).json({ error: `生成失败: ${err.message}` });
+    const errorMessage = formatUpstreamError(err.message);
+    res.status(500).json({ error: errorMessage });
   }
 });
 

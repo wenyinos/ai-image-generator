@@ -3,5 +3,6 @@ node_modules/*
 AGENT.md
 .codex
 public/uploads/*
+data/*
 CODE_REVIEW.md
 SECURITY_REVIEW.md

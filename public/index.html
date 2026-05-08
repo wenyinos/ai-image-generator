@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 图片生成器</title>
+  <title>AI 视觉生成</title>
   <link rel="icon" href="favicon/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
@@ -132,7 +132,7 @@
         <div class="card main-card">
           <div class="card-body p-4">
             <h1 class="card-title text-center mb-4">
-              <i class="bi bi-palette-fill text-primary"></i> AI 图片生成
+              <i class="bi bi-palette-fill text-primary"></i> AI 视觉生成
             </h1>
 
             <!-- 模式切换标签 -->
@@ -145,6 +145,11 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="image2image-tab" data-bs-toggle="tab" data-bs-target="#image2image" type="button" role="tab">
                   <i class="bi bi-image"></i> 图生图
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab">
+                  <i class="bi bi-camera-video"></i> 视频生成
                 </button>
               </li>
             </ul>
@@ -401,9 +406,102 @@
                   ></textarea>
                 </div>
               </div>
+
+              <!-- 视频生成模式 -->
+              <div class="tab-pane fade" id="video" role="tabpanel">
+                <p class="text-center text-muted mb-4">通过阿里云百炼生成视频，支持文生视频和图生视频</p>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <label for="videoMode" class="form-label fw-semibold">生成方式</label>
+                    <select class="form-select" id="videoMode">
+                      <option value="text2video" selected>文生视频</option>
+                      <option value="image2video">图生视频</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="videoApiKeyInput" class="form-label fw-semibold">DashScope API Key（可选）</label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-...">
+                      <button class="btn btn-outline-secondary" type="button" id="toggleVideoApiKeyBtn"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">留空将使用服务端环境变量 <code>DASHSCOPE_API_KEY</code>。</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="videoModelSelect" class="form-label fw-semibold">模型</label>
+                    <select class="form-select" id="videoModelSelect">
+                      <option value="happyhorse-1.0-t2v" selected>happyhorse-1.0-t2v（推荐）</option>
+                      <option value="wan2.7-t2v">wan2.7-t2v（文生视频2.7）</option>
+                      <option value="wan2.7-t2v-2026-04-25">wan2.7-t2v-2026-04-25（文生视频2.7）</option>
+                      <option value="wan2.6-t2v">wan2.6-t2v（文生视频2.6）</option>
+                      <option value="wan2.5-t2v-preview">wan2.5-t2v-preview</option>
+                      <option value="wan2.2-t2v-plus">wan2.2-t2v-plus</option>
+                      <option value="wan2.2-t2v-flash">wan2.2-t2v-flash</option>
+                      <option value="wanx2.1-t2v-turbo">wanx2.1-t2v-turbo</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="refreshVideoModelsBtn">
+                      <i class="bi bi-arrow-clockwise"></i> 获取可用模型
+                    </button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="videoPromptInput" class="form-label fw-semibold">视频描述</label>
+                  <textarea class="form-control" id="videoPromptInput" rows="3" placeholder="例如：电影感镜头，一只小猫在月光下奔跑"></textarea>
+                </div>
+                <div class="row g-3 mb-3 d-none" id="videoFrameGroup">
+                  <div class="col-md-6">
+                    <label for="videoFirstFrame" class="form-label fw-semibold">首帧图片</label>
+                    <input class="form-control" type="file" id="videoFirstFrame" accept="image/*">
+                  </div>
+                  <div class="col-md-6">
+                    <label for="videoLastFrame" class="form-label fw-semibold">尾帧图片（仅 2.7 可选）</label>
+                    <input class="form-control" type="file" id="videoLastFrame" accept="image/*">
+                  </div>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <label for="videoDuration" class="form-label">时长</label>
+                    <select class="form-select" id="videoDuration">
+                      <option value="5" selected>5 秒</option>
+                      <option value="10">10 秒</option>
+                      <option value="15">15 秒</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="videoResolution" class="form-label">分辨率</label>
+                    <select class="form-select" id="videoResolution">
+                      <option value="720P" selected>720P</option>
+                      <option value="1080P">1080P</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4" id="videoRatioGroup">
+                    <label for="videoRatio" class="form-label">宽高比</label>
+                    <select class="form-select" id="videoRatio">
+                      <option value="16:9" selected>16:9</option>
+                      <option value="9:16">9:16</option>
+                      <option value="1:1">1:1</option>
+                      <option value="4:3">4:3</option>
+                      <option value="3:4">3:4</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="border-top pt-3 mt-3" id="videoTaskRecordsPanel">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#videoTaskRecordsCollapse" aria-expanded="false" aria-controls="videoTaskRecordsCollapse">
+                      <i class="bi bi-clock-history"></i> 任务记录
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" id="importVideoTaskRecordsBtn">
+                      <i class="bi bi-database-add"></i> 导入旧记录
+                    </button>
+                  </div>
+                  <div class="collapse" id="videoTaskRecordsCollapse">
+                    <div class="text-muted small" id="videoTaskRecordsEmpty">暂无视频任务记录</div>
+                    <div class="list-group small" id="videoTaskRecords"></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3" id="imageParamsPanel">
               <div class="d-flex align-items-center mb-2">
                 <label class="form-label fw-semibold mb-0">生成参数</label>
                 <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#advancedParams" aria-expanded="false" aria-controls="advancedParams">
@@ -556,13 +654,36 @@
               </div>
             </div>
 
-            <div class="d-grid mb-4">
+            <div class="d-grid mb-2">
               <button class="btn btn-primary btn-lg" id="generateBtn" type="button">
                 <i class="bi bi-magic"></i> 生成图片
               </button>
               <button class="btn btn-primary btn-lg d-none" id="generateBtnI2I" type="button">
                 <i class="bi bi-images"></i> 基于参考图生成
               </button>
+              <button class="btn btn-primary btn-lg d-none" id="generateBtnVideo" type="button">
+                <i class="bi bi-camera-video"></i> 生成视频
+              </button>
+            </div>
+
+            <div class="border-top pt-3 mb-4" id="textImageTaskRecordsPanel">
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#textImageTaskRecordsCollapse" aria-expanded="false" aria-controls="textImageTaskRecordsCollapse">
+                <i class="bi bi-clock-history"></i> 任务记录
+              </button>
+              <div class="collapse mt-2" id="textImageTaskRecordsCollapse">
+                <div class="text-muted small" id="textImageTaskRecordsEmpty">暂无文生图任务记录</div>
+                <div class="list-group small" id="textImageTaskRecords"></div>
+              </div>
+            </div>
+
+            <div class="border-top pt-3 mb-4 d-none" id="imageTaskRecordsPanel">
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#imageTaskRecordsCollapse" aria-expanded="false" aria-controls="imageTaskRecordsCollapse">
+                <i class="bi bi-clock-history"></i> 任务记录
+              </button>
+              <div class="collapse mt-2" id="imageTaskRecordsCollapse">
+                <div class="text-muted small" id="imageTaskRecordsEmpty">暂无图生图任务记录</div>
+                <div class="list-group small" id="imageTaskRecords"></div>
+              </div>
             </div>
 
             <div id="alertContainer"></div>
@@ -570,7 +691,7 @@
             <div class="image-container" id="imageContainer">
               <p class="placeholder-text mb-0" id="placeholder">
                 <i class="bi bi-image fs-1 d-block mb-2"></i>
-                生成的图片将在这里显示
+                生成结果将在这里显示
               </p>
               <div class="text-center d-none" id="loading">
                 <div class="spinner-border text-primary mb-3" role="status"></div>
@@ -581,7 +702,7 @@
 
             <div class="text-center mt-3 d-none" id="downloadBtn">
               <a class="btn btn-outline-success" id="downloadLink" download="generated-image.png">
-                <i class="bi bi-download"></i> 下载图片
+                <i class="bi bi-download"></i> 下载结果
               </a>
             </div>
           </div>

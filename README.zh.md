@@ -1,14 +1,15 @@
-# AI 图片生成器
+# AI 视觉生成
 
 <p align="right">
   <a href="README.md">🇬🇧 English</a>
 </p>
 
-一个面向生产部署的 AI 图片生成 Web 应用，支持**文生图**与**图生图**。
+一个面向生产部署的 AI 视觉生成 Web 应用，支持**文生图**、**图生图**与**视频生成**。
 
 - 前端：Bootstrap 5 + 原生 JavaScript
 - 后端：Express (Node.js)
 - Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**
+- 本地任务记录：SQLite（默认 `data/video-tasks.sqlite`）
 
 ## 功能特性
 
@@ -29,6 +30,12 @@
   - 外部 HTTP(S) 图片 URL 输入
 - 火山图生图上传的临时文件会在**成功生成后 5 分钟自动清理**
 
+### 视频生成
+- 支持 DashScope 文生视频与图生视频
+- 内置 `happyhorse-1.0-*`、`wan2.7-*` 以及早期 Wan 视频模型
+- 长任务通过异步轮询实时显示进度
+- 视频任务记录保存到本地 SQLite，并在前端展示
+
 ### 安全与稳定性
 - API Key 支持前端输入，也支持服务端 `.env` 回退
 - 火山 AK/SK 鉴权签名流程
@@ -37,6 +44,8 @@
 - 内存型 API 频率限制（反向代理下正确识别客户端 IP）
 - CORS 白名单
 - 可选前端访问密钥保护（防暴力破解 + Cookie 会话）
+- 访问 Cookie 签名密钥未配置时会首次启动自动生成并持久化
+- 浏览器后台切回前台时会自动恢复前端状态，减少直接生成失败
 
 ## Provider 与凭证
 
@@ -75,6 +84,33 @@
 | `z-image-turbo` | wan | 异步 | 轻量快速 |
 
 **Gemini**：`gemini-2.5-flash-image`（默认）
+
+## 支持的 DashScope 视频模型
+
+### 文生视频
+
+| 模型 | 说明 |
+|---|---|
+| `happyhorse-1.0-t2v` | 推荐 |
+| `wan2.7-t2v` | 万相 2.7 文生视频 |
+| `wan2.7-t2v-2026-04-25` | 万相 2.7 文生视频快照 |
+| `wan2.6-t2v` | 万相 2.6 文生视频 |
+| `wan2.5-t2v-preview` | 预览 |
+| `wan2.2-t2v-plus` | 增强 |
+| `wan2.2-t2v-flash` | 极速 |
+| `wanx2.1-t2v-turbo` | Turbo |
+
+### 图生视频
+
+| 模型 | 说明 |
+|---|---|
+| `happyhorse-1.0-i2v` | 推荐 |
+| `wan2.7-i2v` | 万相 2.7 图生视频 |
+| `wan2.7-i2v-2026-04-25` | 万相 2.7 图生视频快照 |
+| `wan2.6-i2v-flash` | 极速 |
+| `wan2.5-i2v-preview` | 预览 |
+| `wan2.2-i2v-plus` | 增强 |
+| `wanx2.1-i2v-turbo` | Turbo |
 
 ## 支持的即梦模型
 
@@ -136,6 +172,7 @@ npm run dev
 核心：
 - `PORT`（默认 `3000`）
 - `DEBUG`（`true/1` 开启）
+- `VIDEO_TASK_DB_PATH`（默认 `data/video-tasks.sqlite`，保存图片/视频任务记录）
 
 Provider 凭证：
 - `DASHSCOPE_API_KEY`
@@ -144,10 +181,15 @@ Provider 凭证：
 - `VOLCENGINE_SECRET_KEY`
 - `VOLCENGINE_SESSION_TOKEN`（可选）
 
-超时：
-- `DASHSCOPE_TIMEOUT_MS`（默认 `120000`）
-- `GEMINI_TIMEOUT_MS`（默认 `180000`）
-- `VOLCENGINE_TIMEOUT_MS`（代码默认 `120000`）
+超时与轮询：
+- `GENERATION_MAX_POLL_ATTEMPTS`（默认 `90`）
+- `GENERATION_POLL_INTERVAL_MS`（默认 `5000`）
+- `GENERATION_REQUEST_TIMEOUT_MS`（默认 `450000`）
+- `VIDEO_GENERATION_MAX_POLL_ATTEMPTS`（默认 `288`）
+- `VIDEO_GENERATION_REQUEST_TIMEOUT_MS`（默认 `1800000`）
+- `DASHSCOPE_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
+- `GEMINI_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
+- `VOLCENGINE_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
 
 火山请求调优：
 - `VOLCENGINE_HOST`（默认 `visual.volcengineapi.com`）
@@ -163,7 +205,7 @@ Provider 凭证：
 - `VOLCENGINE_JIMENG_40_REQ_KEY`（默认 `jimeng_t2i_v40`）
 - `VOLCENGINE_JIMENG_46_REQ_KEY`（默认 `jimeng_seedream46_cvtob`）
 - `VOLCENGINE_MAX_POLL_ATTEMPTS`（默认 `90`）
-- `VOLCENGINE_POLL_INTERVAL_MS`（默认 `2000`）
+- `VOLCENGINE_POLL_INTERVAL_MS`（默认 `5000`）
 
 前端访问控制：
 - `FRONTEND_ACCESS_CONTROL_ENABLED`（`true/1` 开启）
@@ -171,7 +213,8 @@ Provider 凭证：
 - `ACCESS_AUTH_WINDOW_MS`（防爆破窗口，默认 `300000`）
 - `ACCESS_AUTH_MAX_ATTEMPTS`（最大失败次数，默认 `8`）
 - `ACCESS_AUTH_LOCK_MS`（锁定时长，默认 `900000`）
-- `ACCESS_COOKIE_SECRET`（Cookie 签名密钥，不配则每次重启变化）
+- `ACCESS_COOKIE_SECRET`（Cookie 签名密钥；不配置时自动生成并持久化）
+- `ACCESS_COOKIE_SECRET_PATH`（默认 `data/access-cookie-secret`，自动生成密钥保存路径）
 
 网关：
 - `CORS_ORIGIN`（逗号分隔白名单）
@@ -234,6 +277,30 @@ FRONTEND_ACCESS_KEY=your_secret_key
 - `/uploads/*` 保持公开（火山引擎需回源拉图）
 - 基于 Cookie 的会话（HttpOnly，7 天有效）
 - 密钥自动保存在浏览器 localStorage（72 小时有效），72 小时内再次访问无需手动输入
+- 若未配置 `ACCESS_COOKIE_SECRET`，服务端首次启动会生成 `data/access-cookie-secret` 并复用
+- 多实例部署建议为所有实例配置相同的 `ACCESS_COOKIE_SECRET`
+
+## 任务记录与本地 SQLite
+
+图片和视频生成任务记录会保存到本地 SQLite：
+
+- 默认路径：`data/video-tasks.sqlite`
+- `video_tasks` 表：视频任务记录
+- `image_tasks` 表：文生图与图生图任务记录
+
+数据库会在服务启动时自动创建。除非要迁移已有记录，否则部署时无需上传本地数据库文件。
+
+如果部署平台没有持久化磁盘，请将 `VIDEO_TASK_DB_PATH` 指向持久化目录。
+
+## 启动 Warning 说明
+
+项目使用 Node.js 内置 `node:sqlite` 保存本地任务记录。Node.js v22 中该 API 可能输出：
+
+```text
+ExperimentalWarning: SQLite is an experimental feature and might change at any time
+```
+
+服务启动时只过滤这条已知 SQLite 实验性提示，不会屏蔽其它 warning。
 
 ## Nginx 反向代理建议
 
@@ -320,10 +387,25 @@ server {
   - 响应: `{ status: 'ok', version: '1.0.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
-  - 响应: `{ imageUrls: string[] }`
+  - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
 - `POST /api/image-to-image`
   - multipart：`image` + 可选 `imageMask` + 字段（`prompt`、`apiKey`、`model`、`provider`、`parameters`、可选 `imageUrls`）
-  - 响应: `{ imageUrls: string[] }`
+  - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
+- `POST /api/generate-video`
+  - multipart：可选 `firstFrame` / `lastFrame` + 字段（`prompt`、`apiKey`、`model`、`mode`、`parameters`）
+  - 响应：视频 URL 或异步任务信息
+- `POST /api/video-models`
+  - 返回 DashScope 视频模型列表或本地备用模型列表
+- `POST /api/dashscope-task-status`
+  - 查询 DashScope 异步图片/视频任务状态
+- `POST /api/volcengine-task-status`
+  - 查询 Volcengine 异步图片任务状态
+- `GET /api/video-task-records`
+  - 返回本地视频任务记录
+- `POST /api/video-task-records/import`
+  - 将浏览器旧视频任务记录导入 SQLite
+- `GET /api/image-task-records`
+  - 按模式返回本地图片任务记录
 - `POST /api/access-auth`
   - body: `{ accessKey }`（form 编码）
   - 成功后返回 auth cookie
@@ -337,6 +419,9 @@ server {
 ```text
 ai-image-generator/
 ├── server.js              # Express 后端（全部 API 逻辑）
+├── data/
+│   ├── video-tasks.sqlite # 本地图片/视频任务记录数据库
+│   └── access-cookie-secret # 自动生成的 Cookie 签名密钥
 ├── public/
 │   ├── index.html         # 单页 UI
 │   ├── app.js             # 前端逻辑（原生 JS）

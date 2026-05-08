@@ -7,6 +7,14 @@
  * @see https://github.com/wenyinos/ai-image-generator
  */
 
+const GENERATION_REQUEST_TIMEOUT_MS = 450000; // 与后端默认补偿窗口保持一致
+const GENERATION_PROGRESS_POLL_INTERVAL_MS = 5000;
+const GENERATION_PROGRESS_MAX_POLL_ATTEMPTS = 90;
+const VIDEO_PROGRESS_MAX_POLL_ATTEMPTS = 0; // 0 表示不因前端轮询次数触发超时
+const FREE_TIER_QUOTA_ERROR_CODE = 'AllocationQuota.FreeTierOnly';
+const FREE_TIER_QUOTA_ERROR_MESSAGE = '此模型额度已用尽，请更换其他模型';
+const FOREGROUND_RECOVERY_MIN_INTERVAL_MS = 3000;
+
 // DOM 元素引用
 const providerSelect = document.getElementById('providerSelect');
 const providerSelectI2I = document.getElementById('providerSelectI2I');
@@ -26,6 +34,7 @@ const modelSelect = document.getElementById('modelSelect');
 const promptInput = document.getElementById('promptInput');
 const generateBtn = document.getElementById('generateBtn');
 const generateBtnI2I = document.getElementById('generateBtnI2I');
+const generateBtnVideo = document.getElementById('generateBtnVideo');
 const alertContainer = document.getElementById('alertContainer');
 const placeholder = document.getElementById('placeholder');
 const loading = document.getElementById('loading');
@@ -33,6 +42,7 @@ const resultImages = document.getElementById('resultImages');
 const downloadBtn = document.getElementById('downloadBtn');
 const downloadLink = document.getElementById('downloadLink');
 const imageCount = document.getElementById('imageCount');
+const imageParamsPanel = document.getElementById('imageParamsPanel');
 const imageSize = document.getElementById('imageSize');
 const genericSizeGroup = document.getElementById('genericSizeGroup');
 const genericSeedGroup = document.getElementById('genericSeedGroup');
@@ -96,11 +106,39 @@ const removeMaskImageBtn = document.getElementById('removeMaskImageBtn');
 const volcengineLocalUploadHint = document.getElementById('volcengineLocalUploadHint');
 const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
+const videoMode = document.getElementById('videoMode');
+const videoApiKeyInput = document.getElementById('videoApiKeyInput');
+const toggleVideoApiKeyBtn = document.getElementById('toggleVideoApiKeyBtn');
+const videoModelSelect = document.getElementById('videoModelSelect');
+const refreshVideoModelsBtn = document.getElementById('refreshVideoModelsBtn');
+const videoPromptInput = document.getElementById('videoPromptInput');
+const videoFrameGroup = document.getElementById('videoFrameGroup');
+const videoFirstFrame = document.getElementById('videoFirstFrame');
+const videoLastFrame = document.getElementById('videoLastFrame');
+const videoDuration = document.getElementById('videoDuration');
+const videoResolution = document.getElementById('videoResolution');
+const videoRatio = document.getElementById('videoRatio');
+const videoRatioGroup = document.getElementById('videoRatioGroup');
+const videoTaskRecordsEl = document.getElementById('videoTaskRecords');
+const videoTaskRecordsEmpty = document.getElementById('videoTaskRecordsEmpty');
+const importVideoTaskRecordsBtn = document.getElementById('importVideoTaskRecordsBtn');
+const textImageTaskRecordsPanel = document.getElementById('textImageTaskRecordsPanel');
+const textImageTaskRecordsEl = document.getElementById('textImageTaskRecords');
+const textImageTaskRecordsEmpty = document.getElementById('textImageTaskRecordsEmpty');
+const imageTaskRecordsPanel = document.getElementById('imageTaskRecordsPanel');
+const imageTaskRecordsEl = document.getElementById('imageTaskRecords');
+const imageTaskRecordsEmpty = document.getElementById('imageTaskRecordsEmpty');
 
 // 当前模式
-let currentMode = 'text2image'; // 'text2image' 或 'image2image'
+let currentMode = 'text2image'; // 'text2image'、'image2image' 或 'video'
 let uploadedImageFile = null;
 let uploadedMaskFile = null;
+let videoTaskRecords = [];
+let textImageTaskRecords = [];
+let imageTaskRecords = [];
+let foregroundRecoveryNeeded = false;
+let foregroundRecoveryPromise = null;
+let lastForegroundRecoveryAt = 0;
 const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
 const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
 
@@ -208,6 +246,28 @@ const MODELS_I2I = {
   ],
 };
 
+let VIDEO_MODELS = {
+  text2video: [
+    { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v（推荐）' },
+    { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
+    { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
+    { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
+    { value: 'wan2.5-t2v-preview', label: 'wan2.5-t2v-preview' },
+    { value: 'wan2.2-t2v-plus', label: 'wan2.2-t2v-plus' },
+    { value: 'wan2.2-t2v-flash', label: 'wan2.2-t2v-flash' },
+    { value: 'wanx2.1-t2v-turbo', label: 'wanx2.1-t2v-turbo' },
+  ],
+  image2video: [
+    { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v（推荐）' },
+    { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
+    { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
+    { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
+    { value: 'wan2.5-i2v-preview', label: 'wan2.5-i2v-preview' },
+    { value: 'wan2.2-i2v-plus', label: 'wan2.2-i2v-plus' },
+    { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
+  ],
+};
+
 // 各模型支持的尺寸选项
 const MODEL_SIZES = {
   // 万相 2.7
@@ -261,6 +321,7 @@ function normalizeGeminiModel(model) {
 }
 
 function getApiKeyStorageKey(mode, provider) {
+  if (mode === 'video') return 'apiKey_video_dashscope';
   return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
 }
 
@@ -273,6 +334,7 @@ function getVolcengineSkStorageKey(mode) {
 }
 
 function getModelStorageKey(mode, provider) {
+  if (mode === 'video') return 'model_video_dashscope';
   return mode === 'image2image' ? `modelI2I_${provider}` : `model_${provider}`;
 }
 
@@ -322,6 +384,30 @@ function renderModelOptions(selectElement, groups, selectedValue) {
   const availableValues = groups.flatMap(group => group.options.map(option => option.value));
   if (selectedValue && availableValues.includes(selectedValue)) {
     selectElement.value = selectedValue;
+  }
+}
+
+function renderVideoModelOptions() {
+  const mode = videoMode ? videoMode.value : 'text2video';
+  const savedModel = localStorage.getItem(getModelStorageKey('video', 'dashscope'));
+  renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+}
+
+async function loadVideoModels() {
+  const apiKey = videoApiKeyInput ? videoApiKeyInput.value.trim() : '';
+  try {
+    const res = await fetch('/api/video-models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey }),
+    });
+    const data = await res.json();
+    if (res.ok && data.models) {
+      VIDEO_MODELS = data.models;
+      renderVideoModelOptions();
+    }
+  } catch (err) {
+    renderVideoModelOptions();
   }
 }
 
@@ -478,6 +564,7 @@ function updateImageProviderState() {
 }
 
 function getActiveProvider() {
+  if (currentMode === 'video') return 'dashscope';
   return currentMode === 'image2image' ? providerSelectI2I.value : providerSelect.value;
 }
 
@@ -511,9 +598,22 @@ function updateI2ISpecialParamState() {
   if (materialPodParamsGroup) materialPodParamsGroup.classList.toggle('d-none', !isMaterialPod);
 }
 
+function updateVideoUiState() {
+  const isVideo = currentMode === 'video';
+  const isImageVideo = videoMode && videoMode.value === 'image2video';
+  if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo);
+  if (generateBtnVideo) generateBtnVideo.classList.toggle('d-none', !isVideo);
+  if (textImageTaskRecordsPanel) textImageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'text2image');
+  if (imageTaskRecordsPanel) imageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'image2image');
+}
+
 // 从 localStorage 恢复用户设置
 providerSelect.value = localStorage.getItem('provider') || 'dashscope';
 providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
+if (videoApiKeyInput) videoApiKeyInput.value = loadCredential(getApiKeyStorageKey('video', 'dashscope'));
+if (videoMode && localStorage.getItem('videoMode')) videoMode.value = localStorage.getItem('videoMode');
 
 if (localStorage.getItem('imageCount')) {
   imageCount.value = localStorage.getItem('imageCount');
@@ -532,6 +632,9 @@ updateTextProviderState();
 updateImageProviderState();
 updateVolcengineUiState();
 updateI2ISpecialParamState();
+renderVideoModelOptions();
+updateVideoUiState();
+loadVideoModels();
 
 // 切换事件
 providerSelect.addEventListener('change', () => {
@@ -543,6 +646,48 @@ providerSelectI2I.addEventListener('change', () => {
   updateVolcengineUiState();
   updateI2ISpecialParamState();
 });
+if (videoMode) {
+  videoMode.addEventListener('change', () => {
+    localStorage.setItem('videoMode', videoMode.value);
+    renderVideoModelOptions();
+    updateVideoUiState();
+  });
+}
+if (refreshVideoModelsBtn) {
+  refreshVideoModelsBtn.addEventListener('click', loadVideoModels);
+}
+if (videoModelSelect) {
+  videoModelSelect.addEventListener('change', () => {
+    localStorage.setItem(getModelStorageKey('video', 'dashscope'), videoModelSelect.value);
+  });
+}
+if (importVideoTaskRecordsBtn) {
+  importVideoTaskRecordsBtn.addEventListener('click', async () => {
+    let legacyRecords = [];
+    try {
+      legacyRecords = JSON.parse(localStorage.getItem('videoTaskRecords') || '[]');
+    } catch (err) {
+      legacyRecords = [];
+    }
+    if (!Array.isArray(legacyRecords) || legacyRecords.length === 0) {
+      showAlert('未发现浏览器旧任务记录', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/video-task-records/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records: legacyRecords }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '导入失败');
+      await loadVideoTaskRecords();
+      showAlert(`已导入 ${data.imported || 0} 条旧任务记录`, 'success');
+    } catch (err) {
+      showAlert(`导入失败: ${err.message}`);
+    }
+  });
+}
 
 modelSelect.addEventListener('change', () => {
   const provider = providerSelect.value;
@@ -600,6 +745,7 @@ bindPasswordToggle(toggleVolcengineAkBtn, volcengineAkInput);
 bindPasswordToggle(toggleVolcengineSkBtn, volcengineSkInput);
 bindPasswordToggle(toggleVolcengineAkBtnI2I, volcengineAkInputI2I);
 bindPasswordToggle(toggleVolcengineSkBtnI2I, volcengineSkInputI2I);
+bindPasswordToggle(toggleVideoApiKeyBtn, videoApiKeyInput);
 
 /**
  * 转义 HTML 特殊字符，防止 XSS
@@ -616,6 +762,160 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+function getFriendlyErrorMessage(error, fallback = '生成失败', forceFailurePrefix = false) {
+  const codes = [];
+  const messages = [];
+  const collectCode = (value) => {
+    if (typeof value === 'string' && value.trim()) codes.push(value.trim());
+  };
+  const collectMessage = (value) => {
+    if (typeof value === 'string' && value.trim()) messages.push(value.trim());
+  };
+  if (typeof error === 'string') {
+    collectMessage(error);
+  } else if (error && typeof error === 'object') {
+    collectCode(error.code);
+    collectCode(error.error?.code);
+    collectMessage(error.message);
+    collectMessage(error.error?.message);
+  }
+  const values = [...codes, ...messages];
+  if (values.some(value => value.includes(FREE_TIER_QUOTA_ERROR_CODE))) {
+    return FREE_TIER_QUOTA_ERROR_MESSAGE;
+  }
+  if (values.some(value => value.includes(FREE_TIER_QUOTA_ERROR_MESSAGE))) {
+    return FREE_TIER_QUOTA_ERROR_MESSAGE;
+  }
+  const stripPrefix = value => String(value || '').replace(/^(?:生成失败[:：]\s*)+/, '').trim();
+  const code = stripPrefix(codes.find(Boolean) || '');
+  const message = stripPrefix(messages.find(value => stripPrefix(value) !== code) || fallback);
+  if (!forceFailurePrefix && !code && !messages.some(value => /^生成失败[:：]/.test(value))) {
+    return message || fallback;
+  }
+  if (code && message && message !== code) return `生成失败：${code} - ${message}`;
+  if (code) return `生成失败：${code}`;
+  return message && message !== '生成失败' ? `生成失败：${message}` : '生成失败';
+}
+
+function saveVideoTaskRecords() {
+  videoTaskRecords = videoTaskRecords.slice(0, 20);
+}
+
+async function loadVideoTaskRecords() {
+  if (!videoTaskRecordsEl) return;
+  try {
+    const res = await fetch('/api/video-task-records?limit=100');
+    const data = await res.json();
+    if (res.ok && Array.isArray(data.records)) {
+      videoTaskRecords = data.records;
+      renderVideoTaskRecords();
+    }
+  } catch (err) {
+    renderVideoTaskRecords();
+  }
+}
+
+function upsertVideoTaskRecord(record) {
+  if (!record?.taskId) return;
+  const existingIndex = videoTaskRecords.findIndex(item => item.taskId === record.taskId);
+  const nextRecord = {
+    ...(existingIndex >= 0 ? videoTaskRecords[existingIndex] : {}),
+    ...record,
+    updatedAt: Date.now(),
+  };
+  if (existingIndex >= 0) {
+    videoTaskRecords.splice(existingIndex, 1);
+  }
+  videoTaskRecords.unshift(nextRecord);
+  saveVideoTaskRecords();
+  renderVideoTaskRecords();
+}
+
+function renderVideoTaskRecords() {
+  if (!videoTaskRecordsEl || !videoTaskRecordsEmpty) return;
+  videoTaskRecordsEmpty.classList.toggle('d-none', videoTaskRecords.length > 0);
+  videoTaskRecordsEl.innerHTML = videoTaskRecords.map((record) => {
+    const createdAt = record.createdAt ? new Date(record.createdAt).toLocaleString() : '';
+    const statusText = getTaskStatusText(record.status);
+    const params = `${record.mode === 'image2video' ? '图生视频' : '文生视频'} · ${record.duration || '-'}秒 · ${record.resolution || '-'}`;
+    const usage = record.usage?.output_video_duration || record.usage?.duration || '';
+    const usageText = usage ? ` · 输出${usage}秒` : '';
+    const link = record.videoUrl
+      ? `<a href="${escapeHtml(record.videoUrl)}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">打开</a>`
+      : '';
+    return `
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="text-break">
+            <div class="fw-semibold">${escapeHtml(record.model || '')}</div>
+            <div class="text-muted">${escapeHtml(params)} · ${escapeHtml(statusText)}${escapeHtml(usageText)}</div>
+            <div class="text-muted">任务ID：${escapeHtml(record.taskId)}</div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="text-muted">${escapeHtml(createdAt)}</div>
+            ${link}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+loadVideoTaskRecords();
+
+async function loadImageTaskRecords(mode) {
+  const targetList = mode === 'image2image' ? imageTaskRecordsEl : textImageTaskRecordsEl;
+  if (!targetList) return;
+  try {
+    const res = await fetch(`/api/image-task-records?mode=${encodeURIComponent(mode)}&limit=100`);
+    const data = await res.json();
+    if (res.ok && Array.isArray(data.records)) {
+      if (mode === 'image2image') {
+        imageTaskRecords = data.records;
+      } else {
+        textImageTaskRecords = data.records;
+      }
+      renderImageTaskRecords(mode);
+    }
+  } catch (err) {
+    renderImageTaskRecords(mode);
+  }
+}
+
+function renderImageTaskRecords(mode) {
+  const records = mode === 'image2image' ? imageTaskRecords : textImageTaskRecords;
+  const listEl = mode === 'image2image' ? imageTaskRecordsEl : textImageTaskRecordsEl;
+  const emptyEl = mode === 'image2image' ? imageTaskRecordsEmpty : textImageTaskRecordsEmpty;
+  if (!listEl || !emptyEl) return;
+  emptyEl.classList.toggle('d-none', records.length > 0);
+  listEl.innerHTML = records.map((record) => {
+    const createdAt = record.createdAt ? new Date(record.createdAt).toLocaleString() : '';
+    const statusText = getTaskStatusText(record.status);
+    const count = Array.isArray(record.imageUrls) ? record.imageUrls.length : 0;
+    const preview = count > 0
+      ? `<a href="${escapeHtml(record.imageUrls[0])}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">打开</a>`
+      : '';
+    return `
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="text-break">
+            <div class="fw-semibold">${escapeHtml(record.model || '')}</div>
+            <div class="text-muted">${escapeHtml(record.provider || '')} · ${escapeHtml(statusText)} · ${count || '-'}张</div>
+            ${record.taskId ? `<div class="text-muted">任务ID：${escapeHtml(record.taskId)}</div>` : ''}
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="text-muted">${escapeHtml(createdAt)}</div>
+            ${preview}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+loadImageTaskRecords('text2image');
+loadImageTaskRecords('image2image');
+
 /**
  * 显示提示信息
  * @param {string} message - 提示内容
@@ -623,7 +923,7 @@ function escapeHtml(str) {
  */
 function showAlert(message, type = 'danger') {
   const safeType = escapeHtml(type);
-  const safeMessage = escapeHtml(message);
+  const safeMessage = escapeHtml(type === 'danger' ? getFriendlyErrorMessage(message, '操作失败') : message);
   alertContainer.innerHTML = `
     <div class="alert alert-${safeType} alert-dismissible fade show" role="alert">
       ${safeMessage}
@@ -642,6 +942,7 @@ function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   
   generateBtn.disabled = isLoading;
   generateBtnI2I.disabled = isLoading;
+  if (generateBtnVideo) generateBtnVideo.disabled = isLoading;
   placeholder.classList.toggle('d-none', isLoading);
   loading.classList.toggle('d-none', !isLoading);
   resultImages.classList.toggle('d-none', isLoading);
@@ -655,6 +956,95 @@ function setLoading(isLoading, message = '正在生成图片，请稍候...') {
   const loadingText = loading.querySelector('p');
   if (loadingText) {
     loadingText.textContent = message;
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function formatElapsed(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const restSeconds = seconds % 60;
+  return minutes > 0 ? `${minutes}分${restSeconds}秒` : `${restSeconds}秒`;
+}
+
+function getTaskStatusText(status) {
+  const labels = {
+    PENDING: '排队中',
+    RUNNING: '生成中',
+    SUCCEEDED: '已完成',
+    FAILED: '失败',
+    CANCELED: '已取消',
+    UNKNOWN: '状态未知',
+  };
+  return labels[status] || status || '查询中';
+}
+
+async function pollGenerationTask({ endpoint, payload, resultType, title, maxAttempts = GENERATION_PROGRESS_MAX_POLL_ATTEMPTS, onTaskUpdate }) {
+  const startedAt = Date.now();
+  let attempt = 0;
+  while (!maxAttempts || attempt < maxAttempts) {
+    await sleep(GENERATION_PROGRESS_POLL_INTERVAL_MS);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(getFriendlyErrorMessage(data.error || data, '查询任务失败', true));
+    }
+
+    const status = data.taskStatus || 'PENDING';
+    setLoading(true, `${title}：${getTaskStatusText(status)}，已等待 ${formatElapsed(Date.now() - startedAt)}，任务ID ${data.taskId || payload.taskId}`);
+    if (onTaskUpdate) onTaskUpdate(data, status);
+
+    if (status === 'SUCCEEDED') {
+      if (resultType === 'video') {
+        if (!data.videoUrl) throw new Error('任务完成但未返回视频 URL');
+        displayVideos([data.videoUrl]);
+      } else {
+        if (!Array.isArray(data.imageUrls) || data.imageUrls.length === 0) {
+          throw new Error('任务完成但未返回图片 URL');
+        }
+        displayImages(data.imageUrls);
+      }
+      return;
+    }
+    if (status === 'FAILED' || status === 'CANCELED' || status === 'UNKNOWN') {
+      throw new Error(getFriendlyErrorMessage(data.message || data, `任务状态异常：${status}`, true));
+    }
+    attempt += 1;
+  }
+  throw new Error('任务查询超时');
+}
+
+async function handleGenerationResult(data, { apiKey, model, resultType, title, mode, onTaskUpdate }) {
+  if (data.taskId) {
+    const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
+    setLoading(true, `${title}：${getTaskStatusText(data.taskStatus)}，任务ID ${data.taskId}`);
+    await pollGenerationTask({
+      endpoint,
+      payload: {
+        apiKey,
+        taskId: data.taskId,
+        model: data.model || model,
+        resultType,
+        mode,
+      },
+      resultType,
+      title,
+      maxAttempts: resultType === 'video' ? VIDEO_PROGRESS_MAX_POLL_ATTEMPTS : GENERATION_PROGRESS_MAX_POLL_ATTEMPTS,
+      onTaskUpdate,
+    });
+    return;
+  }
+  if (resultType === 'video') {
+    displayVideos([data.videoUrl]);
+  } else {
+    displayImages(data.imageUrls);
   }
 }
 
@@ -800,6 +1190,28 @@ function displayImages(imageUrls) {
   downloadLink.download = 'generated-image-1.png';
 }
 
+function displayVideos(videoUrls) {
+  const imageContainer = document.getElementById('imageContainer');
+  imageContainer.classList.add('has-images');
+  placeholder.classList.add('d-none');
+  loading.classList.add('d-none');
+  resultImages.innerHTML = '';
+  resultImages.className = 'w-100';
+
+  videoUrls.forEach((url) => {
+    const video = document.createElement('video');
+    video.className = 'w-100 rounded bg-dark';
+    video.controls = true;
+    video.src = url;
+    resultImages.appendChild(video);
+  });
+
+  resultImages.classList.remove('d-none');
+  downloadBtn.classList.remove('d-none');
+  downloadLink.href = videoUrls[0];
+  downloadLink.download = 'generated-video.mp4';
+}
+
 // 生成按钮点击事件
 generateBtn.addEventListener('click', async () => {
   const provider = providerSelect.value;
@@ -846,6 +1258,8 @@ generateBtn.addEventListener('click', async () => {
     }
   }
 
+  if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+
   // 根据"记住我"状态存储凭证
   if (provider === 'volcengine') {
     const rememberVolc = rememberVolcengine?.checked ?? true;
@@ -871,6 +1285,7 @@ generateBtn.addEventListener('click', async () => {
         apiKey,
         model,
         prompt,
+        progressMode: true,
         parameters: {
           n,
           size,
@@ -887,11 +1302,18 @@ generateBtn.addEventListener('click', async () => {
     const data = await res.json();
 
     if (!res.ok) {
-      const errorMsg = data.error?.message || data.error || '生成失败';
-      throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
+      throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
     }
 
-    displayImages(data.imageUrls);
+    await handleGenerationResult(data, {
+      apiKey,
+      model,
+      resultType: 'image',
+      title: '图片生成',
+      mode: 'text2image',
+      onTaskUpdate: () => loadImageTaskRecords('text2image'),
+    });
+    await loadImageTaskRecords('text2image');
     setLoading(false);
   } catch (err) {
     setLoading(false);
@@ -899,18 +1321,120 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
+if (generateBtnVideo) {
+  generateBtnVideo.addEventListener('click', async () => {
+    const mode = videoMode.value;
+    const apiKey = videoApiKeyInput.value.trim();
+    const model = videoModelSelect.value;
+    const prompt = videoPromptInput.value.trim();
+    const firstFrame = videoFirstFrame.files[0];
+    const lastFrame = videoLastFrame.files[0];
+    const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
+
+    if (mode === 'text2video' && !prompt) {
+      showAlert('请输入视频描述');
+      return;
+    }
+    if (mode === 'image2video' && !firstFrame) {
+      showAlert('图生视频需要上传首帧图片');
+      return;
+    }
+
+    if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+
+    if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, true);
+    localStorage.setItem(getModelStorageKey('video', 'dashscope'), model);
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在生成视频，请耐心等待...');
+    downloadBtn.classList.add('d-none');
+
+    const videoParams = {
+      duration: parseInt(videoDuration.value, 10),
+      resolution: videoResolution.value,
+      ratio: mode === 'text2video' ? videoRatio.value : undefined,
+      seed,
+      negative_prompt: negativePrompt.value.trim() || undefined,
+      prompt_extend: promptExtend.checked,
+      watermark: watermarkToggle.checked,
+    };
+    const formData = new FormData();
+    formData.append('apiKey', apiKey);
+    formData.append('mode', mode);
+    formData.append('model', model);
+    formData.append('prompt', prompt);
+    formData.append('progressMode', 'true');
+    if (firstFrame) formData.append('firstFrame', firstFrame);
+    if (lastFrame) formData.append('lastFrame', lastFrame);
+    formData.append('parameters', JSON.stringify(videoParams));
+
+    let activeVideoTaskId = '';
+    try {
+      const res = await fetch('/api/generate-video', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      }
+      if (data.taskId) {
+        activeVideoTaskId = data.taskId;
+        upsertVideoTaskRecord({
+          taskId: data.taskId,
+          model,
+          mode,
+          duration: videoParams.duration,
+          resolution: videoParams.resolution,
+          ratio: videoParams.ratio,
+          status: data.taskStatus || 'PENDING',
+          createdAt: Date.now(),
+        });
+      }
+      await handleGenerationResult(data, {
+        apiKey,
+        model,
+        resultType: 'video',
+        title: '视频生成',
+        onTaskUpdate: (taskData, status) => {
+          upsertVideoTaskRecord({
+            taskId: taskData.taskId || activeVideoTaskId,
+            status,
+            videoUrl: taskData.videoUrl,
+            usage: taskData.usage,
+          });
+        },
+      });
+      setLoading(false);
+    } catch (err) {
+      if (activeVideoTaskId) {
+        const existingRecord = videoTaskRecords.find(item => item.taskId === activeVideoTaskId);
+        if (!['FAILED', 'CANCELED', 'UNKNOWN'].includes(existingRecord?.status)) {
+          upsertVideoTaskRecord({ taskId: activeVideoTaskId, status: 'FAILED', error: err.message });
+        }
+      }
+      setLoading(false);
+      showAlert(`生成失败: ${err.message}`);
+    }
+  });
+}
+
 // 快捷键 Ctrl+Enter 触发生成
 promptInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) {
     generateBtn.click();
   }
 });
+if (videoPromptInput) {
+  videoPromptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      generateBtnVideo.click();
+    }
+  });
+}
 
 // ========== 图生图相关功能 ==========
 
 // 模式切换
 const text2imageTab = document.getElementById('text2image-tab');
 const image2imageTab = document.getElementById('image2image-tab');
+const videoTab = document.getElementById('video-tab');
 
 text2imageTab.addEventListener('click', () => {
   currentMode = 'text2image';
@@ -919,6 +1443,7 @@ text2imageTab.addEventListener('click', () => {
   image2imageParams.classList.add('d-none');
   updateSizeOptions();
   updateVolcengineUiState();
+  updateVideoUiState();
 });
 
 image2imageTab.addEventListener('click', () => {
@@ -928,7 +1453,19 @@ image2imageTab.addEventListener('click', () => {
   image2imageParams.classList.remove('d-none');
   updateSizeOptionsI2I();
   updateVolcengineUiState();
+  updateVideoUiState();
 });
+
+if (videoTab) {
+  videoTab.addEventListener('click', () => {
+    currentMode = 'video';
+    generateBtn.classList.add('d-none');
+    generateBtnI2I.classList.add('d-none');
+    image2imageParams.classList.add('d-none');
+    updateVolcengineUiState();
+    updateVideoUiState();
+  });
+}
 
 // 参考图强度滑块
 if (imageStrength) {
@@ -1226,6 +1763,8 @@ generateBtnI2I.addEventListener('click', async () => {
     return;
   }
 
+  if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+
   // 根据"记住我"状态存储凭证
   const rememberI2I = rememberApiKeyI2I?.checked ?? true;
   if (provider === 'volcengine') {
@@ -1252,6 +1791,7 @@ generateBtnI2I.addEventListener('click', async () => {
   }
   formData.append('apiKey', apiKey);
   formData.append('model', model);
+  formData.append('progressMode', provider === 'volcengine' ? 'true' : 'false');
   if (prompt) formData.append('prompt', prompt);
   if (provider === 'volcengine' && volcengineImageUrls) {
     const urls = volcengineImageUrls.value
@@ -1332,11 +1872,19 @@ generateBtnI2I.addEventListener('click', async () => {
     });
 
     // 请求完成
-    xhr.addEventListener('load', () => {
+    xhr.addEventListener('load', async () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText);
-          displayImages(data.imageUrls);
+          await handleGenerationResult(data, {
+            apiKey,
+            model,
+            resultType: 'image',
+            title: '图生图',
+            mode: 'image2image',
+            onTaskUpdate: () => loadImageTaskRecords('image2image'),
+          });
+          await loadImageTaskRecords('image2image');
           setLoading(false);
         } catch (err) {
           setLoading(false);
@@ -1353,8 +1901,7 @@ generateBtnI2I.addEventListener('click', async () => {
           }
 
           const data = JSON.parse(xhr.responseText);
-          const errorMsg = data.error?.message || data.error || '生成失败';
-          throw new Error(typeof errorMsg === 'string' ? errorMsg : '未知错误');
+          throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
         } catch (err) {
           showAlert(`生成失败: ${err.message}`);
         }
@@ -1374,7 +1921,7 @@ generateBtnI2I.addEventListener('click', async () => {
     });
 
     xhr.open('POST', '/api/image-to-image');
-    xhr.timeout = 300000; // 5 分钟超时
+    xhr.timeout = GENERATION_REQUEST_TIMEOUT_MS;
     xhr.send(formData);
   } catch (err) {
     setLoading(false);
@@ -1390,3 +1937,68 @@ if (promptInputI2I) {
     }
   });
 }
+
+function isGenerationActive() {
+  return generateBtn.disabled || generateBtnI2I.disabled || (generateBtnVideo && generateBtnVideo.disabled);
+}
+
+async function recoverForegroundState({ force = false } = {}) {
+  if (!force && !foregroundRecoveryNeeded) return true;
+  if (!force && Date.now() - lastForegroundRecoveryAt < FOREGROUND_RECOVERY_MIN_INTERVAL_MS) return true;
+  if (isGenerationActive()) return true;
+  if (foregroundRecoveryPromise) return foregroundRecoveryPromise;
+
+  foregroundRecoveryPromise = (async () => {
+    try {
+      const res = await fetch('/health', { cache: 'no-store', credentials: 'same-origin' });
+      const redirectedToUnlock = res.redirected && new URL(res.url).pathname === '/unlock';
+      if (redirectedToUnlock || res.status === 401) {
+        window.location.href = '/unlock';
+        return false;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      updateTextProviderState();
+      updateImageProviderState();
+      updateVolcengineUiState();
+      updateI2ISpecialParamState();
+      renderVideoModelOptions();
+      updateVideoUiState();
+      await Promise.allSettled([
+        loadVideoModels(),
+        loadVideoTaskRecords(),
+        loadImageTaskRecords('text2image'),
+        loadImageTaskRecords('image2image'),
+      ]);
+      foregroundRecoveryNeeded = false;
+      lastForegroundRecoveryAt = Date.now();
+      return true;
+    } catch (err) {
+      showAlert('服务连接异常，请刷新页面后重试', 'warning');
+      return false;
+    } finally {
+      foregroundRecoveryPromise = null;
+    }
+  })();
+
+  return foregroundRecoveryPromise;
+}
+
+function ensureForegroundRecoveredBeforeGenerate() {
+  if (!foregroundRecoveryNeeded && !foregroundRecoveryPromise) return Promise.resolve(true);
+  return recoverForegroundState({ force: true });
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    foregroundRecoveryNeeded = true;
+    return;
+  }
+  recoverForegroundState({ force: foregroundRecoveryNeeded });
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  foregroundRecoveryNeeded = true;
+  recoverForegroundState({ force: true });
+});

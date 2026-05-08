@@ -2,13 +2,14 @@
   <a href="README.zh.md">🇨🇳 中文</a>
 </p>
 
-# AI Image Generator
+# AI Visual Generator
 
-A production-oriented AI image generation web app with **text-to-image** and **image-to-image** workflows.
+A production-oriented AI visual generation web app with **text-to-image**, **image-to-image**, and **video generation** workflows.
 
 - Frontend: Bootstrap 5 + vanilla JavaScript
 - Backend: Express (Node.js)
 - Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**
+- Local task records: SQLite (`data/video-tasks.sqlite` by default)
 
 ## Features
 
@@ -29,6 +30,12 @@ A production-oriented AI image generation web app with **text-to-image** and **i
   - external HTTP(S) image URLs input
 - Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
 
+### Video Generation
+- DashScope text-to-video and image-to-video workflows
+- Built-in model options for `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
+- Long-running task progress display through async polling
+- Video task records are stored in local SQLite and shown in the UI
+
 ### Security & Reliability
 - Optional API key input from UI, with server-side `.env` fallback
 - Volcengine AK/SK parsing and signature request flow
@@ -37,6 +44,8 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 - Basic in-memory API rate limit (respects `X-Forwarded-For` behind reverse proxy)
 - CORS allowlist support
 - Optional frontend access control with key-based auth, brute-force throttle, and cookie session
+- Access cookie signing secret is auto-generated and persisted on first startup if not configured
+- Foreground recovery refreshes UI state after returning from a background browser tab
 
 ## Providers & Credentials
 
@@ -75,6 +84,33 @@ A production-oriented AI image generation web app with **text-to-image** and **i
 | `z-image-turbo` | wan | async | Lightweight |
 
 **Gemini**: `gemini-2.5-flash-image` (default)
+
+## Supported DashScope Video Models
+
+### Text-to-Video
+
+| Model | Notes |
+|---|---|
+| `happyhorse-1.0-t2v` | Recommended |
+| `wan2.7-t2v` | Wan 2.7 text-to-video |
+| `wan2.7-t2v-2026-04-25` | Wan 2.7 text-to-video snapshot |
+| `wan2.6-t2v` | Wan 2.6 text-to-video |
+| `wan2.5-t2v-preview` | Preview |
+| `wan2.2-t2v-plus` | Enhanced |
+| `wan2.2-t2v-flash` | Fast |
+| `wanx2.1-t2v-turbo` | Turbo |
+
+### Image-to-Video
+
+| Model | Notes |
+|---|---|
+| `happyhorse-1.0-i2v` | Recommended |
+| `wan2.7-i2v` | Wan 2.7 image-to-video |
+| `wan2.7-i2v-2026-04-25` | Wan 2.7 image-to-video snapshot |
+| `wan2.6-i2v-flash` | Fast |
+| `wan2.5-i2v-preview` | Preview |
+| `wan2.2-i2v-plus` | Enhanced |
+| `wanx2.1-i2v-turbo` | Turbo |
 
 ## Supported Jimeng Models
 
@@ -136,6 +172,7 @@ Open `http://localhost:3000`.
 Core:
 - `PORT` (default `3000`)
 - `DEBUG` (`true/1` to enable)
+- `VIDEO_TASK_DB_PATH` (default `data/video-tasks.sqlite`; stores image/video task records)
 
 Provider keys:
 - `DASHSCOPE_API_KEY`
@@ -145,9 +182,14 @@ Provider keys:
 - `VOLCENGINE_SESSION_TOKEN` (optional)
 
 Timeouts:
-- `DASHSCOPE_TIMEOUT_MS` (default `120000`)
-- `GEMINI_TIMEOUT_MS` (default `180000`)
-- `VOLCENGINE_TIMEOUT_MS` (default `120000` in server code)
+- `GENERATION_MAX_POLL_ATTEMPTS` (default `90`)
+- `GENERATION_POLL_INTERVAL_MS` (default `5000`)
+- `GENERATION_REQUEST_TIMEOUT_MS` (default `450000`)
+- `VIDEO_GENERATION_MAX_POLL_ATTEMPTS` (default `288`)
+- `VIDEO_GENERATION_REQUEST_TIMEOUT_MS` (default `1800000`)
+- `DASHSCOPE_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
+- `GEMINI_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
+- `VOLCENGINE_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
 
 Volcengine request tuning:
 - `VOLCENGINE_HOST` (default `visual.volcengineapi.com`)
@@ -163,7 +205,7 @@ Volcengine request tuning:
 - `VOLCENGINE_JIMENG_40_REQ_KEY` (default `jimeng_t2i_v40`)
 - `VOLCENGINE_JIMENG_46_REQ_KEY` (default `jimeng_seedream46_cvtob`)
 - `VOLCENGINE_MAX_POLL_ATTEMPTS` (default `90`)
-- `VOLCENGINE_POLL_INTERVAL_MS` (default `2000`)
+- `VOLCENGINE_POLL_INTERVAL_MS` (default `5000`)
 
 Frontend access control:
 - `FRONTEND_ACCESS_CONTROL_ENABLED` (`true/1` to enable)
@@ -171,7 +213,8 @@ Frontend access control:
 - `ACCESS_AUTH_WINDOW_MS` (throttle window, default `300000`)
 - `ACCESS_AUTH_MAX_ATTEMPTS` (max failures before lock, default `8`)
 - `ACCESS_AUTH_LOCK_MS` (lock duration, default `900000`)
-- `ACCESS_COOKIE_SECRET` (HMAC signing key for auth cookie; auto-generated if unset)
+- `ACCESS_COOKIE_SECRET` (HMAC signing key for auth cookie; auto-generated and persisted if unset)
+- `ACCESS_COOKIE_SECRET_PATH` (default `data/access-cookie-secret`; generated secret file path)
 
 Gateway:
 - `CORS_ORIGIN` (comma-separated allowlist)
@@ -235,6 +278,30 @@ FRONTEND_ACCESS_KEY=your_secret_key
 - `/uploads/*` stays public (Volcengine needs to fetch images)
 - Auth is cookie-based (HttpOnly, 7-day expiry)
 - Key is auto-saved in browser localStorage (72-hour TTL); re-visits within 72h skip manual input
+- If `ACCESS_COOKIE_SECRET` is unset, the server creates `data/access-cookie-secret` on first startup and reuses it
+- Multi-instance deployments should set the same `ACCESS_COOKIE_SECRET` on every instance
+
+## Task Records & Local SQLite
+
+Generated image and video task records are stored in local SQLite:
+
+- default path: `data/video-tasks.sqlite`
+- table `video_tasks`: video task history
+- table `image_tasks`: text-to-image and image-to-image task history
+
+The database is created automatically on startup. You do not need to upload a local DB file unless you want to migrate existing records.
+
+For platforms without persistent disk, set `VIDEO_TASK_DB_PATH` to a persistent volume path.
+
+## Startup Warning
+
+This project uses Node.js built-in `node:sqlite` for local task records. In Node.js v22, that API may still emit:
+
+```text
+ExperimentalWarning: SQLite is an experimental feature and might change at any time
+```
+
+The server filters only this known SQLite experimental warning during startup. Other warnings are not suppressed.
 
 ## Nginx Reverse Proxy (Recommended)
 
@@ -321,10 +388,25 @@ server {
   - response: `{ status: 'ok', version: '1.0.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
-  - response: `{ imageUrls: string[] }`
+  - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
 - `POST /api/image-to-image`
   - multipart: `image` + optional `imageMask` + fields (`prompt`, `apiKey`, `model`, `provider`, `parameters`, optional `imageUrls`)
-  - response: `{ imageUrls: string[] }`
+  - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
+- `POST /api/generate-video`
+  - multipart: optional `firstFrame` / `lastFrame` + fields (`prompt`, `apiKey`, `model`, `mode`, `parameters`)
+  - response: video URL or async task metadata
+- `POST /api/video-models`
+  - returns available/fallback DashScope video model options
+- `POST /api/dashscope-task-status`
+  - polls DashScope async image/video task status
+- `POST /api/volcengine-task-status`
+  - polls Volcengine async image task status
+- `GET /api/video-task-records`
+  - returns local video task records
+- `POST /api/video-task-records/import`
+  - imports legacy browser-stored video task records into SQLite
+- `GET /api/image-task-records`
+  - returns local image task records filtered by mode
 - `POST /api/access-auth`
   - body: `{ accessKey }` (form-encoded)
   - Returns auth cookie on success
@@ -338,6 +420,9 @@ server {
 ```text
 ai-image-generator/
 ├── server.js              # Express backend (all API logic)
+├── data/
+│   ├── video-tasks.sqlite # Local image/video task record database
+│   └── access-cookie-secret # Auto-generated cookie signing secret
 ├── public/
 │   ├── index.html         # Single-page UI
 │   ├── app.js             # Frontend logic (vanilla JS)
