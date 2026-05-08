@@ -10,7 +10,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '.env') });
+const dotenv = require('dotenv');
+const DOTENV_PATH = path.join(__dirname, '.env');
+const dotenvResult = dotenv.config({ path: DOTENV_PATH });
 const DOTENV_PARSED = dotenvResult.parsed || {};
 const multer = require('multer');
 const crypto = require('crypto');
@@ -567,12 +569,32 @@ function isPlaceholderCredential(value) {
   return PLACEHOLDER_CREDENTIALS.has(String(value || '').trim());
 }
 
+function getDotenvCredential(name) {
+  let validValue = '';
+  try {
+    if (fsSync.existsSync(DOTENV_PATH)) {
+      const lines = fsSync.readFileSync(DOTENV_PATH, 'utf8').split(/\r?\n/);
+      lines.forEach((line) => {
+        const value = dotenv.parse(line)[name];
+        if (typeof value === 'string' && value.trim() && !isPlaceholderCredential(value)) {
+          validValue = value.trim();
+        }
+      });
+    }
+  } catch (err) {
+    if (DEBUG) console.warn(`读取 .env 中的 ${name} 失败: ${err.message}`);
+  }
+  if (validValue) return validValue;
+
+  const parsedValue = typeof DOTENV_PARSED[name] === 'string' ? DOTENV_PARSED[name].trim() : '';
+  return parsedValue && !isPlaceholderCredential(parsedValue) ? parsedValue : '';
+}
+
 function getCredentialEnv(name) {
   const envValue = typeof process.env[name] === 'string' ? process.env[name].trim() : '';
   if (envValue && !isPlaceholderCredential(envValue)) return envValue;
 
-  const fileValue = typeof DOTENV_PARSED[name] === 'string' ? DOTENV_PARSED[name].trim() : '';
-  return fileValue && !isPlaceholderCredential(fileValue) ? fileValue : '';
+  return getDotenvCredential(name);
 }
 
 function getApiKey(provider, providedApiKey) {
