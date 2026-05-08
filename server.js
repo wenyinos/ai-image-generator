@@ -10,7 +10,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const dotenvResult = require('dotenv').config({ path: path.join(__dirname, '.env') });
+const DOTENV_PARSED = dotenvResult.parsed || {};
 const multer = require('multer');
 const crypto = require('crypto');
 const fsSync = require('fs');
@@ -553,10 +554,10 @@ function parseVolcengineCredentials(providedValue) {
     }
   }
 
-  const accessKey = typeof process.env.VOLCENGINE_ACCESS_KEY === 'string' ? process.env.VOLCENGINE_ACCESS_KEY.trim() : '';
-  const secretKey = typeof process.env.VOLCENGINE_SECRET_KEY === 'string' ? process.env.VOLCENGINE_SECRET_KEY.trim() : '';
-  const sessionToken = typeof process.env.VOLCENGINE_SESSION_TOKEN === 'string' ? process.env.VOLCENGINE_SESSION_TOKEN.trim() : '';
-  if (accessKey && secretKey && !isPlaceholderCredential(accessKey) && !isPlaceholderCredential(secretKey)) {
+  const accessKey = getCredentialEnv('VOLCENGINE_ACCESS_KEY');
+  const secretKey = getCredentialEnv('VOLCENGINE_SECRET_KEY');
+  const sessionToken = getCredentialEnv('VOLCENGINE_SESSION_TOKEN');
+  if (accessKey && secretKey) {
     return { accessKey, secretKey, sessionToken };
   }
   return null;
@@ -566,19 +567,25 @@ function isPlaceholderCredential(value) {
   return PLACEHOLDER_CREDENTIALS.has(String(value || '').trim());
 }
 
+function getCredentialEnv(name) {
+  const envValue = typeof process.env[name] === 'string' ? process.env[name].trim() : '';
+  if (envValue && !isPlaceholderCredential(envValue)) return envValue;
+
+  const fileValue = typeof DOTENV_PARSED[name] === 'string' ? DOTENV_PARSED[name].trim() : '';
+  return fileValue && !isPlaceholderCredential(fileValue) ? fileValue : '';
+}
+
 function getApiKey(provider, providedApiKey) {
   const trimmed = typeof providedApiKey === 'string' ? providedApiKey.trim() : '';
   if (trimmed && !isPlaceholderCredential(trimmed)) return trimmed;
 
   if (provider === 'gemini') {
-    const geminiEnv = typeof process.env.GEMINI_API_KEY === 'string' ? process.env.GEMINI_API_KEY.trim() : '';
-    if (geminiEnv && !isPlaceholderCredential(geminiEnv)) return geminiEnv;
-    const googleEnv = typeof process.env.GOOGLE_API_KEY === 'string' ? process.env.GOOGLE_API_KEY.trim() : '';
-    return googleEnv && !isPlaceholderCredential(googleEnv) ? googleEnv : '';
+    const geminiEnv = getCredentialEnv('GEMINI_API_KEY');
+    if (geminiEnv) return geminiEnv;
+    return getCredentialEnv('GOOGLE_API_KEY');
   }
 
-  const dashscopeEnv = typeof process.env.DASHSCOPE_API_KEY === 'string' ? process.env.DASHSCOPE_API_KEY.trim() : '';
-  return dashscopeEnv && !isPlaceholderCredential(dashscopeEnv) ? dashscopeEnv : '';
+  return getCredentialEnv('DASHSCOPE_API_KEY');
 }
 
 function parseDataUrl(dataUrl) {
