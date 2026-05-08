@@ -52,6 +52,16 @@ const DASHSCOPE_VIDEO_POLL_INTERVAL_MS = GENERATION_POLL_INTERVAL_MS;
 const I2I_REQUEST_TIMEOUT_MS = GENERATION_REQUEST_TIMEOUT_MS;
 const FREE_TIER_QUOTA_ERROR_CODE = 'AllocationQuota.FreeTierOnly';
 const FREE_TIER_QUOTA_ERROR_MESSAGE = '此模型额度已用尽，请更换其他模型';
+const PLACEHOLDER_CREDENTIALS = new Set([
+  'your_api_key_here',
+  'your_dashscope_key',
+  'your_gemini_api_key_here',
+  'your_google_api_key_here',
+  'your_volcengine_access_key',
+  'your_volcengine_secret_key',
+  'your_volcengine_session_token',
+  'sk-...',
+]);
 const FRONTEND_ACCESS_CONTROL_ENABLED = process.env.FRONTEND_ACCESS_CONTROL_ENABLED === '1' || process.env.FRONTEND_ACCESS_CONTROL_ENABLED === 'true';
 const FRONTEND_ACCESS_KEY = typeof process.env.FRONTEND_ACCESS_KEY === 'string' ? process.env.FRONTEND_ACCESS_KEY.trim() : '';
 const ACCESS_COOKIE_NAME = 'access_auth';
@@ -546,25 +556,29 @@ function parseVolcengineCredentials(providedValue) {
   const accessKey = typeof process.env.VOLCENGINE_ACCESS_KEY === 'string' ? process.env.VOLCENGINE_ACCESS_KEY.trim() : '';
   const secretKey = typeof process.env.VOLCENGINE_SECRET_KEY === 'string' ? process.env.VOLCENGINE_SECRET_KEY.trim() : '';
   const sessionToken = typeof process.env.VOLCENGINE_SESSION_TOKEN === 'string' ? process.env.VOLCENGINE_SESSION_TOKEN.trim() : '';
-  if (accessKey && secretKey) {
+  if (accessKey && secretKey && !isPlaceholderCredential(accessKey) && !isPlaceholderCredential(secretKey)) {
     return { accessKey, secretKey, sessionToken };
   }
   return null;
 }
 
+function isPlaceholderCredential(value) {
+  return PLACEHOLDER_CREDENTIALS.has(String(value || '').trim());
+}
+
 function getApiKey(provider, providedApiKey) {
   const trimmed = typeof providedApiKey === 'string' ? providedApiKey.trim() : '';
-  if (trimmed) return trimmed;
+  if (trimmed && !isPlaceholderCredential(trimmed)) return trimmed;
 
   if (provider === 'gemini') {
     const geminiEnv = typeof process.env.GEMINI_API_KEY === 'string' ? process.env.GEMINI_API_KEY.trim() : '';
-    if (geminiEnv) return geminiEnv;
+    if (geminiEnv && !isPlaceholderCredential(geminiEnv)) return geminiEnv;
     const googleEnv = typeof process.env.GOOGLE_API_KEY === 'string' ? process.env.GOOGLE_API_KEY.trim() : '';
-    return googleEnv || '';
+    return googleEnv && !isPlaceholderCredential(googleEnv) ? googleEnv : '';
   }
 
   const dashscopeEnv = typeof process.env.DASHSCOPE_API_KEY === 'string' ? process.env.DASHSCOPE_API_KEY.trim() : '';
-  return dashscopeEnv || '';
+  return dashscopeEnv && !isPlaceholderCredential(dashscopeEnv) ? dashscopeEnv : '';
 }
 
 function parseDataUrl(dataUrl) {
