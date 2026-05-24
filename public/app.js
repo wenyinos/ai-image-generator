@@ -1299,8 +1299,7 @@ function displayImages(imageUrls) {
     img.onload = () => {
       img.addEventListener('click', () => {
         modalImage.src = url;
-        modalDownloadLink.href = url;
-        modalDownloadLink.download = `generated-image-${index + 1}.png`;
+        setupDownloadLink(url, `generated-image-${index + 1}.png`);
         previewModal.show();
       });
     };
@@ -1312,8 +1311,28 @@ function displayImages(imageUrls) {
 
   resultImages.classList.remove('d-none');
   downloadBtn.classList.remove('d-none');
-  downloadLink.href = imageUrls[0];
-  downloadLink.download = 'generated-image-1.png';
+  setupDownloadLink(imageUrls[0], 'generated-image-1.png');
+}
+
+function setupDownloadLink(url, filename) {
+  downloadLink.href = '#';
+  downloadLink.onclick = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
 }
 
 function displayVideos(videoUrls) {
@@ -1334,8 +1353,7 @@ function displayVideos(videoUrls) {
 
   resultImages.classList.remove('d-none');
   downloadBtn.classList.remove('d-none');
-  downloadLink.href = videoUrls[0];
-  downloadLink.download = 'generated-video.mp4';
+  setupDownloadLink(videoUrls[0], 'generated-video.mp4');
 }
 
 // 生成按钮点击事件
