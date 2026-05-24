@@ -409,24 +409,40 @@
 
               <!-- 视频生成模式 -->
               <div class="tab-pane fade" id="video" role="tabpanel">
-                <p class="text-center text-muted mb-4">通过阿里云百炼生成视频，支持文生视频和图生视频</p>
+                <p class="text-center text-muted mb-4">支持阿里云百炼与即梦AI生成视频</p>
                 <div class="row g-3 mb-3">
-                  <div class="col-md-4">
+                  <div class="col-md-3">
                     <label for="videoMode" class="form-label fw-semibold">生成方式</label>
                     <select class="form-select" id="videoMode">
                       <option value="text2video" selected>文生视频</option>
                       <option value="image2video">图生视频</option>
+                      <option value="motion">动作模仿</option>
                     </select>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-3">
+                    <label for="videoProvider" class="form-label fw-semibold">提供商</label>
+                    <select class="form-select" id="videoProvider">
+                      <option value="dashscope" selected>阿里云百炼</option>
+                      <option value="volcengine">即梦AI (火山引擎)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3" id="videoApiKeyDashscopeGroup">
                     <label for="videoApiKeyInput" class="form-label fw-semibold">DashScope API Key（可选）</label>
                     <div class="input-group">
                       <input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-...">
                       <button class="btn btn-outline-secondary" type="button" id="toggleVideoApiKeyBtn"><i class="bi bi-eye"></i></button>
                     </div>
-                    <div class="form-text">留空将使用服务端环境变量 <code>DASHSCOPE_API_KEY</code>。</div>
+                    <div class="form-text">留空将使用服务端环境变量。</div>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-3 d-none" id="videoApiKeyVolcengineGroup">
+                    <label for="videoVolcengineAk" class="form-label fw-semibold">Volcengine AK:SK（可选）</label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" id="videoVolcengineAk" placeholder="AK:SK">
+                      <button class="btn btn-outline-secondary" type="button" id="toggleVideoVolcengineAkBtn"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">留空将使用服务端环境变量。</div>
+                  </div>
+                  <div class="col-md-3">
                     <label for="videoModelSelect" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="videoModelSelect">
                       <option value="happyhorse-1.0-t2v" selected>happyhorse-1.0-t2v（推荐）</option>
@@ -455,6 +471,18 @@
                   <div class="col-md-6">
                     <label for="videoLastFrame" class="form-label fw-semibold">尾帧图片（仅 2.7 可选）</label>
                     <input class="form-control" type="file" id="videoLastFrame" accept="image/*">
+                  </div>
+                </div>
+                <div class="row g-3 mb-3 d-none" id="motionUploadGroup">
+                  <div class="col-md-6">
+                    <label for="motionImage" class="form-label fw-semibold">人物图片</label>
+                    <input class="form-control" type="file" id="motionImage" accept="image/*">
+                    <div class="form-text">支持 JPG/PNG，480x480 ~ 1920x1080，最大 4.7MB</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="motionVideo" class="form-label fw-semibold">模板视频</label>
+                    <input class="form-control" type="file" id="motionVideo" accept="video/mp4,video/quicktime,video/webm">
+                    <div class="form-text">支持 MP4/MOV/WebM，最长 30 秒，最大 64MB</div>
                   </div>
                 </div>
                 <div class="row g-3 mb-3">

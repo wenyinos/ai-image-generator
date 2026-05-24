@@ -31,8 +31,11 @@
 - 火山图生图上传的临时文件会在**成功生成后 5 分钟自动清理**
 
 ### 视频生成
+- 前端可切换 Provider（DashScope / Volcengine）
 - 支持 DashScope 文生视频与图生视频
 - 内置 `happyhorse-1.0-*`、`wan2.7-*` 以及早期 Wan 视频模型
+- 即梦（火山引擎）1080P 视频生成：文生视频、图生视频（首帧/首尾帧）、Pro 模式
+- 动作模仿（v1.0 / v2.0）：上传人物图片 + 模板视频生成动态视频
 - 长任务通过异步轮询实时显示进度
 - 视频任务记录保存到本地 SQLite，并在前端展示
 
@@ -111,6 +114,26 @@
 | `wan2.5-i2v-preview` | 预览 |
 | `wan2.2-i2v-plus` | 增强 |
 | `wanx2.1-i2v-turbo` | Turbo |
+
+## 支持的即梦视频模型
+
+### 视频生成（Volcengine）
+
+| 前端模型 ID | 上游 `req_key` | 说明 |
+|---|---|---|
+| `jimeng-v3.0-t2v-1080p` | `jimeng_t2v_v30_1080p` | 文生视频 1080P |
+| `jimeng-v3.0-i2v-first-1080p` | `jimeng_i2v_first_v30_1080` | 图生视频首帧 1080P |
+| `jimeng-v3.0-i2v-tail-1080p` | `jimeng_i2v_first_tail_v30_1080` | 图生视频首尾帧 1080P |
+| `jimeng-v3.0-pro` | `jimeng_ti2v_v30_pro` | Pro 模式（文/图生视频） |
+
+### 动作模仿（Volcengine）
+
+| 前端模型 ID | 上游 `req_key` | 说明 |
+|---|---|---|
+| `jimeng-motion-2.0` | `jimeng_dreamactor_m20_gen_video` | 支持多人、非真人 |
+| `jimeng-motion-1.0` | `jimeng_dream_actor_m1_gen_video_cv` | 单人 |
+
+动作模仿需上传人物图片和模板视频。服务端将上传文件保存为临时公网 URL，生成完成后自动清理。
 
 ## 支持的即梦模型
 
@@ -344,7 +367,7 @@ server {
   ssl_session_cache shared:SSL:10m;
   ssl_session_timeout 10m;
 
-  client_max_body_size 20m;
+  client_max_body_size 80m;
 
   location ^~ /uploads/ {
     proxy_pass http://127.0.0.1:3000;
@@ -394,6 +417,12 @@ server {
 - `POST /api/generate-video`
   - multipart：可选 `firstFrame` / `lastFrame` + 字段（`prompt`、`apiKey`、`model`、`mode`、`parameters`）
   - 响应：视频 URL 或异步任务信息
+- `POST /api/jimeng-video`
+  - multipart：可选 `firstFrame` / `lastFrame` + 字段（`apiKey`、`model`、`prompt`、`parameters`）
+  - 响应：异步任务信息（即梦视频生成）
+- `POST /api/jimeng-motion`
+  - multipart：`motionImage` + `motionVideo` + 字段（`apiKey`、`model`）
+  - 响应：异步任务信息（即梦动作模仿）
 - `POST /api/video-models`
   - 返回 DashScope 视频模型列表或本地备用模型列表
 - `POST /api/dashscope-task-status`
@@ -418,7 +447,16 @@ server {
 
 ```text
 ai-image-generator/
-├── server.js              # Express 后端（全部 API 逻辑）
+├── server.js              # Express 入口（中间件、访问控制、启动）
+├── lib/
+│   ├── config.js          # 配置常量、环境变量、模型映射
+│   ├── database.js        # SQLite 初始化、任务 CRUD
+│   ├── utils.js           # 签名、验证、文件操作、API 工具
+│   ├── middleware.js       # multer、限流、访问控制
+│   └── routes/
+│       ├── video.js       # 视频生成 API（DashScope、即梦、动作模仿）
+│       ├── image.js       # 图片生成 API（文生图、图生图）
+│       └── task.js        # 任务记录与状态查询 API
 ├── data/
 │   ├── video-tasks.sqlite # 本地图片/视频任务记录数据库
 │   └── access-cookie-secret # 自动生成的 Cookie 签名密钥
@@ -426,7 +464,7 @@ ai-image-generator/
 │   ├── index.html         # 单页 UI
 │   ├── app.js             # 前端逻辑（原生 JS）
 │   ├── favicon/
-│   └── uploads/           # 火山图生图临时文件（自动清理）
+│   └── uploads/           # 火山图生图/动作模仿临时文件（自动清理）
 ├── jimeng-md/             # 即梦 API 参考文档（中文）
 ├── .env.example
 ├── README.md

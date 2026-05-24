@@ -31,8 +31,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
 
 ### Video Generation
+- Provider switching in UI (DashScope / Volcengine)
 - DashScope text-to-video and image-to-video workflows
 - Built-in model options for `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
+- Jimeng (Volcengine) 1080P video generation: text-to-video, image-to-video (first frame / first+last frame), Pro mode
+- Motion imitation (v1.0 / v2.0): upload a person image + template video to generate animated video
 - Long-running task progress display through async polling
 - Video task records are stored in local SQLite and shown in the UI
 
@@ -111,6 +114,26 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.5-i2v-preview` | Preview |
 | `wan2.2-i2v-plus` | Enhanced |
 | `wanx2.1-i2v-turbo` | Turbo |
+
+## Supported Jimeng Video Models
+
+### Video Generation (Volcengine)
+
+| UI Model ID | Upstream `req_key` | Notes |
+|---|---|---|
+| `jimeng-v3.0-t2v-1080p` | `jimeng_t2v_v30_1080p` | Text-to-video 1080P |
+| `jimeng-v3.0-i2v-first-1080p` | `jimeng_i2v_first_v30_1080` | Image-to-video first frame 1080P |
+| `jimeng-v3.0-i2v-tail-1080p` | `jimeng_i2v_first_tail_v30_1080` | Image-to-video first+last frame 1080P |
+| `jimeng-v3.0-pro` | `jimeng_ti2v_v30_pro` | Pro mode (text/image-to-video) |
+
+### Motion Imitation (Volcengine)
+
+| UI Model ID | Upstream `req_key` | Notes |
+|---|---|---|
+| `jimeng-motion-2.0` | `jimeng_dreamactor_m20_gen_video` | Multi-person, non-real-person supported |
+| `jimeng-motion-1.0` | `jimeng_dream_actor_m1_gen_video_cv` | Single person |
+
+Motion imitation requires uploading a person image and a template video. The server stores uploaded files as temporary public URLs (auto-cleaned after generation).
 
 ## Supported Jimeng Models
 
@@ -345,7 +368,7 @@ server {
   ssl_session_cache shared:SSL:10m;
   ssl_session_timeout 10m;
 
-  client_max_body_size 20m;
+  client_max_body_size 80m;
 
   location ^~ /uploads/ {
     proxy_pass http://127.0.0.1:3000;
@@ -395,6 +418,12 @@ server {
 - `POST /api/generate-video`
   - multipart: optional `firstFrame` / `lastFrame` + fields (`prompt`, `apiKey`, `model`, `mode`, `parameters`)
   - response: video URL or async task metadata
+- `POST /api/jimeng-video`
+  - multipart: optional `firstFrame` / `lastFrame` + fields (`apiKey`, `model`, `prompt`, `parameters`)
+  - response: async task metadata (Volcengine Jimeng video)
+- `POST /api/jimeng-motion`
+  - multipart: `motionImage` + `motionVideo` + fields (`apiKey`, `model`)
+  - response: async task metadata (Volcengine motion imitation)
 - `POST /api/video-models`
   - returns available/fallback DashScope video model options
 - `POST /api/dashscope-task-status`
@@ -419,7 +448,16 @@ server {
 
 ```text
 ai-image-generator/
-├── server.js              # Express backend (all API logic)
+├── server.js              # Express entry point (middleware, access control, startup)
+├── lib/
+│   ├── config.js          # Configuration constants, env vars, model mappings
+│   ├── database.js        # SQLite init, task CRUD operations
+│   ├── utils.js           # Signing, validation, file ops, API helpers
+│   ├── middleware.js       # Multer, rate limiting, access control
+│   └── routes/
+│       ├── video.js       # Video generation APIs (DashScope, Jimeng, motion)
+│       ├── image.js       # Image generation APIs (text-to-image, image-to-image)
+│       └── task.js        # Task record & status query APIs
 ├── data/
 │   ├── video-tasks.sqlite # Local image/video task record database
 │   └── access-cookie-secret # Auto-generated cookie signing secret
@@ -427,7 +465,7 @@ ai-image-generator/
 │   ├── index.html         # Single-page UI
 │   ├── app.js             # Frontend logic (vanilla JS)
 │   ├── favicon/
-│   └── uploads/           # Temp files for Volcengine i2i (auto-cleaned)
+│   └── uploads/           # Temp files for Volcengine i2i/motion (auto-cleaned)
 ├── jimeng-md/             # Volcengine Jimeng API reference docs (Chinese)
 ├── .env.example
 ├── README.md

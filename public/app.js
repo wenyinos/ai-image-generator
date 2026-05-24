@@ -115,6 +115,9 @@ const videoPromptInput = document.getElementById('videoPromptInput');
 const videoFrameGroup = document.getElementById('videoFrameGroup');
 const videoFirstFrame = document.getElementById('videoFirstFrame');
 const videoLastFrame = document.getElementById('videoLastFrame');
+const motionUploadGroup = document.getElementById('motionUploadGroup');
+const motionImage = document.getElementById('motionImage');
+const motionVideo = document.getElementById('motionVideo');
 const videoDuration = document.getElementById('videoDuration');
 const videoResolution = document.getElementById('videoResolution');
 const videoRatio = document.getElementById('videoRatio');
@@ -267,6 +270,20 @@ let VIDEO_MODELS = {
     { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
   ],
 };
+
+// 即梦视频模型列表
+const JIMENG_VIDEO_MODELS = [
+  { value: 'jimeng-v3.0-t2v-1080p', label: '即梦视频3.0-文生视频1080P' },
+  { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
+  { value: 'jimeng-v3.0-i2v-first-1080p', label: '即梦视频3.0-图生视频首帧1080P' },
+  { value: 'jimeng-v3.0-i2v-tail-1080p', label: '即梦视频3.0-图生视频首尾帧1080P' },
+];
+
+// 即梦动作模仿模型列表
+const JIMENG_MOTION_MODELS = [
+  { value: 'jimeng-motion-2.0', label: '动作模仿2.0（多人/非真人）' },
+  { value: 'jimeng-motion-1.0', label: '动作模仿1.0' },
+];
 
 // 各模型支持的尺寸选项
 const MODEL_SIZES = {
@@ -601,12 +618,21 @@ function updateI2ISpecialParamState() {
 function updateVideoUiState() {
   const isVideo = currentMode === 'video';
   const isImageVideo = videoMode && videoMode.value === 'image2video';
+  const isMotion = videoMode && videoMode.value === 'motion';
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
-  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion);
+  if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
   if (generateBtnVideo) generateBtnVideo.classList.toggle('d-none', !isVideo);
   if (textImageTaskRecordsPanel) textImageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'text2image');
   if (imageTaskRecordsPanel) imageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'image2image');
+  // 动作模仿时隐藏视频描述和时长/分辨率选择
+  const videoPromptGroup = document.getElementById('videoPromptInput')?.closest('.mb-3');
+  if (videoPromptGroup) videoPromptGroup.classList.toggle('d-none', isMotion);
+  const videoDurationGroup = document.getElementById('videoDuration')?.closest('.col-md-4');
+  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion);
+  const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
+  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion);
 }
 
 // 从 localStorage 恢复用户设置
@@ -661,6 +687,63 @@ if (videoModelSelect) {
     localStorage.setItem(getModelStorageKey('video', 'dashscope'), videoModelSelect.value);
   });
 }
+
+// 视频提供商切换
+const videoProvider = document.getElementById('videoProvider');
+const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
+const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
+const videoVolcengineAk = document.getElementById('videoVolcengineAk');
+const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
+
+function updateVideoProviderState() {
+  const provider = videoProvider ? videoProvider.value : 'dashscope';
+  const isVolcengine = provider === 'volcengine';
+  const isMotion = videoMode && videoMode.value === 'motion';
+  if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.toggle('d-none', isVolcengine);
+  if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.toggle('d-none', !isVolcengine);
+  if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
+
+  // 渲染模型列表
+  const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
+  if (isMotion) {
+    // 动作模仿模式：强制使用即梦AI
+    renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
+    if (videoProvider) videoProvider.value = 'volcengine';
+    if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.add('d-none');
+    if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.remove('d-none');
+  } else if (isVolcengine) {
+    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS }], savedModel);
+  } else {
+    const mode = videoMode ? videoMode.value : 'text2video';
+    renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+  }
+
+  // 更新图生视频帧图片提示
+  const isImageVideo = videoMode && videoMode.value === 'image2video';
+  if (videoFrameGroup) {
+    const lastFrameLabel = videoFrameGroup.querySelector('label[for="videoLastFrame"]');
+    if (lastFrameLabel) {
+      lastFrameLabel.textContent = isVolcengine ? '尾帧图片（首尾帧模式可选）' : '尾帧图片（仅 2.7 可选）';
+    }
+  }
+}
+
+if (videoProvider) {
+  videoProvider.addEventListener('change', () => {
+    localStorage.setItem('videoProvider', videoProvider.value);
+    updateVideoProviderState();
+  });
+}
+if (toggleVideoVolcengineAkBtn && videoVolcengineAk) {
+  bindPasswordToggle(toggleVideoVolcengineAkBtn, videoVolcengineAk);
+}
+
+// 恢复视频提供商状态
+if (videoProvider && localStorage.getItem('videoProvider')) {
+  videoProvider.value = localStorage.getItem('videoProvider');
+}
+updateVideoProviderState();
+
 if (importVideoTaskRecordsBtn) {
   importVideoTaskRecordsBtn.addEventListener('click', async () => {
     let legacyRecords = [];
@@ -1323,27 +1406,84 @@ generateBtn.addEventListener('click', async () => {
 
 if (generateBtnVideo) {
   generateBtnVideo.addEventListener('click', async () => {
+    const provider = videoProvider ? videoProvider.value : 'dashscope';
     const mode = videoMode.value;
-    const apiKey = videoApiKeyInput.value.trim();
+    const apiKey = provider === 'volcengine'
+      ? (videoVolcengineAk ? videoVolcengineAk.value.trim() : '')
+      : videoApiKeyInput.value.trim();
     const model = videoModelSelect.value;
     const prompt = videoPromptInput.value.trim();
     const firstFrame = videoFirstFrame.files[0];
     const lastFrame = videoLastFrame.files[0];
+    const motionImage = motionImage.files[0];
+    const motionVideo = motionVideo.files[0];
     const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
 
-    if (mode === 'text2video' && !prompt) {
+    // 动作模仿模式
+    if (mode === 'motion') {
+      if (!motionImage) { showAlert('请上传人物图片'); return; }
+      if (!motionVideo) { showAlert('请上传模板视频'); return; }
+      if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+      if (apiKey) saveCredential('videoVolcengineAk', apiKey, true);
+      localStorage.setItem(getModelStorageKey('video', provider), model);
+      alertContainer.innerHTML = '';
+      setLoading(true, '正在生成动作模仿视频，请耐心等待...');
+      downloadBtn.classList.add('d-none');
+
+      const formData = new FormData();
+      formData.append('apiKey', apiKey);
+      formData.append('model', model);
+      formData.append('motionImage', motionImage);
+      formData.append('motionVideo', motionVideo);
+
+      let activeVideoTaskId = '';
+      try {
+        const res = await fetch('/api/jimeng-motion', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+        if (data.taskId) {
+          activeVideoTaskId = data.taskId;
+          upsertVideoTaskRecord({ taskId: data.taskId, provider, model, mode: 'motion', status: data.taskStatus || 'PENDING', createdAt: Date.now() });
+        }
+        await handleGenerationResult(data, {
+          apiKey, model, resultType: 'video', title: '动作模仿',
+          onTaskUpdate: (taskData, status) => {
+            upsertVideoTaskRecord({ taskId: taskData.taskId || activeVideoTaskId, status, videoUrl: taskData.videoUrl, usage: taskData.usage });
+          },
+        });
+        setLoading(false);
+      } catch (err) {
+        if (activeVideoTaskId) {
+          const existingRecord = videoTaskRecords.find(item => item.taskId === activeVideoTaskId);
+          if (!['FAILED', 'CANCELED', 'UNKNOWN'].includes(existingRecord?.status)) {
+            upsertVideoTaskRecord({ taskId: activeVideoTaskId, status: 'FAILED', error: err.message });
+          }
+        }
+        setLoading(false);
+        showAlert(`生成失败: ${err.message}`);
+      }
+      return;
+    }
+
+    // 文生视频/图生视频模式
+    if (!prompt) {
       showAlert('请输入视频描述');
       return;
     }
-    if (mode === 'image2video' && !firstFrame) {
+    if (mode === 'image2video' && !firstFrame && provider === 'dashscope') {
       showAlert('图生视频需要上传首帧图片');
       return;
     }
 
     if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
 
-    if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, true);
-    localStorage.setItem(getModelStorageKey('video', 'dashscope'), model);
+    // 保存凭证
+    if (provider === 'volcengine') {
+      if (apiKey) saveCredential('videoVolcengineAk', apiKey, true);
+    } else {
+      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, true);
+    }
+    localStorage.setItem(getModelStorageKey('video', provider), model);
     alertContainer.innerHTML = '';
     setLoading(true, '正在生成视频，请耐心等待...');
     downloadBtn.classList.add('d-none');
@@ -1356,6 +1496,8 @@ if (generateBtnVideo) {
       negative_prompt: negativePrompt.value.trim() || undefined,
       prompt_extend: promptExtend.checked,
       watermark: watermarkToggle.checked,
+      frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121) : undefined,
+      aspect_ratio: provider === 'volcengine' && mode === 'text2video' ? videoRatio.value : undefined,
     };
     const formData = new FormData();
     formData.append('apiKey', apiKey);
@@ -1367,9 +1509,10 @@ if (generateBtnVideo) {
     if (lastFrame) formData.append('lastFrame', lastFrame);
     formData.append('parameters', JSON.stringify(videoParams));
 
+    const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video' : '/api/generate-video';
     let activeVideoTaskId = '';
     try {
-      const res = await fetch('/api/generate-video', { method: 'POST', body: formData });
+      const res = await fetch(apiEndpoint, { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
@@ -1378,6 +1521,7 @@ if (generateBtnVideo) {
         activeVideoTaskId = data.taskId;
         upsertVideoTaskRecord({
           taskId: data.taskId,
+          provider,
           model,
           mode,
           duration: videoParams.duration,
