@@ -1461,14 +1461,14 @@ if (generateBtnVideo) {
     const prompt = videoPromptInput.value.trim();
     const firstFrame = videoFirstFrame.files[0];
     const lastFrame = videoLastFrame.files[0];
-    const motionImage = motionImage.files[0];
-    const motionVideo = motionVideo.files[0];
+    const motionImageFile = motionImage.files[0];
+    const motionVideoFile = motionVideo.files[0];
     const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
 
     // 动作模仿模式
     if (mode === 'motion') {
-      if (!motionImage) { showAlert('请上传人物图片'); return; }
-      if (!motionVideo) { showAlert('请上传模板视频'); return; }
+      if (!motionImageFile) { showAlert('请上传人物图片'); return; }
+      if (!motionVideoFile) { showAlert('请上传模板视频'); return; }
       if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
       const rememberVolcMotion = rememberVolcengineVideo?.checked ?? true;
       if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolcMotion);
@@ -1481,8 +1481,8 @@ if (generateBtnVideo) {
       const formData = new FormData();
       formData.append('apiKey', apiKey);
       formData.append('model', model);
-      formData.append('motionImage', motionImage);
-      formData.append('motionVideo', motionVideo);
+      formData.append('motionImage', motionImageFile);
+      formData.append('motionVideo', motionVideoFile);
 
       let activeVideoTaskId = '';
       try {
