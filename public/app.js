@@ -633,6 +633,15 @@ function updateVideoUiState() {
   if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion);
   const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
   if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion);
+  // 动作模仿时隐藏 DashScope 提供商选项（不支持）
+  if (videoProvider) {
+    const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
+    if (dashscopeOption) dashscopeOption.hidden = isMotion;
+    if (isMotion && videoProvider.value === 'dashscope') {
+      videoProvider.value = 'volcengine';
+      updateVideoProviderState();
+    }
+  }
 }
 
 // 从 localStorage 恢复用户设置
