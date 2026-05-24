@@ -274,13 +274,18 @@ let VIDEO_MODELS = {
   ],
 };
 
-// 即梦视频模型列表
-const JIMENG_VIDEO_MODELS = [
-  { value: 'jimeng-v3.0-t2v-1080p', label: '即梦视频3.0-文生视频1080P' },
-  { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
-  { value: 'jimeng-v3.0-i2v-first-1080p', label: '即梦视频3.0-图生视频首帧1080P' },
-  { value: 'jimeng-v3.0-i2v-tail-1080p', label: '即梦视频3.0-图生视频首尾帧1080P' },
-];
+// 即梦视频模型列表（按模式区分）
+const JIMENG_VIDEO_MODELS = {
+  text2video: [
+    { value: 'jimeng-v3.0-t2v-1080p', label: '即梦视频3.0-文生视频1080P' },
+    { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
+  ],
+  image2video: [
+    { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
+    { value: 'jimeng-v3.0-i2v-first-1080p', label: '即梦视频3.0-图生视频首帧1080P' },
+    { value: 'jimeng-v3.0-i2v-tail-1080p', label: '即梦视频3.0-图生视频首尾帧1080P' },
+  ],
+};
 
 // 即梦动作模仿模型列表
 const JIMENG_MOTION_MODELS = [
@@ -415,19 +420,13 @@ function renderVideoModelOptions() {
   const provider = videoProvider ? videoProvider.value : 'dashscope';
   const mode = videoMode ? videoMode.value : 'text2video';
   const isMotion = mode === 'motion';
-  const isImageVideo = mode === 'image2video';
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
 
   if (isMotion) {
     renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
   } else if (provider === 'volcengine') {
-    // 根据模式隐藏不支持的模型
-    const T2V_ONLY = 'jimeng-v3.0-t2v-1080p';
-    const I2V_ONLY = ['jimeng-v3.0-i2v-first-1080p', 'jimeng-v3.0-i2v-tail-1080p'];
-    const models = isImageVideo
-      ? JIMENG_VIDEO_MODELS.filter(m => m.value !== T2V_ONLY)
-      : JIMENG_VIDEO_MODELS.filter(m => !I2V_ONLY.includes(m.value));
-    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: models }], savedModel);
+    const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
+    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
   } else {
     renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
   }
@@ -756,11 +755,8 @@ function updateVideoProviderState() {
     if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.add('d-none');
     if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.remove('d-none');
   } else if (isVolcengine) {
-    const i2vOnly = ['jimeng-v3.0-i2v-first-1080p', 'jimeng-v3.0-i2v-tail-1080p'];
-    const jimengModels = isImageVideo
-      ? JIMENG_VIDEO_MODELS.filter(m => m.value !== 'jimeng-v3.0-t2v-1080p')
-      : JIMENG_VIDEO_MODELS.filter(m => !i2vOnly.includes(m.value));
-    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
+    const videoModeKey = isImageVideo ? 'image2video' : 'text2video';
+    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
   } else {
     const mode = videoMode ? videoMode.value : 'text2video';
     renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
