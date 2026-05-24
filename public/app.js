@@ -151,6 +151,8 @@ const rememberApiKey = document.getElementById('rememberApiKey');
 const rememberVolcengine = document.getElementById('rememberVolcengine');
 const rememberApiKeyI2I = document.getElementById('rememberApiKeyI2I');
 const rememberVolcengineI2I = document.getElementById('rememberVolcengineI2I');
+const rememberApiKeyVideo = document.getElementById('rememberApiKeyVideo');
+const rememberVolcengineVideo = document.getElementById('rememberVolcengineVideo');
 
 const PROVIDER_CONFIG = {
   dashscope: {
@@ -344,11 +346,15 @@ function getApiKeyStorageKey(mode, provider) {
 }
 
 function getVolcengineAkStorageKey(mode) {
-  return mode === 'image2image' ? 'volcengineAkI2I' : 'volcengineAk';
+  if (mode === 'image2image') return 'volcengineAkI2I';
+  if (mode === 'video') return 'volcengineAkVideo';
+  return 'volcengineAk';
 }
 
 function getVolcengineSkStorageKey(mode) {
-  return mode === 'image2image' ? 'volcengineSkI2I' : 'volcengineSk';
+  if (mode === 'image2image') return 'volcengineSkI2I';
+  if (mode === 'video') return 'volcengineSkVideo';
+  return 'volcengineSk';
 }
 
 function getModelStorageKey(mode, provider) {
@@ -409,12 +415,17 @@ function renderVideoModelOptions() {
   const provider = videoProvider ? videoProvider.value : 'dashscope';
   const mode = videoMode ? videoMode.value : 'text2video';
   const isMotion = mode === 'motion';
+  const isImageVideo = mode === 'image2video';
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
 
   if (isMotion) {
     renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
   } else if (provider === 'volcengine') {
-    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS }], savedModel);
+    // 图生视频模式隐藏纯文生视频模型
+    const models = isImageVideo
+      ? JIMENG_VIDEO_MODELS.filter(m => m.value !== 'jimeng-v3.0-t2v-1080p')
+      : JIMENG_VIDEO_MODELS;
+    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: models }], savedModel);
   } else {
     renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
   }
@@ -714,6 +725,11 @@ const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeG
 const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
 const videoVolcengineAk = document.getElementById('videoVolcengineAk');
 const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
+const videoVolcengineSk = document.getElementById('videoVolcengineSk');
+const toggleVideoVolcengineSkBtn = document.getElementById('toggleVideoVolcengineSkBtn');
+// 从 localStorage 恢复视频火山引擎凭证
+if (videoVolcengineAk) videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
+if (videoVolcengineSk) videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
 
 function updateVideoProviderState() {
   const provider = videoProvider ? videoProvider.value : 'dashscope';
@@ -722,6 +738,11 @@ function updateVideoProviderState() {
   if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.toggle('d-none', isVolcengine);
   if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.toggle('d-none', !isVolcengine);
   if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
+  // 切换到火山引擎时加载已保存的 AK/SK
+  if (isVolcengine && videoVolcengineAk && videoVolcengineSk) {
+    videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
+    videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
+  }
 
   // 渲染模型列表
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
@@ -756,6 +777,9 @@ if (videoProvider) {
 }
 if (toggleVideoVolcengineAkBtn && videoVolcengineAk) {
   bindPasswordToggle(toggleVideoVolcengineAkBtn, videoVolcengineAk);
+}
+if (toggleVideoVolcengineSkBtn && videoVolcengineSk) {
+  bindPasswordToggle(toggleVideoVolcengineSkBtn, videoVolcengineSk);
 }
 
 // 更新视频提供商状态
@@ -1425,9 +1449,14 @@ if (generateBtnVideo) {
   generateBtnVideo.addEventListener('click', async () => {
     const provider = videoProvider ? videoProvider.value : 'dashscope';
     const mode = videoMode.value;
-    const apiKey = provider === 'volcengine'
-      ? (videoVolcengineAk ? videoVolcengineAk.value.trim() : '')
-      : videoApiKeyInput.value.trim();
+    let apiKey;
+    if (provider === 'volcengine') {
+      const ak = videoVolcengineAk ? videoVolcengineAk.value.trim() : '';
+      const sk = videoVolcengineSk ? videoVolcengineSk.value.trim() : '';
+      apiKey = ak && sk ? `${ak}:${sk}` : '';
+    } else {
+      apiKey = videoApiKeyInput.value.trim();
+    }
     const model = videoModelSelect.value;
     const prompt = videoPromptInput.value.trim();
     const firstFrame = videoFirstFrame.files[0];
@@ -1441,7 +1470,9 @@ if (generateBtnVideo) {
       if (!motionImage) { showAlert('请上传人物图片'); return; }
       if (!motionVideo) { showAlert('请上传模板视频'); return; }
       if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
-      if (apiKey) saveCredential('videoVolcengineAk', apiKey, true);
+      const rememberVolcMotion = rememberVolcengineVideo?.checked ?? true;
+      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolcMotion);
+      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolcMotion);
       localStorage.setItem(getModelStorageKey('video', provider), model);
       alertContainer.innerHTML = '';
       setLoading(true, '正在生成动作模仿视频，请耐心等待...');
@@ -1496,9 +1527,12 @@ if (generateBtnVideo) {
 
     // 保存凭证
     if (provider === 'volcengine') {
-      if (apiKey) saveCredential('videoVolcengineAk', apiKey, true);
+      const rememberVolc = rememberVolcengineVideo?.checked ?? true;
+      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolc);
+      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolc);
     } else {
-      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, true);
+      const remember = rememberApiKeyVideo?.checked ?? true;
+      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, remember);
     }
     localStorage.setItem(getModelStorageKey('video', provider), model);
     alertContainer.innerHTML = '';
