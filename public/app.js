@@ -107,6 +107,7 @@ const volcengineLocalUploadHint = document.getElementById('volcengineLocalUpload
 const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
+const videoProvider = document.getElementById('videoProvider');
 const videoApiKeyInput = document.getElementById('videoApiKeyInput');
 const toggleVideoApiKeyBtn = document.getElementById('toggleVideoApiKeyBtn');
 const videoModelSelect = document.getElementById('videoModelSelect');
@@ -351,7 +352,7 @@ function getVolcengineSkStorageKey(mode) {
 }
 
 function getModelStorageKey(mode, provider) {
-  if (mode === 'video') return 'model_video_dashscope';
+  if (mode === 'video') return `model_video_${provider || 'dashscope'}`;
   return mode === 'image2image' ? `modelI2I_${provider}` : `model_${provider}`;
 }
 
@@ -405,9 +406,18 @@ function renderModelOptions(selectElement, groups, selectedValue) {
 }
 
 function renderVideoModelOptions() {
+  const provider = videoProvider ? videoProvider.value : 'dashscope';
   const mode = videoMode ? videoMode.value : 'text2video';
-  const savedModel = localStorage.getItem(getModelStorageKey('video', 'dashscope'));
-  renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+  const isMotion = mode === 'motion';
+  const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
+
+  if (isMotion) {
+    renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
+  } else if (provider === 'volcengine') {
+    renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS }], savedModel);
+  } else {
+    renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+  }
 }
 
 async function loadVideoModels() {
@@ -649,6 +659,7 @@ providerSelect.value = localStorage.getItem('provider') || 'dashscope';
 providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
 if (videoApiKeyInput) videoApiKeyInput.value = loadCredential(getApiKeyStorageKey('video', 'dashscope'));
 if (videoMode && localStorage.getItem('videoMode')) videoMode.value = localStorage.getItem('videoMode');
+if (videoProvider && localStorage.getItem('videoProvider')) videoProvider.value = localStorage.getItem('videoProvider');
 
 if (localStorage.getItem('imageCount')) {
   imageCount.value = localStorage.getItem('imageCount');
@@ -693,12 +704,12 @@ if (refreshVideoModelsBtn) {
 }
 if (videoModelSelect) {
   videoModelSelect.addEventListener('change', () => {
-    localStorage.setItem(getModelStorageKey('video', 'dashscope'), videoModelSelect.value);
+    const provider = videoProvider ? videoProvider.value : 'dashscope';
+    localStorage.setItem(getModelStorageKey('video', provider), videoModelSelect.value);
   });
 }
 
 // 视频提供商切换
-const videoProvider = document.getElementById('videoProvider');
 const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
 const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
 const videoVolcengineAk = document.getElementById('videoVolcengineAk');
@@ -747,10 +758,7 @@ if (toggleVideoVolcengineAkBtn && videoVolcengineAk) {
   bindPasswordToggle(toggleVideoVolcengineAkBtn, videoVolcengineAk);
 }
 
-// 恢复视频提供商状态
-if (videoProvider && localStorage.getItem('videoProvider')) {
-  videoProvider.value = localStorage.getItem('videoProvider');
-}
+// 更新视频提供商状态
 updateVideoProviderState();
 
 if (importVideoTaskRecordsBtn) {
