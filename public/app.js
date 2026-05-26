@@ -143,6 +143,7 @@ let imageTaskRecords = [];
 let foregroundRecoveryNeeded = false;
 let foregroundRecoveryPromise = null;
 let lastForegroundRecoveryAt = 0;
+let activeTaskContext = null;
 const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
 const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
 
@@ -1108,43 +1109,78 @@ function getTaskStatusText(status) {
   return labels[status] || status || '查询中';
 }
 
-async function pollGenerationTask({ endpoint, payload, resultType, title, maxAttempts = GENERATION_PROGRESS_MAX_POLL_ATTEMPTS, onTaskUpdate }) {
-  const startedAt = Date.now();
-  let attempt = 0;
-  while (!maxAttempts || attempt < maxAttempts) {
-    await sleep(GENERATION_PROGRESS_POLL_INTERVAL_MS);
+async function pollActiveTaskOnce() {
+  if (!activeTaskContext) return;
+  const { endpoint, payload, resultType, onTaskUpdate } = activeTaskContext;
+  try {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(getFriendlyErrorMessage(data.error || data, '查询任务失败', true));
-    }
-
+    if (!res.ok) return;
     const status = data.taskStatus || 'PENDING';
-    setLoading(true, `${title}：${getTaskStatusText(status)}，已等待 ${formatElapsed(Date.now() - startedAt)}，任务ID ${data.taskId || payload.taskId}`);
     if (onTaskUpdate) onTaskUpdate(data, status);
-
     if (status === 'SUCCEEDED') {
+      activeTaskContext = null;
       if (resultType === 'video') {
-        if (!data.videoUrl) throw new Error('任务完成但未返回视频 URL');
-        displayVideos([data.videoUrl]);
+        if (data.videoUrl) displayVideos([data.videoUrl]);
       } else {
-        if (!Array.isArray(data.imageUrls) || data.imageUrls.length === 0) {
-          throw new Error('任务完成但未返回图片 URL');
+        if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+          displayImages(data.imageUrls);
         }
-        displayImages(data.imageUrls);
       }
-      return;
+      setLoading(false);
     }
-    if (status === 'FAILED' || status === 'CANCELED' || status === 'UNKNOWN') {
-      throw new Error(getFriendlyErrorMessage(data.message || data, `任务状态异常：${status}`, true));
-    }
-    attempt += 1;
+  } catch {
+    // 静默处理，主轮询循环负责错误处理
   }
-  throw new Error('任务查询超时');
+}
+
+async function pollGenerationTask({ endpoint, payload, resultType, title, maxAttempts = GENERATION_PROGRESS_MAX_POLL_ATTEMPTS, onTaskUpdate }) {
+  const startedAt = Date.now();
+  let attempt = 0;
+  activeTaskContext = { endpoint, payload, resultType, title, onTaskUpdate };
+  try {
+    while (!maxAttempts || attempt < maxAttempts) {
+      await sleep(GENERATION_PROGRESS_POLL_INTERVAL_MS);
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(getFriendlyErrorMessage(data.error || data, '查询任务失败', true));
+      }
+
+      const status = data.taskStatus || 'PENDING';
+      setLoading(true, `${title}：${getTaskStatusText(status)}，已等待 ${formatElapsed(Date.now() - startedAt)}，任务ID ${data.taskId || payload.taskId}`);
+      if (onTaskUpdate) onTaskUpdate(data, status);
+
+      if (status === 'SUCCEEDED') {
+        if (!activeTaskContext) return;
+        if (resultType === 'video') {
+          if (!data.videoUrl) throw new Error('任务完成但未返回视频 URL');
+          displayVideos([data.videoUrl]);
+        } else {
+          if (!Array.isArray(data.imageUrls) || data.imageUrls.length === 0) {
+            throw new Error('任务完成但未返回图片 URL');
+          }
+          displayImages(data.imageUrls);
+        }
+        return;
+      }
+      if (status === 'FAILED' || status === 'CANCELED' || status === 'UNKNOWN') {
+        throw new Error(getFriendlyErrorMessage(data.message || data, `任务状态异常：${status}`, true));
+      }
+      attempt += 1;
+    }
+    throw new Error('任务查询超时');
+  } finally {
+    activeTaskContext = null;
+  }
 }
 
 async function handleGenerationResult(data, { apiKey, model, resultType, title, mode, onTaskUpdate }) {
@@ -2210,10 +2246,12 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   recoverForegroundState({ force: foregroundRecoveryNeeded });
+  pollActiveTaskOnce();
 });
 
 window.addEventListener('pageshow', (event) => {
   if (!event.persisted) return;
   foregroundRecoveryNeeded = true;
   recoverForegroundState({ force: true });
+  pollActiveTaskOnce();
 });
