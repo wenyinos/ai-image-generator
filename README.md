@@ -135,6 +135,14 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 Motion imitation requires uploading a person image and a template video. The server stores uploaded files as temporary public URLs (auto-cleaned after generation).
 
+### Video Translation (Volcengine)
+
+| UI Model ID | Upstream `req_key` | Notes |
+|---|---|---|
+| `jimeng-video-translate` | `video_translate_v2_cvtob` | Cross-language video lip-sync translation (29 languages) |
+
+Video translation takes a public video URL and source/target language codes. The server submits an async task via `CVSync2AsyncSubmitTask` and polls via `CVSync2AsyncGetResult`. Output video URL is valid for 1 hour.
+
 ## Supported Jimeng Models
 
 ### Text-to-Image (Volcengine)
@@ -157,6 +165,9 @@ Motion imitation requires uploading a person image and a template video. The ser
 | `jimeng-inpainting` | `jimeng_image2image_dream_inpaint` | Interactive inpainting (exactly 2 images: origin + mask) |
 | `jimeng-4.0` | `jimeng_t2i_v40` | Multi-reference image edit/generation |
 | `jimeng-4.6` | `jimeng_seedream46_cvtob` | Multi-reference image edit/generation |
+| `jimeng-seededit` | `seededit_v3.0` | Smart drawing — text-guided image editing (SeedEdit 3.0) |
+| `jimeng-effect` | `i2i_multi_style_zx2x` | Image effects — 23 creative templates (requires 1 face photo) |
+| `jimeng-dressing` | `dressing_diffusionV2` | Virtual try-on — model image + garment image |
 
 ## Quick Start
 
@@ -408,7 +419,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '1.0.0' }`
+  - response: `{ status: 'ok', version: '1.2.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
@@ -424,6 +435,18 @@ server {
 - `POST /api/jimeng-motion`
   - multipart: `motionImage` + `motionVideo` + fields (`apiKey`, `model`)
   - response: async task metadata (Volcengine motion imitation)
+- `POST /api/volcengine-video-translate`
+  - body: `{ apiKey, videoUrl, srcLanguage, targetLanguage }`
+  - response: async task metadata with `queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-dressing`
+  - body: `{ apiKey, modelUrl, garmentData: [{ type, url }] }`
+  - response: async task metadata with `queryAction: "CVGetResult"`
+- `POST /api/volcengine-seededit`
+  - multipart: `image` (optional) + fields (`apiKey`, `prompt`, `scale`, `seed`, `imageUrl`)
+  - response: async task metadata with `queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-effect`
+  - multipart: `image` (optional) + fields (`apiKey`, `templateId`, `imageUrl`, `width`, `height`)
+  - response: async task metadata with `queryAction: "CVSync2AsyncGetResult"`
 - `POST /api/video-models`
   - returns available/fallback DashScope video model options
 - `POST /api/dashscope-task-status`
@@ -457,7 +480,8 @@ ai-image-generator/
 │   └── routes/
 │       ├── video.js       # Video generation APIs (DashScope, Jimeng, motion)
 │       ├── image.js       # Image generation APIs (text-to-image, image-to-image)
-│       └── task.js        # Task record & status query APIs
+│       ├── task.js        # Task record & status query APIs
+│       └── volcengine-tools.js # Volcengine video translate, dressing, seededit, effect
 ├── data/
 │   ├── video-tasks.sqlite # Local image/video task record database
 │   └── access-cookie-secret # Auto-generated cookie signing secret

@@ -211,7 +211,7 @@ app.use('/api', require('./lib/routes/volcengine-tools'));
 
 // 健康检查
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0' });
+  res.json({ status: 'ok', version: '1.2.0' });
 });
 
 // 启动时清理残留上传文件
