@@ -107,6 +107,27 @@ const maskPreviewImage = document.getElementById('maskPreviewImage');
 const removeMaskImageBtn = document.getElementById('removeMaskImageBtn');
 const volcengineLocalUploadHint = document.getElementById('volcengineLocalUploadHint');
 const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
+
+// 视频翻译相关
+const videoTranslateGroup = document.getElementById('videoTranslateGroup');
+const srcLanguage = document.getElementById('srcLanguage');
+const targetLanguage = document.getElementById('targetLanguage');
+const videoTranslateUrl = document.getElementById('videoTranslateUrl');
+
+// 图片换装相关
+const dressingParamsGroup = document.getElementById('dressingParamsGroup');
+const dressingModelUrl = document.getElementById('dressingModelUrl');
+const dressingGarmentUrl = document.getElementById('dressingGarmentUrl');
+const dressingGarmentType = document.getElementById('dressingGarmentType');
+
+// 智能绘图相关
+const seededitParamsGroup = document.getElementById('seededitParamsGroup');
+const seededitScale = document.getElementById('seededitScale');
+const seededitScaleValue = document.getElementById('seededitScaleValue');
+
+// 图像特效相关
+const effectParamsGroup = document.getElementById('effectParamsGroup');
+const effectTemplate = document.getElementById('effectTemplate');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
@@ -251,6 +272,11 @@ const MODELS_I2I = {
       { value: 'jimeng-inpainting', label: '即梦AI-交互编辑inpainting' },
       { value: 'jimeng-4.0', label: '即梦AI-图片生成4.0' },
       { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
+    ] },
+    { group: '✨ 即梦AI新功能', options: [
+      { value: 'jimeng-seededit', label: '即梦AI-智能绘图(图生图)' },
+      { value: 'jimeng-effect', label: '即梦AI-图像特效' },
+      { value: 'jimeng-dressing', label: '即梦AI-图片换装' },
     ] },
   ],
 };
@@ -632,37 +658,50 @@ function updateI2ISpecialParamState() {
   const isInpainting = isVolcengine && model === 'jimeng-inpainting';
   const isMaterialProduct = isVolcengine && model === 'jimeng-material-product';
   const isMaterialPod = isVolcengine && model === 'jimeng-material-pod';
+  const isSeededit = isVolcengine && model === 'jimeng-seededit';
+  const isEffect = isVolcengine && model === 'jimeng-effect';
+  const isDressing = isVolcengine && model === 'jimeng-dressing';
+  const isNewFeature = isSeededit || isEffect || isDressing;
 
-  if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting || isMaterialProduct || isMaterialPod);
+  if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting || isMaterialProduct || isMaterialPod || isNewFeature);
   if (upscaleParamsGroup) upscaleParamsGroup.classList.toggle('d-none', !isUpscale);
   if (inpaintingParamsGroup) inpaintingParamsGroup.classList.toggle('d-none', !isInpainting);
   if (materialProductParamsGroup) materialProductParamsGroup.classList.toggle('d-none', !isMaterialProduct);
   if (materialPodParamsGroup) materialPodParamsGroup.classList.toggle('d-none', !isMaterialPod);
+  if (seededitParamsGroup) seededitParamsGroup.classList.toggle('d-none', !isSeededit);
+  if (effectParamsGroup) effectParamsGroup.classList.toggle('d-none', !isEffect);
+  if (dressingParamsGroup) dressingParamsGroup.classList.toggle('d-none', !isDressing);
+  // 新功能模型提示文本
+  if (isSeededit) modelHintI2I.textContent = '智能绘图：上传参考图 + 文字描述，按指令编辑图片（如换背景、改颜色）。';
+  else if (isEffect) modelHintI2I.textContent = '图像特效：上传单人照片，选择特效模板生成创意图片。';
+  else if (isDressing) modelHintI2I.textContent = '图片换装：上传模特图URL和服装图URL，自动换装。';
 }
 
 function updateVideoUiState() {
   const isVideo = currentMode === 'video';
   const isImageVideo = videoMode && videoMode.value === 'image2video';
   const isMotion = videoMode && videoMode.value === 'motion';
+  const isTranslate = videoMode && videoMode.value === 'translate';
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
-  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate);
   if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
+  if (videoTranslateGroup) videoTranslateGroup.classList.toggle('d-none', !isTranslate);
   if (generateBtnVideo) generateBtnVideo.classList.toggle('d-none', !isVideo);
   if (textImageTaskRecordsPanel) textImageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'text2image');
   if (imageTaskRecordsPanel) imageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'image2image');
-  // 动作模仿时隐藏视频描述和时长/分辨率选择
+  // 动作模仿和视频翻译时隐藏视频描述和时长/分辨率选择
   const videoPromptGroup = document.getElementById('videoPromptInput')?.closest('.mb-3');
-  if (videoPromptGroup) videoPromptGroup.classList.toggle('d-none', isMotion);
+  if (videoPromptGroup) videoPromptGroup.classList.toggle('d-none', isMotion || isTranslate);
   const videoDurationGroup = document.getElementById('videoDuration')?.closest('.col-md-4');
-  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion);
+  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate);
   const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
-  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion);
-  // 动作模仿时隐藏 DashScope 提供商选项（不支持）
+  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate);
+  // 动作模仿和视频翻译时隐藏 DashScope 提供商选项（不支持）
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
-    if (dashscopeOption) dashscopeOption.hidden = isMotion;
-    if (isMotion && videoProvider.value === 'dashscope') {
+    if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
+    if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
     }
@@ -960,6 +999,21 @@ function upsertVideoTaskRecord(record) {
   renderVideoTaskRecords();
 }
 
+function upsertImageTaskRecord(record) {
+  if (!record?.id) return;
+  const existingIndex = imageTaskRecords.findIndex(item => item.id === record.id);
+  const nextRecord = {
+    ...(existingIndex >= 0 ? imageTaskRecords[existingIndex] : {}),
+    ...record,
+    updatedAt: Date.now(),
+  };
+  if (existingIndex >= 0) {
+    imageTaskRecords.splice(existingIndex, 1);
+  }
+  imageTaskRecords.unshift(nextRecord);
+  renderImageTaskRecords('image2image');
+}
+
 function renderVideoTaskRecords() {
   if (!videoTaskRecordsEl || !videoTaskRecordsEmpty) return;
   videoTaskRecordsEmpty.classList.toggle('d-none', videoTaskRecords.length > 0);
@@ -1211,6 +1265,7 @@ async function handleGenerationResult(data, { apiKey, model, resultType, title, 
         model: data.model || model,
         resultType,
         mode,
+        queryAction: data.queryAction,
       },
       resultType,
       title,
@@ -1537,6 +1592,55 @@ if (generateBtnVideo) {
     const motionVideoFile = motionVideo.files[0];
     const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
 
+    // 视频翻译模式
+    if (mode === 'translate') {
+      const videoUrl = videoTranslateUrl ? videoTranslateUrl.value.trim() : '';
+      const srcLang = srcLanguage ? srcLanguage.value : '';
+      const targetLang = targetLanguage ? targetLanguage.value : '';
+      if (!videoUrl) { showAlert('请输入待翻译视频 URL'); return; }
+      if (!srcLang) { showAlert('请选择原始语种'); return; }
+      if (!targetLang) { showAlert('请选择目标语种'); return; }
+      if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+      const rememberVolcTrans = rememberVolcengineVideo?.checked ?? true;
+      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolcTrans);
+      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolcTrans);
+      localStorage.setItem(getModelStorageKey('video', provider), model);
+      alertContainer.innerHTML = '';
+      setLoading(true, '正在提交视频翻译任务...');
+      downloadBtn.classList.add('d-none');
+      let activeVideoTaskId = '';
+      try {
+        const res = await fetch('/api/volcengine-video-translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey, videoUrl, srcLanguage: srcLang, targetLanguage: targetLang }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+        if (data.taskId) {
+          activeVideoTaskId = data.taskId;
+          upsertVideoTaskRecord({ taskId: data.taskId, provider, model, mode: 'translate', status: data.taskStatus || 'PENDING', createdAt: Date.now() });
+        }
+        await handleGenerationResult(data, {
+          apiKey, model, resultType: 'video', title: '视频翻译',
+          onTaskUpdate: (taskData, status) => {
+            upsertVideoTaskRecord({ taskId: taskData.taskId || activeVideoTaskId, status, videoUrl: taskData.videoUrl, usage: taskData.usage });
+          },
+        });
+        setLoading(false);
+      } catch (err) {
+        if (activeVideoTaskId) {
+          const existingRecord = videoTaskRecords.find(item => item.taskId === activeVideoTaskId);
+          if (!['FAILED', 'CANCELED', 'UNKNOWN'].includes(existingRecord?.status)) {
+            upsertVideoTaskRecord({ taskId: activeVideoTaskId, status: 'FAILED', error: err.message });
+          }
+        }
+        setLoading(false);
+        showAlert(`生成失败: ${err.message}`);
+      }
+      return;
+    }
+
     // 动作模仿模式
     if (mode === 'motion') {
       if (!motionImageFile) { showAlert('请上传人物图片'); return; }
@@ -1743,6 +1847,11 @@ if (imageStrength) {
 if (upscaleScale) {
   upscaleScale.addEventListener('input', () => {
     if (upscaleScaleValue) upscaleScaleValue.textContent = upscaleScale.value;
+  });
+}
+if (seededitScale) {
+  seededitScale.addEventListener('input', () => {
+    if (seededitScaleValue) seededitScaleValue.textContent = seededitScale.value;
   });
 }
 
@@ -2042,6 +2151,109 @@ generateBtnI2I.addEventListener('click', async () => {
     saveCredential(getApiKeyStorageKey('image2image', provider), apiKey, rememberI2I);
   }
   localStorage.setItem(getModelStorageKey('image2image', provider), model);
+
+  // 智能绘图(图生图 SeedEdit)
+  if (provider === 'volcengine' && model === 'jimeng-seededit') {
+    if (!prompt) { showAlert('请填写编辑指令（如：背景换成海边）'); return; }
+    const seededitScaleVal = seededitScale ? parseFloat(seededitScale.value) : 0.5;
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交智能绘图任务...');
+    downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    fd.append('prompt', prompt);
+    fd.append('scale', String(seededitScaleVal));
+    if (seedInput.value) fd.append('seed', seedInput.value);
+    if (uploadedImageFile) fd.append('image', uploadedImageFile);
+    else {
+      const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
+      if (urls.length === 0) { showAlert('请上传参考图或填写图片 URL'); return; }
+      fd.append('imageUrl', urls[0]);
+    }
+    let activeTaskId = '';
+    try {
+      const res = await fetch('/api/volcengine-seededit', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.taskId) {
+        activeTaskId = data.taskId;
+        upsertImageTaskRecord({ id: data.taskId, taskId: data.taskId, mode: 'text2image', provider, model, status: 'PENDING', createdAt: Date.now() });
+      }
+      await handleGenerationResult({ ...data, queryAction: data.queryAction || 'CVSync2AsyncGetResult' }, {
+        apiKey, model, resultType: 'image', title: '智能绘图',
+        onTaskUpdate: (taskData, status) => { upsertImageTaskRecord({ id: activeTaskId, taskId: activeTaskId, status, imageUrls: taskData.imageUrls }); },
+      });
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
+
+  // 图像特效
+  if (provider === 'volcengine' && model === 'jimeng-effect') {
+    if (!effectTemplate || !effectTemplate.value) { showAlert('请选择特效模板'); return; }
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交图像特效任务...');
+    downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    fd.append('templateId', effectTemplate.value);
+    if (uploadedImageFile) fd.append('image', uploadedImageFile);
+    else {
+      const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
+      if (urls.length === 0) { showAlert('请上传参考图或填写图片 URL'); return; }
+      fd.append('imageUrl', urls[0]);
+    }
+    if (volcengineWidth && volcengineWidth.value) fd.append('width', volcengineWidth.value);
+    if (volcengineHeight && volcengineHeight.value) fd.append('height', volcengineHeight.value);
+    let activeTaskId = '';
+    try {
+      const res = await fetch('/api/volcengine-effect', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.taskId) {
+        activeTaskId = data.taskId;
+        upsertImageTaskRecord({ id: data.taskId, taskId: data.taskId, mode: 'text2image', provider, model, status: 'PENDING', createdAt: Date.now() });
+      }
+      await handleGenerationResult({ ...data, queryAction: data.queryAction || 'CVSync2AsyncGetResult' }, {
+        apiKey, model, resultType: 'image', title: '图像特效',
+        onTaskUpdate: (taskData, status) => { upsertImageTaskRecord({ id: activeTaskId, taskId: activeTaskId, status, imageUrls: taskData.imageUrls }); },
+      });
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
+
+  // 图片换装
+  if (provider === 'volcengine' && model === 'jimeng-dressing') {
+    const modelUrl = dressingModelUrl ? dressingModelUrl.value.trim() : '';
+    const garmentUrl = dressingGarmentUrl ? dressingGarmentUrl.value.trim() : '';
+    const garmentType = dressingGarmentType ? dressingGarmentType.value : 'full';
+    if (!modelUrl) { showAlert('请输入模特图 URL'); return; }
+    if (!garmentUrl) { showAlert('请输入服装图 URL'); return; }
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交图片换装任务...');
+    downloadBtn.classList.add('d-none');
+    let activeTaskId = '';
+    try {
+      const res = await fetch('/api/volcengine-dressing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, modelUrl, garmentData: [{ type: garmentType, url: garmentUrl }] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.taskId) {
+        activeTaskId = data.taskId;
+        upsertImageTaskRecord({ id: data.taskId, taskId: data.taskId, mode: 'text2image', provider, model, status: 'PENDING', createdAt: Date.now() });
+      }
+      await handleGenerationResult({ ...data, queryAction: data.queryAction || 'CVGetResult' }, {
+        apiKey, model, resultType: 'image', title: '图片换装',
+        onTaskUpdate: (taskData, status) => { upsertImageTaskRecord({ id: activeTaskId, taskId: activeTaskId, status, imageUrls: taskData.imageUrls }); },
+      });
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
 
   alertContainer.innerHTML = '';
   setLoading(true, '正在上传图片，请稍候...');
