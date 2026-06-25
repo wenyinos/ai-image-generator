@@ -449,10 +449,13 @@ function renderVideoModelOptions() {
   const provider = videoProvider ? videoProvider.value : 'dashscope';
   const mode = videoMode ? videoMode.value : 'text2video';
   const isMotion = mode === 'motion';
+  const isTranslate = mode === 'translate';
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
 
   if (isMotion) {
     renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
+  } else if (isTranslate) {
+    renderModelOptions(videoModelSelect, [{ group: '视频翻译', options: [{ value: 'jimeng-video-translate', label: '视频翻译 2.0' }] }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
