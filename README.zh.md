@@ -135,6 +135,14 @@
 
 动作模仿需上传人物图片和模板视频。服务端将上传文件保存为临时公网 URL，生成完成后自动清理。
 
+### 视频翻译（Volcengine）
+
+| 前端模型 ID | 上游 `req_key` | 说明 |
+|---|---|---|
+| `jimeng-video-translate` | `video_translate_v2_cvtob` | 跨语种视频口播翻译（支持 29 种语言） |
+
+视频翻译接受公网视频 URL 和源/目标语种代码。服务端通过 `CVSync2AsyncSubmitTask` 提交异步任务，`CVSync2AsyncGetResult` 轮询结果。输出视频 URL 有效期 1 小时。
+
 ## 支持的即梦模型
 
 ### 文生图（Volcengine）
@@ -157,6 +165,9 @@
 | `jimeng-inpainting` | `jimeng_image2image_dream_inpaint` | 交互编辑 inpainting（需 2 张：原图 + mask） |
 | `jimeng-4.0` | `jimeng_t2i_v40` | 多参考图编辑/生成 |
 | `jimeng-4.6` | `jimeng_seedream46_cvtob` | 多参考图编辑/生成 |
+| `jimeng-seededit` | `seededit_v3.0` | 智能绘图 — 文字指令编辑图片（SeedEdit 3.0） |
+| `jimeng-effect` | `i2i_multi_style_zx2x` | 图像特效 — 23 种创意模板（需单人正面照） |
+| `jimeng-dressing` | `dressing_diffusionV2` | 图片换装 — 模特图 + 服装图虚拟试穿 |
 
 ## 快速开始
 
@@ -423,6 +434,18 @@ server {
 - `POST /api/jimeng-motion`
   - multipart：`motionImage` + `motionVideo` + 字段（`apiKey`、`model`）
   - 响应：异步任务信息（即梦动作模仿）
+- `POST /api/volcengine-video-translate`
+  - body：`{ apiKey, videoUrl, srcLanguage, targetLanguage }`
+  - 响应：异步任务信息，`queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-dressing`
+  - body：`{ apiKey, modelUrl, garmentData: [{ type, url }] }`
+  - 响应：异步任务信息，`queryAction: "CVGetResult"`
+- `POST /api/volcengine-seededit`
+  - multipart：`image`（可选）+ 字段（`apiKey`、`prompt`、`scale`、`seed`、`imageUrl`）
+  - 响应：异步任务信息，`queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-effect`
+  - multipart：`image`（可选）+ 字段（`apiKey`、`templateId`、`imageUrl`、`width`、`height`）
+  - 响应：异步任务信息，`queryAction: "CVSync2AsyncGetResult"`
 - `POST /api/video-models`
   - 返回 DashScope 视频模型列表或本地备用模型列表
 - `POST /api/dashscope-task-status`
@@ -456,7 +479,8 @@ ai-image-generator/
 │   └── routes/
 │       ├── video.js       # 视频生成 API（DashScope、即梦、动作模仿）
 │       ├── image.js       # 图片生成 API（文生图、图生图）
-│       └── task.js        # 任务记录与状态查询 API
+│       ├── task.js        # 任务记录与状态查询 API
+│       └── volcengine-tools.js # 火山引擎视频翻译、图片换装、智能绘图、图像特效
 ├── data/
 │   ├── video-tasks.sqlite # 本地图片/视频任务记录数据库
 │   └── access-cookie-secret # 自动生成的 Cookie 签名密钥
