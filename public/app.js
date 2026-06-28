@@ -151,6 +151,11 @@ const fetchI2ITaskIdInput = document.getElementById('fetchI2ITaskIdInput');
 const fetchI2ITaskIdType = document.getElementById('fetchI2ITaskIdType');
 const fetchI2ITaskIdProvider = document.getElementById('fetchI2ITaskIdProvider');
 const fetchI2ITaskIdBtn = document.getElementById('fetchI2ITaskIdBtn');
+
+// r2v 参考生视频
+const r2vUploadGroup = document.getElementById('r2vUploadGroup');
+const r2vFiles = document.getElementById('r2vFiles');
+const r2vFilesHint = document.getElementById('r2vFilesHint');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
@@ -319,9 +324,7 @@ let VIDEO_MODELS = {
     { value: 'wanx2.1-t2v-turbo', label: 'wanx2.1-t2v-turbo' },
   ],
   image2video: [
-    { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（参考生视频，推荐）' },
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
-    { value: 'wan2.7-r2v', label: 'wan2.7-r2v（参考生视频）' },
     { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
@@ -329,6 +332,11 @@ let VIDEO_MODELS = {
     { value: 'wan2.5-i2v-preview', label: 'wan2.5-i2v-preview' },
     { value: 'wan2.2-i2v-plus', label: 'wan2.2-i2v-plus' },
     { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
+  ],
+  r2v: [
+    { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
+    { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
+    { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
   ],
   videoedit: [
     { value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' },
@@ -490,6 +498,12 @@ function renderVideoModelOptions() {
     renderModelOptions(videoModelSelect, [{ group: '视频翻译', options: [{ value: 'jimeng-video-translate', label: '视频翻译 2.0' }] }], savedModel);
   } else if (mode === 'videoedit') {
     renderModelOptions(videoModelSelect, [{ group: '视频编辑', options: [{ value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' }] }], savedModel);
+  } else if (mode === 'r2v') {
+    renderModelOptions(videoModelSelect, [{ group: '参考生视频', options: [
+      { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
+      { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
+      { value: 'wan2.7-r2v', label: 'wan2.7-r2v（最多5个参考）' },
+    ] }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
@@ -720,8 +734,22 @@ function updateVideoUiState() {
   const isMotion = videoMode && videoMode.value === 'motion';
   const isTranslate = videoMode && videoMode.value === 'translate';
   const isVideoedit = videoMode && videoMode.value === 'videoedit';
+  const isR2V = videoMode && videoMode.value === 'r2v';
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
+  if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
+  if (isR2V && r2vFiles) {
+    const r2vModel = videoModelSelect ? videoModelSelect.value : '';
+    const isWan27R2V = r2vModel === 'wan2.7-r2v';
+    r2vFiles.accept = isWan27R2V
+      ? 'image/jpeg,image/jpg,image/png,image/bmp,image/webp,video/mp4,video/quicktime'
+      : 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
+    if (r2vFilesHint) {
+      r2vFilesHint.textContent = isWan27R2V
+        ? '最多9个：图片（JPG/PNG/BMP/WebP，最大20MB）或视频（MP4/MOV，1-30秒，最大100MB）'
+        : '最多9张图片：JPG/PNG/BMP/WebP，最大 20MB';
+    }
+  }
   if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate || isVideoedit);
   if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
   if (videoTranslateGroup) videoTranslateGroup.classList.toggle('d-none', !isTranslate);
@@ -844,6 +872,12 @@ function updateVideoProviderState() {
     const mode = videoMode ? videoMode.value : 'text2video';
     if (mode === 'videoedit') {
       renderModelOptions(videoModelSelect, [{ group: '视频编辑', options: [{ value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' }] }], savedModel);
+    } else if (mode === 'r2v') {
+      renderModelOptions(videoModelSelect, [{ group: '参考生视频', options: [
+        { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
+        { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
+        { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
+      ] }], savedModel);
     } else {
       renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
     }
@@ -1842,9 +1876,14 @@ if (generateBtnVideo) {
       return;
     }
 
-    // 文生视频/图生视频模式
+    // 文生视频/图生视频/参考生视频模式
+    const r2vFileList = r2vFiles ? Array.from(r2vFiles.files) : [];
     if (!prompt) {
       showAlert('请输入视频描述');
+      return;
+    }
+    if (mode === 'r2v' && r2vFileList.length === 0) {
+      showAlert('参考生视频需要上传至少1个参考图片或视频');
       return;
     }
     if (mode === 'image2video' && !firstFrame && provider === 'dashscope') {
@@ -1885,8 +1924,12 @@ if (generateBtnVideo) {
     formData.append('model', model);
     formData.append('prompt', prompt);
     formData.append('progressMode', 'true');
-    if (firstFrame) formData.append('firstFrame', firstFrame);
-    if (lastFrame) formData.append('lastFrame', lastFrame);
+    if (mode === 'r2v' && r2vFileList.length > 0) {
+      r2vFileList.forEach((file) => formData.append('r2vFiles', file));
+    } else {
+      if (firstFrame) formData.append('firstFrame', firstFrame);
+      if (lastFrame) formData.append('lastFrame', lastFrame);
+    }
     formData.append('parameters', JSON.stringify(videoParams));
 
     const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video' : '/api/generate-video';
