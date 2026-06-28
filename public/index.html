@@ -639,6 +639,16 @@
                     <div class="text-muted small" id="videoTaskRecordsEmpty">暂无视频任务记录</div>
                     <div class="list-group small" id="videoTaskRecords"></div>
                   </div>
+                  <div class="input-group input-group-sm mt-2">
+                    <input type="text" class="form-control" id="fetchTaskIdInput" placeholder="输入任务ID 获取已生成内容">
+                    <select class="form-select" style="max-width:120px" id="fetchTaskIdProvider">
+                      <option value="dashscope">DashScope</option>
+                      <option value="volcengine">即梦AI</option>
+                    </select>
+                    <button class="btn btn-outline-primary" type="button" id="fetchTaskIdBtn">
+                      <i class="bi bi-arrow-repeat"></i> 获取
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

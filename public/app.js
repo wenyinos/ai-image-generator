@@ -133,6 +133,11 @@ const effectTemplate = document.getElementById('effectTemplate');
 const videoeditUploadGroup = document.getElementById('videoeditUploadGroup');
 const videoeditVideo = document.getElementById('videoeditVideo');
 const videoeditRefImage = document.getElementById('videoeditRefImage');
+
+// 任务ID获取
+const fetchTaskIdInput = document.getElementById('fetchTaskIdInput');
+const fetchTaskIdProvider = document.getElementById('fetchTaskIdProvider');
+const fetchTaskIdBtn = document.getElementById('fetchTaskIdBtn');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
@@ -880,6 +885,50 @@ if (importVideoTaskRecordsBtn) {
       showAlert(`已导入 ${data.imported || 0} 条旧任务记录`, 'success');
     } catch (err) {
       showAlert(`导入失败: ${err.message}`);
+    }
+  });
+}
+
+if (fetchTaskIdBtn) {
+  fetchTaskIdBtn.addEventListener('click', async () => {
+    const taskId = fetchTaskIdInput ? fetchTaskIdInput.value.trim() : '';
+    if (!taskId) { showAlert('请输入任务ID'); return; }
+    const provider = fetchTaskIdProvider ? fetchTaskIdProvider.value : 'dashscope';
+    const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
+    const isVolcengine = provider === 'volcengine';
+    const apiKey = isVolcengine
+      ? ((videoVolcengineAk?.value?.trim() || '') + ':' + (videoVolcengineSk?.value?.trim() || ''))
+      : (videoApiKeyInput?.value?.trim() || '');
+    setLoading(true, '正在查询任务状态...');
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, taskId, resultType: 'video' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '查询失败');
+      const status = data.taskStatus || 'UNKNOWN';
+      if (status === 'SUCCEEDED') {
+        if (data.videoUrl) {
+          displayVideos([data.videoUrl]);
+          upsertVideoTaskRecord({ taskId, provider, model: data.model || '', mode: 'fetch', status: 'SUCCEEDED', videoUrl: data.videoUrl, createdAt: Date.now() });
+          showAlert('视频获取成功', 'success');
+        } else if (data.imageUrls && data.imageUrls.length > 0) {
+          displayImages(data.imageUrls);
+          showAlert('图片获取成功', 'success');
+        } else {
+          showAlert('任务已完成但未返回内容', 'warning');
+        }
+      } else if (status === 'FAILED' || status === 'CANCELED') {
+        showAlert(`任务已${status === 'FAILED' ? '失败' : '取消'}：${data.message || '无详细信息'}`);
+      } else {
+        showAlert(`任务状态：${getTaskStatusText(status)}，请稍后再试`, 'warning');
+      }
+    } catch (err) {
+      showAlert(`查询失败: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   });
 }
