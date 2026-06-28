@@ -204,6 +204,15 @@ const PROVIDER_CONFIG = {
 
 const MODELS_T2I = {
   dashscope: [
+    { group: '💬 千问 Qwen-Image', options: [
+      { value: 'qwen-image-2.0-pro-2026-04-22', label: 'qwen-image-2.0-pro-2026-04-22（快照）' },
+      { value: 'qwen-image-2.0-pro-2026-06-22', label: 'qwen-image-2.0-pro-2026-06-22（快照）' },
+      { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
+      { value: 'qwen-image-2.0', label: 'qwen-image-2.0' },
+      { value: 'qwen-image-max', label: 'qwen-image-max (真实感)' },
+      { value: 'qwen-image-plus', label: 'qwen-image-plus (艺术风格)' },
+      { value: 'qwen-image', label: 'qwen-image' },
+    ] },
     { group: '⭐ 万相 2.7 (最新)', options: [
       { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强, 支持4K)' },
       { value: 'wan2.7-image', label: 'wan2.7-image (快速)' },
@@ -221,15 +230,6 @@ const MODELS_T2I = {
       { value: 'wanx2.1-t2i-turbo', label: 'wanx2.1-t2i-turbo' },
       { value: 'wanx2.1-t2i-plus', label: 'wanx2.1-t2i-plus' },
       { value: 'wanx2.0-t2i-turbo', label: 'wanx2.0-t2i-turbo' },
-    ] },
-    { group: '💬 千问 Qwen-Image', options: [
-      { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
-      { value: 'qwen-image-2.0-pro-2026-06-22', label: 'qwen-image-2.0-pro-2026-06-22（快照）' },
-      { value: 'qwen-image-2.0-pro-2026-04-22', label: 'qwen-image-2.0-pro-2026-04-22（快照）' },
-      { value: 'qwen-image-2.0', label: 'qwen-image-2.0' },
-      { value: 'qwen-image-max', label: 'qwen-image-max (真实感)' },
-      { value: 'qwen-image-plus', label: 'qwen-image-plus (艺术风格)' },
-      { value: 'qwen-image', label: 'qwen-image' },
     ] },
     { group: '🚀 Z-Image', options: [
       { value: 'z-image-turbo', label: 'z-image-turbo (轻量快速)' },
@@ -253,8 +253,8 @@ const MODELS_T2I = {
 const MODELS_I2I = {
   dashscope: [
     { group: '⭐ 万相 2.7 (推荐)', options: [
-      { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强)' },
       { value: 'wan2.7-image', label: 'wan2.7-image (快速)' },
+      { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强)' },
     ] },
     { group: '🎨 万相 2.6', options: [
       { value: 'wan2.6-image', label: 'wan2.6-image (图文混排)' },
