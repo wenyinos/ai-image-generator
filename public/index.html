@@ -884,6 +884,20 @@
                 <div class="text-muted small" id="textImageTaskRecordsEmpty">暂无文生图任务记录</div>
                 <div class="list-group small" id="textImageTaskRecords"></div>
               </div>
+              <div class="input-group input-group-sm mt-2">
+                <input type="text" class="form-control" id="fetchTextImageTaskIdInput" placeholder="输入任务ID 获取已生成内容">
+                <select class="form-select" style="max-width:100px" id="fetchTextImageTaskIdType">
+                  <option value="image" selected>图片</option>
+                  <option value="video">视频</option>
+                </select>
+                <select class="form-select" style="max-width:120px" id="fetchTextImageTaskIdProvider">
+                  <option value="dashscope">DashScope</option>
+                  <option value="volcengine">即梦AI</option>
+                </select>
+                <button class="btn btn-outline-primary" type="button" id="fetchTextImageTaskIdBtn">
+                  <i class="bi bi-arrow-repeat"></i> 获取
+                </button>
+              </div>
             </div>
 
             <div class="border-top pt-3 mb-4 d-none" id="imageTaskRecordsPanel">
@@ -893,6 +907,20 @@
               <div class="collapse mt-2" id="imageTaskRecordsCollapse">
                 <div class="text-muted small" id="imageTaskRecordsEmpty">暂无图生图任务记录</div>
                 <div class="list-group small" id="imageTaskRecords"></div>
+              </div>
+              <div class="input-group input-group-sm mt-2">
+                <input type="text" class="form-control" id="fetchI2ITaskIdInput" placeholder="输入任务ID 获取已生成内容">
+                <select class="form-select" style="max-width:100px" id="fetchI2ITaskIdType">
+                  <option value="image" selected>图片</option>
+                  <option value="video">视频</option>
+                </select>
+                <select class="form-select" style="max-width:120px" id="fetchI2ITaskIdProvider">
+                  <option value="dashscope">DashScope</option>
+                  <option value="volcengine">即梦AI</option>
+                </select>
+                <button class="btn btn-outline-primary" type="button" id="fetchI2ITaskIdBtn">
+                  <i class="bi bi-arrow-repeat"></i> 获取
+                </button>
               </div>
             </div>
 
