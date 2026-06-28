@@ -765,15 +765,17 @@ function updateVideoUiState() {
   if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate);
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
+    const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
+    if (volcengineOption) volcengineOption.hidden = isVideoedit || isR2V;
     if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
     }
-  }
-  if (videoProvider && isVideoedit && videoProvider.value === 'volcengine') {
-    videoProvider.value = 'dashscope';
-    updateVideoProviderState();
+    if ((isVideoedit || isR2V) && videoProvider.value === 'volcengine') {
+      videoProvider.value = 'dashscope';
+      updateVideoProviderState();
+    }
   }
 }
 
