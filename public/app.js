@@ -224,6 +224,8 @@ const MODELS_T2I = {
     ] },
     { group: '💬 千问 Qwen-Image', options: [
       { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
+      { value: 'qwen-image-2.0-pro-2026-06-22', label: 'qwen-image-2.0-pro-2026-06-22（快照）' },
+      { value: 'qwen-image-2.0-pro-2026-04-22', label: 'qwen-image-2.0-pro-2026-04-22（快照）' },
       { value: 'qwen-image-2.0', label: 'qwen-image-2.0' },
       { value: 'qwen-image-max', label: 'qwen-image-max (真实感)' },
       { value: 'qwen-image-plus', label: 'qwen-image-plus (艺术风格)' },
@@ -283,7 +285,8 @@ const MODELS_I2I = {
 
 let VIDEO_MODELS = {
   text2video: [
-    { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v（推荐）' },
+    { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
+    { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
     { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
     { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
@@ -293,7 +296,9 @@ let VIDEO_MODELS = {
     { value: 'wanx2.1-t2v-turbo', label: 'wanx2.1-t2v-turbo' },
   ],
   image2video: [
-    { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v（推荐）' },
+    { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（参考生视频，推荐）' },
+    { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
+    { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
     { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
