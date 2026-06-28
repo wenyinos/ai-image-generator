@@ -33,7 +33,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 ### Video Generation
 - Provider switching in UI (DashScope / Volcengine)
 - DashScope text-to-video and image-to-video workflows
-- Built-in model options for `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
+- Built-in model options for `happyhorse-1.1-*`, `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
 - Jimeng (Volcengine) 1080P video generation: text-to-video, image-to-video (first frame / first+last frame), Pro mode
 - Motion imitation (v1.0 / v2.0): upload a person image + template video to generate animated video
 - Long-running task progress display through async polling
@@ -80,6 +80,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wanx2.1-t2i-plus` | wan | async | |
 | `wanx2.0-t2i-turbo` | wan | async | |
 | `qwen-image-2.0-pro` | qwen | sync | Text rendering |
+| `qwen-image-2.0-pro-2026-06-22` | qwen | sync | Snapshot |
+| `qwen-image-2.0-pro-2026-04-22` | qwen | sync | Snapshot |
 | `qwen-image-2.0` | qwen | sync | |
 | `qwen-image-max` | qwen | async | Realistic |
 | `qwen-image-plus` | qwen | async | Artistic |
@@ -94,7 +96,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Notes |
 |---|---|
-| `happyhorse-1.0-t2v` | Recommended |
+| `happyhorse-1.1-t2v` | Recommended |
+| `happyhorse-1.0-t2v` | |
 | `wan2.7-t2v` | Wan 2.7 text-to-video |
 | `wan2.7-t2v-2026-04-25` | Wan 2.7 text-to-video snapshot |
 | `wan2.6-t2v` | Wan 2.6 text-to-video |
@@ -107,7 +110,9 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Notes |
 |---|---|
-| `happyhorse-1.0-i2v` | Recommended |
+| `happyhorse-1.1-r2v` | Reference-to-video, stable subject & scene, Recommended |
+| `happyhorse-1.1-i2v` | Image-to-video |
+| `happyhorse-1.0-i2v` | |
 | `wan2.7-i2v` | Wan 2.7 image-to-video |
 | `wan2.7-i2v-2026-04-25` | Wan 2.7 image-to-video snapshot |
 | `wan2.6-i2v-flash` | Fast |

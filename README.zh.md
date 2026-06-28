@@ -33,7 +33,7 @@
 ### 视频生成
 - 前端可切换 Provider（DashScope / Volcengine）
 - 支持 DashScope 文生视频与图生视频
-- 内置 `happyhorse-1.0-*`、`wan2.7-*` 以及早期 Wan 视频模型
+- 内置 `happyhorse-1.1-*`、`happyhorse-1.0-*`、`wan2.7-*` 以及早期 Wan 视频模型
 - 即梦（火山引擎）1080P 视频生成：文生视频、图生视频（首帧/首尾帧）、Pro 模式
 - 动作模仿（v1.0 / v2.0）：上传人物图片 + 模板视频生成动态视频
 - 长任务通过异步轮询实时显示进度
@@ -80,6 +80,8 @@
 | `wanx2.1-t2i-plus` | wan | 异步 | |
 | `wanx2.0-t2i-turbo` | wan | 异步 | |
 | `qwen-image-2.0-pro` | qwen | 同步 | 擅长文字渲染 |
+| `qwen-image-2.0-pro-2026-06-22` | qwen | 同步 | 快照 |
+| `qwen-image-2.0-pro-2026-04-22` | qwen | 同步 | 快照 |
 | `qwen-image-2.0` | qwen | 同步 | |
 | `qwen-image-max` | qwen | 异步 | 真实感 |
 | `qwen-image-plus` | qwen | 异步 | 艺术风格 |
@@ -94,7 +96,8 @@
 
 | 模型 | 说明 |
 |---|---|
-| `happyhorse-1.0-t2v` | 推荐 |
+| `happyhorse-1.1-t2v` | 推荐 |
+| `happyhorse-1.0-t2v` | |
 | `wan2.7-t2v` | 万相 2.7 文生视频 |
 | `wan2.7-t2v-2026-04-25` | 万相 2.7 文生视频快照 |
 | `wan2.6-t2v` | 万相 2.6 文生视频 |
@@ -107,7 +110,9 @@
 
 | 模型 | 说明 |
 |---|---|
-| `happyhorse-1.0-i2v` | 推荐 |
+| `happyhorse-1.1-r2v` | 参考生视频，主体与场景更稳定，推荐 |
+| `happyhorse-1.1-i2v` | 图生视频 |
+| `happyhorse-1.0-i2v` | |
 | `wan2.7-i2v` | 万相 2.7 图生视频 |
 | `wan2.7-i2v-2026-04-25` | 万相 2.7 图生视频快照 |
 | `wan2.6-i2v-flash` | 极速 |
