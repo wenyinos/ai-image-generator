@@ -298,6 +298,7 @@ let VIDEO_MODELS = {
   image2video: [
     { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（参考生视频，推荐）' },
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
+    { value: 'wan2.7-r2v', label: 'wan2.7-r2v（参考生视频）' },
     { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },

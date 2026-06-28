@@ -112,6 +112,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 |---|---|
 | `happyhorse-1.1-r2v` | Reference-to-video, stable subject & scene, Recommended |
 | `happyhorse-1.1-i2v` | Image-to-video |
+| `wan2.7-r2v` | Wan 2.7 reference-to-video |
 | `happyhorse-1.0-i2v` | |
 | `wan2.7-i2v` | Wan 2.7 image-to-video |
 | `wan2.7-i2v-2026-04-25` | Wan 2.7 image-to-video snapshot |
