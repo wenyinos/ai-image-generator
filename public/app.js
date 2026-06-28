@@ -136,6 +136,7 @@ const videoeditRefImage = document.getElementById('videoeditRefImage');
 
 // 任务ID获取
 const fetchTaskIdInput = document.getElementById('fetchTaskIdInput');
+const fetchTaskIdType = document.getElementById('fetchTaskIdType');
 const fetchTaskIdProvider = document.getElementById('fetchTaskIdProvider');
 const fetchTaskIdBtn = document.getElementById('fetchTaskIdBtn');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
@@ -894,6 +895,7 @@ if (fetchTaskIdBtn) {
     const taskId = fetchTaskIdInput ? fetchTaskIdInput.value.trim() : '';
     if (!taskId) { showAlert('请输入任务ID'); return; }
     const provider = fetchTaskIdProvider ? fetchTaskIdProvider.value : 'dashscope';
+    const resultType = fetchTaskIdType ? fetchTaskIdType.value : 'video';
     const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
     const isVolcengine = provider === 'volcengine';
     const apiKey = isVolcengine
@@ -904,7 +906,7 @@ if (fetchTaskIdBtn) {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey, taskId, resultType: 'video' }),
+        body: JSON.stringify({ apiKey, taskId, resultType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '查询失败');
