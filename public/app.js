@@ -128,6 +128,11 @@ const seededitScaleValue = document.getElementById('seededitScaleValue');
 // 图像特效相关
 const effectParamsGroup = document.getElementById('effectParamsGroup');
 const effectTemplate = document.getElementById('effectTemplate');
+
+// 视频编辑相关
+const videoeditUploadGroup = document.getElementById('videoeditUploadGroup');
+const videoeditVideo = document.getElementById('videoeditVideo');
+const videoeditRefImage = document.getElementById('videoeditRefImage');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
@@ -307,6 +312,9 @@ let VIDEO_MODELS = {
     { value: 'wan2.2-i2v-plus', label: 'wan2.2-i2v-plus' },
     { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
   ],
+  videoedit: [
+    { value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' },
+  ],
 };
 
 // 即梦视频模型列表（按模式区分）
@@ -462,6 +470,8 @@ function renderVideoModelOptions() {
     renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
   } else if (isTranslate) {
     renderModelOptions(videoModelSelect, [{ group: '视频翻译', options: [{ value: 'jimeng-video-translate', label: '视频翻译 2.0' }] }], savedModel);
+  } else if (mode === 'videoedit') {
+    renderModelOptions(videoModelSelect, [{ group: '视频编辑', options: [{ value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' }] }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
@@ -691,22 +701,22 @@ function updateVideoUiState() {
   const isImageVideo = videoMode && videoMode.value === 'image2video';
   const isMotion = videoMode && videoMode.value === 'motion';
   const isTranslate = videoMode && videoMode.value === 'translate';
+  const isVideoedit = videoMode && videoMode.value === 'videoedit';
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
-  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate || isVideoedit);
   if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
   if (videoTranslateGroup) videoTranslateGroup.classList.toggle('d-none', !isTranslate);
+  if (videoeditUploadGroup) videoeditUploadGroup.classList.toggle('d-none', !isVideoedit);
   if (generateBtnVideo) generateBtnVideo.classList.toggle('d-none', !isVideo);
   if (textImageTaskRecordsPanel) textImageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'text2image');
   if (imageTaskRecordsPanel) imageTaskRecordsPanel.classList.toggle('d-none', currentMode !== 'image2image');
-  // 动作模仿和视频翻译时隐藏视频描述和时长/分辨率选择
   const videoPromptGroup = document.getElementById('videoPromptInput')?.closest('.mb-3');
   if (videoPromptGroup) videoPromptGroup.classList.toggle('d-none', isMotion || isTranslate);
   const videoDurationGroup = document.getElementById('videoDuration')?.closest('.col-md-4');
-  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate);
+  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate || isVideoedit);
   const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
   if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate);
-  // 动作模仿和视频翻译时隐藏 DashScope 提供商选项（不支持）
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
@@ -714,6 +724,10 @@ function updateVideoUiState() {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
     }
+  }
+  if (videoProvider && isVideoedit && videoProvider.value === 'volcengine') {
+    videoProvider.value = 'dashscope';
+    updateVideoProviderState();
   }
 }
 
@@ -810,7 +824,11 @@ function updateVideoProviderState() {
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
   } else {
     const mode = videoMode ? videoMode.value : 'text2video';
-    renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+    if (mode === 'videoedit') {
+      renderModelOptions(videoModelSelect, [{ group: '视频编辑', options: [{ value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' }] }], savedModel);
+    } else {
+      renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
+    }
   }
 
   // 更新图生视频帧图片提示
@@ -1600,6 +1618,60 @@ if (generateBtnVideo) {
     const motionImageFile = motionImage.files[0];
     const motionVideoFile = motionVideo.files[0];
     const seed = seedInput.value ? parseInt(seedInput.value, 10) : undefined;
+
+    // 视频编辑模式
+    if (mode === 'videoedit') {
+      const videoFile = videoeditVideo ? videoeditVideo.files[0] : null;
+      const refImageFile = videoeditRefImage ? videoeditRefImage.files[0] : null;
+      if (!videoFile) { showAlert('请上传待编辑的视频'); return; }
+      if (!prompt) { showAlert('请输入视频编辑指令'); return; }
+      if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
+      const rememberDash = rememberApiKeyVideo?.checked ?? true;
+      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, rememberDash);
+      localStorage.setItem(getModelStorageKey('video', provider), model);
+      alertContainer.innerHTML = '';
+      setLoading(true, '正在提交视频编辑任务...');
+      downloadBtn.classList.add('d-none');
+      const fd = new FormData();
+      fd.append('apiKey', apiKey);
+      fd.append('mode', 'videoedit');
+      fd.append('model', model);
+      fd.append('prompt', prompt);
+      fd.append('progressMode', 'true');
+      fd.append('videoFile', videoFile);
+      if (refImageFile) fd.append('refImage', refImageFile);
+      fd.append('parameters', JSON.stringify({
+        resolution: videoResolution ? videoResolution.value : '720P',
+        prompt_extend: promptExtend.checked,
+        watermark: watermarkToggle.checked,
+        seed,
+      }));
+      let activeVideoTaskId = '';
+      try {
+        const res = await fetch('/api/generate-video', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+        if (data.taskId) {
+          activeVideoTaskId = data.taskId;
+          upsertVideoTaskRecord({ taskId: data.taskId, provider: 'dashscope', model, mode: 'videoedit', status: data.taskStatus || 'PENDING', createdAt: Date.now() });
+        }
+        await handleGenerationResult(data, {
+          apiKey, model, resultType: 'video', title: '视频编辑',
+          onTaskUpdate: (taskData, status) => { upsertVideoTaskRecord({ taskId: taskData.taskId || activeVideoTaskId, status, videoUrl: taskData.videoUrl, usage: taskData.usage }); },
+        });
+        setLoading(false);
+      } catch (err) {
+        if (activeVideoTaskId) {
+          const existingRecord = videoTaskRecords.find(item => item.taskId === activeVideoTaskId);
+          if (!['FAILED', 'CANCELED', 'UNKNOWN'].includes(existingRecord?.status)) {
+            upsertVideoTaskRecord({ taskId: activeVideoTaskId, status: 'FAILED', error: err.message });
+          }
+        }
+        setLoading(false);
+        showAlert(`生成失败: ${err.message}`);
+      }
+      return;
+    }
 
     // 视频翻译模式
     if (mode === 'translate') {

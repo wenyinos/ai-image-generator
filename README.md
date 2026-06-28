@@ -121,6 +121,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.2-i2v-plus` | Enhanced |
 | `wanx2.1-i2v-turbo` | Turbo |
 
+### Video Editing
+
+| Model | Notes |
+|---|---|
+| `wan2.7-videoedit` | Natural language video editing, supports reference image for element replacement |
+
 ## Supported Jimeng Video Models
 
 ### Video Generation (Volcengine)

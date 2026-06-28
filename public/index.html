@@ -415,8 +415,11 @@
                     <label for="videoMode" class="form-label fw-semibold">生成方式</label>
                     <select class="form-select" id="videoMode">
                       <option value="text2video" selected>文生视频</option>
-                      <option value="image2video">图生视频</option>
-                      <option value="motion">动作模仿</option>
+                      <optgroup label="图生视频">
+                        <option value="image2video">图生视频</option>
+                        <option value="motion">动作模仿</option>
+                        <option value="videoedit">视频编辑</option>
+                      </optgroup>
                       <option value="translate">视频翻译</option>
                     </select>
                   </div>
@@ -501,6 +504,19 @@
                     <label for="motionVideo" class="form-label fw-semibold">模板视频</label>
                     <input class="form-control" type="file" id="motionVideo" accept="video/mp4,video/quicktime,video/webm">
                     <div class="form-text">支持 MP4/MOV/WebM，最长 30 秒，最大 64MB</div>
+                  </div>
+                </div>
+                <!-- 视频编辑 -->
+                <div class="row g-3 mb-3 d-none" id="videoeditUploadGroup">
+                  <div class="col-md-6">
+                    <label for="videoeditVideo" class="form-label fw-semibold">待编辑视频</label>
+                    <input class="form-control" type="file" id="videoeditVideo" accept="video/mp4,video/quicktime,video/webm">
+                    <div class="form-text">支持 MP4/MOV/WebM，最大 64MB</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="videoeditRefImage" class="form-label">参考图片（可选）</label>
+                    <input class="form-control" type="file" id="videoeditRefImage" accept="image/*">
+                    <div class="form-text">用于替换视频中元素的参考图片</div>
                   </div>
                 </div>
                 <!-- 视频翻译 -->
