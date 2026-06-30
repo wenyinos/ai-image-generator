@@ -228,6 +228,13 @@ const PROVIDER_CONFIG = {
     helpLink: 'https://www.volcengine.com/docs/82379/1666945',
     consoleLink: 'https://console.volcengine.com/ark',
   },
+  agnes: {
+    label: 'Agnes API Key（可选）',
+    envName: 'AGNES_API_KEY',
+    placeholder: 'agnes-...',
+    helpLink: 'https://agnes-ai.com/docs',
+    consoleLink: 'https://agnes-ai.com',
+  },
 };
 
 const MODELS_T2I = {
@@ -276,6 +283,12 @@ const MODELS_T2I = {
       { value: 'jimeng-4.6', label: '即梦AI-图片生成4.6' },
     ] },
   ],
+  agnes: [
+    { group: '🤖 Agnes AI', options: [
+      { value: 'agnes-image-2.1-flash', label: 'Agnes Image 2.1 Flash (推荐)' },
+      { value: 'agnes-image-2.0-flash', label: 'Agnes Image 2.0 Flash' },
+    ] },
+  ],
 };
 
 const MODELS_I2I = {
@@ -307,6 +320,12 @@ const MODELS_I2I = {
       { value: 'jimeng-seededit', label: '即梦AI-智能绘图(图生图)' },
       { value: 'jimeng-effect', label: '即梦AI-图像特效' },
       { value: 'jimeng-dressing', label: '即梦AI-图片换装' },
+    ] },
+  ],
+  agnes: [
+    { group: '🤖 Agnes AI', options: [
+      { value: 'agnes-image-2.1-flash', label: 'Agnes Image 2.1 Flash (推荐)' },
+      { value: 'agnes-image-2.0-flash', label: 'Agnes Image 2.0 Flash' },
     ] },
   ],
 };
@@ -503,6 +522,10 @@ function renderVideoModelOptions() {
       { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
       { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
       { value: 'wan2.7-r2v', label: 'wan2.7-r2v（最多5个参考）' },
+    ] }], savedModel);
+  } else if (provider === 'agnes') {
+    renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
+      { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
@@ -766,13 +789,20 @@ function updateVideoUiState() {
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
+    const agnesOption = videoProvider.querySelector('option[value="agnes"]');
+    const agnesSupported = videoMode && (videoMode.value === 'text2video' || videoMode.value === 'image2video');
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
     if (volcengineOption) volcengineOption.hidden = isVideoedit || isR2V;
+    if (agnesOption) agnesOption.hidden = !agnesSupported;
     if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
     }
     if ((isVideoedit || isR2V) && videoProvider.value === 'volcengine') {
+      videoProvider.value = 'dashscope';
+      updateVideoProviderState();
+    }
+    if (!agnesSupported && videoProvider.value === 'agnes') {
       videoProvider.value = 'dashscope';
       updateVideoProviderState();
     }
@@ -836,6 +866,8 @@ if (videoModelSelect) {
 
 // 视频提供商切换
 const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
+const videoApiKeyLabel = document.getElementById('videoApiKeyLabel');
+const videoApiEnvName = document.getElementById('videoApiEnvName');
 const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
 const videoVolcengineAk = document.getElementById('videoVolcengineAk');
 const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
@@ -853,6 +885,13 @@ function updateVideoProviderState() {
   if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.toggle('d-none', isVolcengine);
   if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.toggle('d-none', !isVolcengine);
   if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
+  // 更新 API Key 标签和占位符
+  if (!isVolcengine) {
+    const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
+    if (videoApiKeyLabel) videoApiKeyLabel.textContent = cfg.label;
+    if (videoApiEnvName) videoApiEnvName.textContent = cfg.envName;
+    if (videoApiKeyInput) videoApiKeyInput.placeholder = cfg.placeholder;
+  }
   // 切换到火山引擎时加载已保存的 AK/SK
   if (isVolcengine && videoVolcengineAk && videoVolcengineSk) {
     videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
@@ -867,6 +906,11 @@ function updateVideoProviderState() {
     if (videoProvider) videoProvider.value = 'volcengine';
     if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.add('d-none');
     if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.remove('d-none');
+  } else if (provider === 'agnes') {
+    // Agnes 视频模型
+    renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
+      { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
+    ] }], savedModel);
   } else if (isVolcengine) {
     const videoModeKey = isImageVideo ? 'image2video' : 'text2video';
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
@@ -1390,7 +1434,9 @@ async function pollGenerationTask({ endpoint, payload, resultType, title, maxAtt
 
 async function handleGenerationResult(data, { apiKey, model, resultType, title, mode, onTaskUpdate }) {
   if (data.taskId) {
-    const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
+    const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status'
+      : data.provider === 'agnes' ? '/api/agnes-task-status'
+      : '/api/dashscope-task-status';
     setLoading(true, `${title}：${getTaskStatusText(data.taskStatus)}，任务ID ${data.taskId}`);
     await pollGenerationTask({
       endpoint,
@@ -1934,7 +1980,9 @@ if (generateBtnVideo) {
     }
     formData.append('parameters', JSON.stringify(videoParams));
 
-    const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video' : '/api/generate-video';
+    const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video'
+      : provider === 'agnes' ? '/api/agnes-video'
+      : '/api/generate-video';
     let activeVideoTaskId = '';
     try {
       const res = await fetch(apiEndpoint, { method: 'POST', body: formData });

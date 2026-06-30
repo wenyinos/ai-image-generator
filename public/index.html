@@ -4,12 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 视觉生成</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="css/pixel.css" rel="stylesheet">
+  <link href="vendor/vanillajs-datepicker/dist/css/datepicker-bs5.min.css" rel="stylesheet">
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -19,6 +24,11 @@
       border: none;
       border-radius: 1rem;
       box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .main-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
     }
     .image-container {
       min-height: 120px;
@@ -129,27 +139,27 @@
   <div class="container py-5">
     <div class="row justify-content-center">
       <div class="col-lg-10">
-        <div class="card main-card">
-          <div class="card-body p-4">
+        <div class="card main-card border-0 shadow">
+          <div class="card-body p-4 p-lg-5">
             <h1 class="card-title text-center mb-4">
-              <i class="bi bi-palette-fill text-primary"></i> AI 视觉生成
+              <i class="bi bi-palette-fill text-primary me-2"></i>AI 视觉生成
             </h1>
 
             <!-- 模式切换标签 -->
-            <ul class="nav nav-tabs mb-4" id="modeTabs" role="tablist">
+            <ul class="nav nav-tabs nav-tabs-primary mb-4" id="modeTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="text2image-tab" data-bs-toggle="tab" data-bs-target="#text2image" type="button" role="tab">
-                  <i class="bi bi-fonts"></i> 文生图
+                  <i class="bi bi-fonts me-1"></i> 文生图
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="image2image-tab" data-bs-toggle="tab" data-bs-target="#image2image" type="button" role="tab">
-                  <i class="bi bi-image"></i> 图生图
+                  <i class="bi bi-image me-1"></i> 图生图
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab">
-                  <i class="bi bi-camera-video"></i> 视频生成
+                  <i class="bi bi-camera-video me-1"></i> 视频生成
                 </button>
               </li>
             </ul>
@@ -157,7 +167,7 @@
             <div class="tab-content" id="modeTabContent">
               <!-- 文生图模式 -->
               <div class="tab-pane fade show active" id="text2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine 与 Gemini 生成图片</p>
+                <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine、Gemini 与 Agnes 生成图片</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-4">
@@ -166,6 +176,7 @@
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
                       <option value="volcengine">Volcengine (火山方舟)</option>
                       <option value="gemini">Gemini (Google)</option>
+                      <option value="agnes">Agnes AI</option>
                     </select>
                   </div>
                   <div class="col-md-4">
@@ -275,7 +286,7 @@
 
               <!-- 图生图模式 -->
               <div class="tab-pane fade" id="image2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Gemini 与 Volcengine 图生图</p>
+                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Gemini、Volcengine 与 Agnes 图生图</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-4">
@@ -284,6 +295,7 @@
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
                       <option value="volcengine">Volcengine (火山方舟)</option>
                       <option value="gemini">Gemini (Google)</option>
+                      <option value="agnes">Agnes AI</option>
                     </select>
                   </div>
                   <div class="col-md-4">
@@ -409,7 +421,7 @@
 
               <!-- 视频生成模式 -->
               <div class="tab-pane fade" id="video" role="tabpanel">
-                <p class="text-center text-muted mb-4">支持阿里云百炼与即梦AI生成视频</p>
+                <p class="text-center text-muted mb-4">支持阿里云百炼、即梦AI、Agnes AI 生成视频</p>
                 <div class="row g-3 mb-3">
                   <div class="col-md-3">
                     <label for="videoMode" class="form-label fw-semibold">生成方式</label>
@@ -427,15 +439,16 @@
                     <select class="form-select" id="videoProvider">
                       <option value="dashscope" selected>阿里云百炼</option>
                       <option value="volcengine">即梦AI (火山引擎)</option>
+                      <option value="agnes">Agnes AI</option>
                     </select>
                   </div>
                   <div class="col-md-3" id="videoApiKeyDashscopeGroup">
-                    <label for="videoApiKeyInput" class="form-label fw-semibold">DashScope API Key（可选）</label>
+                    <label for="videoApiKeyInput" class="form-label fw-semibold" id="videoApiKeyLabel">DashScope API Key（可选）</label>
                     <div class="input-group">
                       <input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-...">
                       <button class="btn btn-outline-secondary" type="button" id="toggleVideoApiKeyBtn"><i class="bi bi-eye"></i></button>
                     </div>
-                    <div class="form-text">留空将使用服务端环境变量 <code>DASHSCOPE_API_KEY</code>（如已配置）。</div>
+                    <div class="form-text" id="videoApiKeyHelpText">留空将使用服务端环境变量 <code id="videoApiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。</div>
                     <div class="form-check mt-2">
                       <input class="form-check-input" type="checkbox" id="rememberApiKeyVideo" checked>
                       <label class="form-check-label" for="rememberApiKeyVideo">
@@ -869,20 +882,20 @@
             </div>
 
             <div class="d-grid mb-2">
-              <button class="btn btn-primary btn-lg" id="generateBtn" type="button">
-                <i class="bi bi-magic"></i> 生成图片
+              <button class="btn btn-primary btn-lg btn-pill" id="generateBtn" type="button">
+                <i class="bi bi-magic me-1"></i> 生成图片
               </button>
-              <button class="btn btn-primary btn-lg d-none" id="generateBtnI2I" type="button">
-                <i class="bi bi-images"></i> 基于参考图生成
+              <button class="btn btn-primary btn-lg btn-pill d-none" id="generateBtnI2I" type="button">
+                <i class="bi bi-images me-1"></i> 基于参考图生成
               </button>
-              <button class="btn btn-primary btn-lg d-none" id="generateBtnVideo" type="button">
-                <i class="bi bi-camera-video"></i> 生成视频
+              <button class="btn btn-primary btn-lg btn-pill d-none" id="generateBtnVideo" type="button">
+                <i class="bi bi-camera-video me-1"></i> 生成视频
               </button>
             </div>
 
             <div class="border-top pt-3 mb-4" id="textImageTaskRecordsPanel">
-              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#textImageTaskRecordsCollapse" aria-expanded="false" aria-controls="textImageTaskRecordsCollapse">
-                <i class="bi bi-clock-history"></i> 任务记录
+              <button class="btn btn-sm btn-outline-tertiary" type="button" data-bs-toggle="collapse" data-bs-target="#textImageTaskRecordsCollapse" aria-expanded="false" aria-controls="textImageTaskRecordsCollapse">
+                <i class="bi bi-clock-history me-1"></i> 任务记录
               </button>
               <div class="collapse mt-2" id="textImageTaskRecordsCollapse">
                 <div class="text-muted small" id="textImageTaskRecordsEmpty">暂无文生图任务记录</div>
@@ -897,6 +910,7 @@
                 <select class="form-select" style="max-width:120px" id="fetchTextImageTaskIdProvider">
                   <option value="dashscope">DashScope</option>
                   <option value="volcengine">即梦AI</option>
+                  <option value="agnes">Agnes AI</option>
                 </select>
                 <button class="btn btn-outline-primary" type="button" id="fetchTextImageTaskIdBtn">
                   <i class="bi bi-arrow-repeat"></i> 获取
@@ -921,6 +935,7 @@
                 <select class="form-select" style="max-width:120px" id="fetchI2ITaskIdProvider">
                   <option value="dashscope">DashScope</option>
                   <option value="volcengine">即梦AI</option>
+                  <option value="agnes">Agnes AI</option>
                 </select>
                 <button class="btn btn-outline-primary" type="button" id="fetchI2ITaskIdBtn">
                   <i class="bi bi-arrow-repeat"></i> 获取
@@ -987,6 +1002,10 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="vendor/headroom.js/dist/headroom.min.js"></script>
+  <script src="vendor/smooth-scroll/dist/smooth-scroll.min.js"></script>
+  <script src="vendor/vanillajs-datepicker/dist/js/datepicker.min.js"></script>
+  <script src="js/pixel.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

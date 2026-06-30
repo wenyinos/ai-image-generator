@@ -8,7 +8,7 @@
 
 - 前端：Bootstrap 5 + 原生 JavaScript
 - 后端：Express (Node.js)
-- Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**
+- Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**、**Agnes AI**
 - 本地任务记录：SQLite（默认 `data/video-tasks.sqlite`）
 
 ## 功能特性
@@ -65,6 +65,11 @@
   - `VOLCENGINE_SECRET_KEY`
   - `VOLCENGINE_SESSION_TOKEN`（可选）
 
+### Agnes AI
+- 前端输入，或配置 `AGNES_API_KEY`
+- 端点：`https://apihub.agnes-ai.com`（可通过 `AGNES_BASE_URL` 配置）
+- 支持：文生图、图生图、文生视频、图生视频
+
 ## 支持的 DashScope / Gemini 模型
 
 | 模型 | 类型 | 同步/异步 | 说明 |
@@ -89,6 +94,13 @@
 | `z-image-turbo` | wan | 异步 | 轻量快速 |
 
 **Gemini**：`gemini-2.5-flash-image`（默认）
+
+**Agnes AI**：
+
+| 模型 | 类型 | 说明 |
+|---|---|---|
+| `agnes-image-2.1-flash` | agnes | 推荐 |
+| `agnes-image-2.0-flash` | agnes | |
 
 ## 支持的 DashScope 视频模型
 
@@ -126,6 +138,12 @@
 | 模型 | 说明 |
 |---|---|
 | `wan2.7-videoedit` | 自然语言指令编辑视频，支持参考图替换视频元素 |
+
+### Agnes 视频
+
+| 模型 | 说明 |
+|---|---|
+| `agnes-video-v2.0` | 文生视频、图生视频（异步） |
 
 ## 支持的即梦视频模型
 
@@ -458,6 +476,12 @@ server {
 - `POST /api/volcengine-effect`
   - multipart：`image`（可选）+ 字段（`apiKey`、`templateId`、`imageUrl`、`width`、`height`）
   - 响应：异步任务信息，`queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/agnes-video`
+  - multipart：可选 `firstFrame` + 字段（`apiKey`、`model`、`prompt`、`parameters`）
+  - 响应：异步任务信息（Agnes 视频）
+- `POST /api/agnes-task-status`
+  - body：`{ apiKey, taskId, model }`
+  - 响应：任务状态，成功时返回 `videoUrl`
 - `POST /api/video-models`
   - 返回 DashScope 视频模型列表或本地备用模型列表
 - `POST /api/dashscope-task-status`

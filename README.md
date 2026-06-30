@@ -8,13 +8,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 - Frontend: Bootstrap 5 + vanilla JavaScript
 - Backend: Express (Node.js)
-- Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**
+- Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**, **Agnes AI**
 - Local task records: SQLite (`data/video-tasks.sqlite` by default)
 
 ## Features
 
 ### Text-to-Image
-- Provider switching in UI (DashScope / Gemini / Volcengine)
+- Provider switching in UI (DashScope / Gemini / Volcengine / Agnes AI)
 - Multi-model support with model-specific size constraints
 - Parameters: image count, size, seed, negative prompt, prompt extension, watermark
 - Sync/async protocol handling for DashScope models
@@ -65,6 +65,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
   - `VOLCENGINE_SECRET_KEY`
   - optional `VOLCENGINE_SESSION_TOKEN`
 
+### Agnes AI
+- Frontend key or `AGNES_API_KEY`
+- Endpoint: `https://apihub.agnes-ai.com` (configurable via `AGNES_BASE_URL`)
+- Supports: text-to-image, image-to-image, text-to-video, image-to-video
+
 ## Supported DashScope Models
 
 | Model | Type | Sync/Async | Notes |
@@ -89,6 +94,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `z-image-turbo` | wan | async | Lightweight |
 
 **Gemini**: `gemini-2.5-flash-image` (default)
+
+**Agnes AI**:
+
+| Model | Type | Notes |
+|---|---|---|
+| `agnes-image-2.1-flash` | agnes | Recommended |
+| `agnes-image-2.0-flash` | agnes | |
 
 ## Supported DashScope Video Models
 
@@ -126,6 +138,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | Model | Notes |
 |---|---|
 | `wan2.7-videoedit` | Natural language video editing, supports reference image for element replacement |
+
+### Agnes Video
+
+| Model | Notes |
+|---|---|
+| `agnes-video-v2.0` | Text-to-video, image-to-video (async) |
 
 ## Supported Jimeng Video Models
 
@@ -459,6 +477,12 @@ server {
 - `POST /api/volcengine-effect`
   - multipart: `image` (optional) + fields (`apiKey`, `templateId`, `imageUrl`, `width`, `height`)
   - response: async task metadata with `queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/agnes-video`
+  - multipart: optional `firstFrame` + fields (`apiKey`, `model`, `prompt`, `parameters`)
+  - response: async task metadata (Agnes video)
+- `POST /api/agnes-task-status`
+  - body: `{ apiKey, taskId, model }`
+  - response: task status with `videoUrl` on success
 - `POST /api/video-models`
   - returns available/fallback DashScope video model options
 - `POST /api/dashscope-task-status`
