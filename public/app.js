@@ -1405,7 +1405,8 @@ async function pollGenerationTask({ endpoint, payload, resultType, title, maxAtt
       }
 
       const status = data.taskStatus || 'PENDING';
-      setLoading(true, `${title}：${getTaskStatusText(status)}，已等待 ${formatElapsed(Date.now() - startedAt)}，任务ID ${data.taskId || payload.taskId}`);
+      const progressText = typeof data.progress === 'number' && data.progress >= 0 ? ` (${data.progress}%)` : '';
+      setLoading(true, `${title}：${getTaskStatusText(status)}${progressText}，已等待 ${formatElapsed(Date.now() - startedAt)}，任务ID ${data.taskId || payload.taskId}`);
       if (onTaskUpdate) onTaskUpdate(data, status);
 
       if (status === 'SUCCEEDED') {
