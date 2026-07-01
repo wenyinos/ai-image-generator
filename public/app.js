@@ -335,6 +335,7 @@ let VIDEO_MODELS = {
     { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
     { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
     { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
+    { value: 'wan2.7-t2v-2026-06-12', label: 'wan2.7-t2v-2026-06-12（文生视频2.7）' },
     { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
     { value: 'wan2.5-t2v-preview', label: 'wan2.5-t2v-preview' },
@@ -356,6 +357,7 @@ let VIDEO_MODELS = {
     { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
     { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
     { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
+    { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
   ],
   videoedit: [
     { value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' },
@@ -522,6 +524,7 @@ function renderVideoModelOptions() {
       { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
       { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
       { value: 'wan2.7-r2v', label: 'wan2.7-r2v（最多5个参考）' },
+      { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
     ] }], savedModel);
   } else if (provider === 'agnes') {
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
@@ -763,7 +766,7 @@ function updateVideoUiState() {
   if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
   if (isR2V && r2vFiles) {
     const r2vModel = videoModelSelect ? videoModelSelect.value : '';
-    const isWan27R2V = r2vModel === 'wan2.7-r2v';
+    const isWan27R2V = r2vModel === 'wan2.7-r2v' || r2vModel === 'wan2.7-r2v-2026-06-12';
     r2vFiles.accept = isWan27R2V
       ? 'image/jpeg,image/jpg,image/png,image/bmp,image/webp,video/mp4,video/quicktime'
       : 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
@@ -923,6 +926,7 @@ function updateVideoProviderState() {
         { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
         { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
         { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
+        { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
       ] }], savedModel);
     } else {
       renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
