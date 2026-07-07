@@ -832,6 +832,18 @@ if (localStorage.getItem('watermark') !== null) {
   watermarkToggle.checked = localStorage.getItem('watermark') === 'true';
 }
 
+// 视频提供商切换 DOM 元素（必须在 updateVideoUiState 调用前声明）
+const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
+const videoApiKeyLabel = document.getElementById('videoApiKeyLabel');
+const videoApiEnvName = document.getElementById('videoApiEnvName');
+const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
+const videoVolcengineAk = document.getElementById('videoVolcengineAk');
+const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
+const videoVolcengineSk = document.getElementById('videoVolcengineSk');
+const toggleVideoVolcengineSkBtn = document.getElementById('toggleVideoVolcengineSkBtn');
+if (videoVolcengineAk) videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
+if (videoVolcengineSk) videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
+
 updateTextProviderState();
 updateImageProviderState();
 updateVolcengineUiState();
@@ -866,19 +878,6 @@ if (videoModelSelect) {
     localStorage.setItem(getModelStorageKey('video', provider), videoModelSelect.value);
   });
 }
-
-// 视频提供商切换
-const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
-const videoApiKeyLabel = document.getElementById('videoApiKeyLabel');
-const videoApiEnvName = document.getElementById('videoApiEnvName');
-const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
-const videoVolcengineAk = document.getElementById('videoVolcengineAk');
-const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
-const videoVolcengineSk = document.getElementById('videoVolcengineSk');
-const toggleVideoVolcengineSkBtn = document.getElementById('toggleVideoVolcengineSkBtn');
-// 从 localStorage 恢复视频火山引擎凭证
-if (videoVolcengineAk) videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
-if (videoVolcengineSk) videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
 
 function updateVideoProviderState() {
   const provider = videoProvider ? videoProvider.value : 'dashscope';
