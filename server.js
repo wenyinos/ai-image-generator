@@ -79,8 +79,8 @@ app.get('/unlock', (req, res) => {
 <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link href="/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
 <style>
 body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh}
 .main-card{border:none;border-radius:1rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15)}
@@ -148,7 +148,7 @@ window.location.href='/';
 });
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>`);
 });
