@@ -6,7 +6,7 @@
 
 一个面向生产部署的 AI 视觉生成 Web 应用，支持**文生图**、**图生图**与**视频生成**。
 
-- 前端：Bootstrap 5 + 原生 JavaScript
+- 前端：Bootstrap 5 + 原生 JavaScript（所有资源本地化）
 - 后端：Express (Node.js)
 - Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**、**Agnes AI**
 - 本地任务记录：SQLite（默认 `data/video-tasks.sqlite`）
@@ -46,6 +46,8 @@
 - Provider 级超时配置
 - 内存型 API 频率限制（反向代理下正确识别客户端 IP）
 - CORS 白名单
+- CSP 安全头策略（仅允许 `'self'`，无外部 CDN 依赖）
+- 所有前端资源本地化（Bootstrap、Bootstrap Icons、Nunito Sans 字体、Pixel UI Kit）
 - 可选前端访问密钥保护（防暴力破解 + Cookie 会话）
 - 访问 Cookie 签名密钥未配置时会首次启动自动生成并持久化
 - 浏览器后台切回前台时会自动恢复前端状态，减少直接生成失败
@@ -450,7 +452,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '1.0.0' }`
+  - 响应: `{ status: 'ok', version: '1.2.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息

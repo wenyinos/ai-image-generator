@@ -6,7 +6,7 @@
 
 A production-oriented AI visual generation web app with **text-to-image**, **image-to-image**, and **video generation** workflows.
 
-- Frontend: Bootstrap 5 + vanilla JavaScript
+- Frontend: Bootstrap 5 + vanilla JavaScript (all assets served locally)
 - Backend: Express (Node.js)
 - Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**, **Agnes AI**
 - Local task records: SQLite (`data/video-tasks.sqlite` by default)
@@ -46,6 +46,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Request timeout controls per provider
 - Basic in-memory API rate limit (respects `X-Forwarded-For` behind reverse proxy)
 - CORS allowlist support
+- Content Security Policy (CSP) headers with `'self'` only — no external CDN dependencies
+- All frontend assets served locally (Bootstrap, Bootstrap Icons, Nunito Sans font, Pixel UI Kit)
 - Optional frontend access control with key-based auth, brute-force throttle, and cookie session
 - Access cookie signing secret is auto-generated and persisted on first startup if not configured
 - Foreground recovery refreshes UI state after returning from a background browser tab
