@@ -188,7 +188,7 @@ app.post('/api/access-logout', (req, res) => {
 app.use((req, res, next) => {
   if (!FRONTEND_ACCESS_CONTROL_ENABLED || !FRONTEND_ACCESS_KEY) return next();
   if (req.path === '/unlock' || req.path === '/api/access-auth' || req.path === '/api/access-logout') return next();
-  if (req.path.startsWith('/uploads/')) return next();
+  if (req.path.startsWith('/uploads/') || req.path.startsWith('/vendor/') || req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/favicon/')) return next();
   if (isAccessAuthorized(req)) return next();
   if (req.path.startsWith('/api/')) {
     return res.status(401).json({ error: '未授权：需要访问密钥' });
