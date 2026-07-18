@@ -107,6 +107,12 @@ const maskImageUpload = document.getElementById('maskImageUpload');
 const maskImagePreview = document.getElementById('maskImagePreview');
 const maskPreviewImage = document.getElementById('maskPreviewImage');
 const removeMaskImageBtn = document.getElementById('removeMaskImageBtn');
+const templateUploadGroup = document.getElementById('templateUploadGroup');
+const templateUploadArea = document.getElementById('templateUploadArea');
+const templateImageUpload = document.getElementById('templateImageUpload');
+const templateImagePreview = document.getElementById('templateImagePreview');
+const templatePreviewImage = document.getElementById('templatePreviewImage');
+const removeTemplateImageBtn = document.getElementById('removeTemplateImageBtn');
 const volcengineLocalUploadHint = document.getElementById('volcengineLocalUploadHint');
 const volcengineImageUrlsGroup = document.getElementById('volcengineImageUrlsGroup');
 
@@ -195,6 +201,7 @@ const imageTaskRecordsEmpty = document.getElementById('imageTaskRecordsEmpty');
 let currentMode = 'text2image'; // 'text2image'、'image2image' 或 'video'
 let uploadedImageFile = null;
 let uploadedMaskFile = null;
+let uploadedTemplateFile = null;
 let videoTaskRecords = [];
 let textImageTaskRecords = [];
 let imageTaskRecords = [];
@@ -826,7 +833,8 @@ function updateI2ISpecialParamState() {
   const isSeededit = isVolcengine && model === 'jimeng-seededit';
   const isEffect = isVolcengine && model === 'jimeng-effect';
   const isDressing = isVolcengine && model === 'jimeng-dressing';
-  const isNewFeature = isSeededit || isEffect || isDressing;
+  const isFaceSwap = isVolcengine && (model === 'jimeng-faceswap' || model === 'jimeng-faceswap-ai');
+  const isNewFeature = isSeededit || isEffect || isDressing || isFaceSwap;
 
   if (imageStrengthGroup) imageStrengthGroup.classList.toggle('d-none', isUpscale || isInpainting || isMaterialProduct || isMaterialPod || isNewFeature);
   if (upscaleParamsGroup) upscaleParamsGroup.classList.toggle('d-none', !isUpscale);
@@ -836,6 +844,13 @@ function updateI2ISpecialParamState() {
   if (seededitParamsGroup) seededitParamsGroup.classList.toggle('d-none', !isSeededit);
   if (effectParamsGroup) effectParamsGroup.classList.toggle('d-none', !isEffect);
   if (dressingParamsGroup) dressingParamsGroup.classList.toggle('d-none', !isDressing);
+  if (templateUploadGroup) templateUploadGroup.classList.toggle('d-none', !isFaceSwap);
+  if (!isFaceSwap) {
+    uploadedTemplateFile = null;
+    if (templateImageUpload) templateImageUpload.value = '';
+    if (templateImagePreview) templateImagePreview.classList.add('d-none');
+    if (templateUploadArea) templateUploadArea.classList.remove('d-none');
+  }
   // 新功能模型提示文本
   if (isSeededit) modelHintI2I.textContent = '智能绘图：上传参考图 + 文字描述，按指令编辑图片（如换背景、改颜色）。';
   else if (isEffect) modelHintI2I.textContent = '图像特效：上传单人照片，选择特效模板生成创意图片。';
@@ -2398,6 +2413,67 @@ if (maskImageUpload) {
   });
 }
 
+// 模板图上传（人像融合/智能变美）- 复用 inpainting 模式
+async function handleTemplateImageFile(file) {
+  if (file.size > 10 * 1024 * 1024) {
+    showAlert('模板图片文件大小不能超过10MB');
+    return;
+  }
+  try {
+    if (file.size > 1 * 1024 * 1024) {
+      uploadedTemplateFile = await compressImage(file, 1536, 0.8);
+    } else {
+      uploadedTemplateFile = file;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      templatePreviewImage.src = e.target.result;
+      templateImagePreview.classList.remove('d-none');
+      templateUploadArea.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    showAlert(`模板图片处理失败: ${err.message}`);
+  }
+}
+
+if (templateUploadArea) {
+  templateUploadArea.addEventListener('click', () => {
+    templateImageUpload.click();
+  });
+  templateUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    templateUploadArea.classList.add('dragover');
+  });
+  templateUploadArea.addEventListener('dragleave', () => {
+    templateUploadArea.classList.remove('dragover');
+  });
+  templateUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    templateUploadArea.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleTemplateImageFile(file);
+    }
+  });
+}
+
+if (templateImageUpload) {
+  templateImageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleTemplateImageFile(file);
+  });
+}
+
+if (removeTemplateImageBtn) {
+  removeTemplateImageBtn.addEventListener('click', () => {
+    uploadedTemplateFile = null;
+    if (templateImageUpload) templateImageUpload.value = '';
+    if (templateImagePreview) templateImagePreview.classList.add('d-none');
+    if (templateUploadArea) templateUploadArea.classList.remove('d-none');
+  });
+}
+
 if (removeMaskImageBtn) {
   removeMaskImageBtn.addEventListener('click', () => {
     uploadedMaskFile = null;
@@ -2613,15 +2689,16 @@ generateBtnI2I.addEventListener('click', async () => {
 
   // 人像融合
   if (provider === 'volcengine' && (model === 'jimeng-faceswap' || model === 'jimeng-faceswap-ai')) {
+    if (!uploadedImageFile) { showAlert('请上传素材图（含人脸）'); return; }
+    if (!uploadedTemplateFile) { showAlert('请上传模板图'); return; }
     alertContainer.innerHTML = '';
     setLoading(true, '正在提交人像融合任务...');
     downloadBtn.classList.add('d-none');
     const fd = new FormData();
     fd.append('apiKey', apiKey);
     fd.append('model', model);
-    if (uploadedImageFile) fd.append('images', uploadedImageFile);
-    const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
-    if (urls.length > 0) fd.append('imageUrls', JSON.stringify(urls));
+    fd.append('images', uploadedImageFile);
+    fd.append('images', uploadedTemplateFile);
     try {
       const res = await fetch('/api/volcengine-faceswap', { method: 'POST', body: fd });
       const data = await res.json();

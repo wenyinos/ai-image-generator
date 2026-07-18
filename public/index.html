@@ -394,6 +394,21 @@
                     </button>
                   </div>
                 </div>
+                <div class="mb-3 d-none" id="templateUploadGroup">
+                  <label class="form-label fw-semibold">模板图片（人像融合/智能变美）</label>
+                  <div class="upload-area" id="templateUploadArea">
+                    <i class="bi bi-person-bounding-box fs-1 text-muted"></i>
+                    <p class="mb-0 mt-2">点击上传或拖拽模板图片到这里</p>
+                    <small class="text-muted">素材图人脸将融入此模板图</small>
+                    <input type="file" id="templateImageUpload" accept="image/*" style="display: none;">
+                  </div>
+                  <div id="templateImagePreview" class="text-center d-none">
+                    <img id="templatePreviewImage" class="upload-preview" alt="模板图预览">
+                    <button class="btn btn-sm btn-outline-danger mt-2" id="removeTemplateImageBtn" type="button">
+                      <i class="bi bi-trash"></i> 移除模板图
+                    </button>
+                  </div>
+                </div>
 
                 <div class="mb-3 d-none" id="volcengineImageUrlsGroup">
                   <label for="volcengineImageUrls" class="form-label fw-semibold">参考图片 URL（可选）</label>
