@@ -91,6 +91,8 @@ const toggleVolcengineSkBtnI2I = document.getElementById('toggleVolcengineSkBtnI
 const apiKeyLabelTextI2I = document.getElementById('apiKeyLabelTextI2I');
 const apiEnvNameI2I = document.getElementById('apiEnvNameI2I');
 const modelHintI2I = document.getElementById('modelHintI2I');
+const modelHintT2I = document.getElementById('modelHintT2I');
+const modelHintVideo = document.getElementById('modelHintVideo');
 const toggleApiKeyBtnI2I = document.getElementById('toggleApiKeyBtnI2I');
 const modelSelectI2I = document.getElementById('modelSelectI2I');
 const promptInputI2I = document.getElementById('promptInputI2I');
@@ -326,6 +328,15 @@ const MODELS_I2I = {
       { value: 'jimeng-effect', label: '即梦AI-图像特效' },
       { value: 'jimeng-dressing', label: '即梦AI-图片换装' },
     ] },
+    { group: '👤 即梦AI人像处理', options: [
+      { value: 'jimeng-faceswap', label: '即梦AI-人像融合(多人)' },
+      { value: 'jimeng-faceswap-ai', label: '即梦AI-人像融合(美颜)' },
+      { value: 'jimeng-facepretty', label: '即梦AI-智能变美' },
+    ] },
+    { group: '🔧 即梦AI图像修复', options: [
+      { value: 'jimeng-lqir', label: '即梦AI-智能画质增强' },
+      { value: 'jimeng-nnsr2', label: '即梦AI-2倍超分' },
+    ] },
   ],
   agnes: [
     { group: '🤖 Agnes AI', options: [
@@ -333,6 +344,74 @@ const MODELS_I2I = {
       { value: 'agnes-image-2.0-flash', label: 'Agnes Image 2.0 Flash' },
     ] },
   ],
+};
+
+// 文生图模型提示文本
+const T2I_MODEL_HINTS = {
+  'wan2.7-image-pro': '万相2.7 Pro：最强画质，支持最高4K分辨率输出，适合高质量需求场景。',
+  'wan2.7-image': '万相2.7：快速生成，最高2K，平衡速度与质量。',
+  'wan2.6-image': '万相2.6：支持图文混排输入，适合需要文字渲染的场景。',
+  'wan2.6-t2i': '万相2.6标准版：基础文生图能力。',
+  'wan2.5-t2i-preview': '万相2.5预览版：实验性模型，效果可能不稳定。',
+  'wan2.2-t2i-flash': '万相2.2极速版：生成速度最快，适合快速迭代。',
+  'wan2.2-t2i-plus': '万相2.2增强版：画质优于flash版。',
+  'wanx2.1-t2i-turbo': '万相2.1 Turbo：快速生成。',
+  'wanx2.1-t2i-plus': '万相2.1 Plus：画质增强版。',
+  'wanx2.0-t2i-turbo': '万相2.0 Turbo：早期快速模型。',
+  'qwen-image-2.0-pro-2026-04-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
+  'qwen-image-2.0-pro-2026-06-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
+  'qwen-image-2.0-pro': '千问图片2.0 Pro：擅长文字渲染，支持中英文。',
+  'qwen-image-2.0': '千问图片2.0：基础文生图能力。',
+  'qwen-image-max': '千问图片Max：真实感画质，适合摄影风格。',
+  'qwen-image-plus': '千问图片Plus：艺术风格，适合插画和创意场景。',
+  'qwen-image': '千问图片：基础版。',
+  'z-image-turbo': 'Z-Image Turbo：轻量快速模型。',
+  'gemini-2.5-flash-image': 'Gemini 2.5 Flash Image：Google 多模态模型，支持图文混合理解。',
+  'jimeng-3.0': '即梦文生图3.0：基础文生图。',
+  'jimeng-3.1': '即梦文生图3.1：画质提升版。',
+  'jimeng-4.0': '即梦图片生成4.0：高质量生成。',
+  'jimeng-4.6': '即梦图片生成4.6：最新版本，画质最佳。',
+  'agnes-image-2.1-flash': 'Agnes Image 2.1 Flash：推荐，高性能图像生成。',
+  'agnes-image-2.0-flash': 'Agnes Image 2.0 Flash：基础版图像生成。',
+};
+
+// 视频模型提示文本
+const VIDEO_MODEL_HINTS = {
+  'happyhorse-1.1-t2v': 'HappyHorse 1.1 文生视频：推荐模型，高质量视频生成。',
+  'happyhorse-1.0-t2v': 'HappyHorse 1.0 文生视频：基础版。',
+  'happyhorse-1.1-r2v': 'HappyHorse 1.1 参考生视频：最多上传9张参考图，保持主体和场景风格一致。',
+  'happyhorse-1.1-i2v': 'HappyHorse 1.1 图生视频：上传首帧图片生成视频。',
+  'happyhorse-1.0-r2v': 'HappyHorse 1.0 参考生视频：最多上传9张参考图。',
+  'happyhorse-1.0-i2v': 'HappyHorse 1.0 图生视频：基础版。',
+  'wan2.7-t2v': '万相2.7 文生视频：支持文生视频。',
+  'wan2.7-t2v-2026-06-12': '万相2.7 文生视频快照（06-12）。',
+  'wan2.7-t2v-2026-04-25': '万相2.7 文生视频快照（04-25）。',
+  'wan2.7-i2v': '万相2.7 图生视频：支持首帧/首尾帧。',
+  'wan2.7-i2v-2026-04-25': '万相2.7 图生视频快照（04-25）。',
+  'wan2.7-r2v': '万相2.7 参考生视频：支持图片+视频参考，最多5个。',
+  'wan2.7-r2v-2026-06-12': '万相2.7 参考生视频快照（06-12）。',
+  'wan2.6-t2v': '万相2.6 文生视频。',
+  'wan2.6-i2v-flash': '万相2.6 图生视频快速版。',
+  'wan2.5-t2v-preview': '万相2.5 文生视频预览版。',
+  'wan2.5-i2v-preview': '万相2.5 图生视频预览版。',
+  'wan2.2-t2v-plus': '万相2.2 文生视频增强版。',
+  'wan2.2-t2v-flash': '万相2.2 文生视频快速版。',
+  'wan2.2-i2v-plus': '万相2.2 图生视频增强版。',
+  'wanx2.1-t2v-turbo': '万相2.1 文生视频 Turbo。',
+  'wanx2.1-i2v-turbo': '万相2.1 图生视频 Turbo。',
+  'wan2.7-videoedit': '万相2.7 视频编辑：上传视频+参考图，用文字指令编辑视频元素。',
+  'jimeng-v3.0-t2v-1080p': '即梦视频3.0 文生视频1080P：高质量文生视频。',
+  'jimeng-v3.0-t2v': '即梦视频3.0 文生视频720P。',
+  'jimeng-v3.0-pro': '即梦视频3.0 Pro：文/图生视频，综合能力最强。',
+  'jimeng-v3.0-i2v-first-1080p': '即梦视频3.0 图生视频首帧1080P。',
+  'jimeng-v3.0-i2v-tail-1080p': '即梦视频3.0 图生视频首尾帧1080P。',
+  'jimeng-v3.0-i2v-first': '即梦视频3.0 图生视频首帧720P。',
+  'jimeng-v3.0-i2v-tail': '即梦视频3.0 图生视频首尾帧720P。',
+  'jimeng-v3.0-recamera': '即梦视频3.0 运镜模板：上传图片+选择运镜模板+强度，生成运镜视频。',
+  'jimeng-video-translate': '视频翻译2.0：上传视频URL，选择源语言和目标语言，保留口型和声音翻译。',
+  'jimeng-motion-2.0': '动作模仿2.0：支持多人、非真人，上传人物图+模板视频。',
+  'jimeng-motion-1.0': '动作模仿1.0：单人动作模仿。',
+  'agnes-video-v2.0': 'Agnes Video V2.0：支持文生视频和图生视频。',
 };
 
 let VIDEO_MODELS = {
@@ -761,6 +840,9 @@ function updateI2ISpecialParamState() {
   if (isSeededit) modelHintI2I.textContent = '智能绘图：上传参考图 + 文字描述，按指令编辑图片（如换背景、改颜色）。';
   else if (isEffect) modelHintI2I.textContent = '图像特效：上传单人照片，选择特效模板生成创意图片。';
   else if (isDressing) modelHintI2I.textContent = '图片换装：上传模特图URL和服装图URL，自动换装。';
+  else if (model === 'jimeng-faceswap' || model === 'jimeng-faceswap-ai') modelHintI2I.textContent = '人像融合：上传素材图（含人脸）+ 模板图，将素材人脸融合到模板中。';
+  else if (model === 'jimeng-facepretty') modelHintI2I.textContent = '智能变美：上传含人脸的照片，自动美颜处理。支持单人或多人。';
+  else if (model === 'jimeng-lqir' || model === 'jimeng-nnsr2') modelHintI2I.textContent = '图像修复：上传图片，智能画质增强或超分辨率处理。';
 }
 
 function updateVideoUiState() {
@@ -868,6 +950,7 @@ loadVideoModels();
 providerSelect.addEventListener('change', () => {
   updateTextProviderState();
   updateVolcengineUiState();
+  if (modelHintT2I && modelSelect) modelHintT2I.textContent = T2I_MODEL_HINTS[modelSelect.value] || '输入描述即可生成图片。';
 });
 providerSelectI2I.addEventListener('change', () => {
   updateImageProviderState();
@@ -879,6 +962,9 @@ if (videoMode) {
     localStorage.setItem('videoMode', videoMode.value);
     renderVideoModelOptions();
     updateVideoUiState();
+    if (modelHintVideo && videoModelSelect) {
+      modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
+    }
   });
 }
 if (refreshVideoModelsBtn) {
@@ -888,6 +974,7 @@ if (videoModelSelect) {
   videoModelSelect.addEventListener('change', () => {
     const provider = videoProvider ? videoProvider.value : 'dashscope';
     localStorage.setItem(getModelStorageKey('video', provider), videoModelSelect.value);
+    if (modelHintVideo) modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
   });
 }
 
@@ -957,6 +1044,9 @@ if (videoProvider) {
   videoProvider.addEventListener('change', () => {
     localStorage.setItem('videoProvider', videoProvider.value);
     updateVideoProviderState();
+    if (modelHintVideo && videoModelSelect) {
+      modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
+    }
   });
 }
 if (toggleVideoVolcengineAkBtn && videoVolcengineAk) {
@@ -1054,6 +1144,7 @@ modelSelect.addEventListener('change', () => {
   const provider = providerSelect.value;
   updateSizeOptions();
   localStorage.setItem(getModelStorageKey('text2image', provider), modelSelect.value);
+  if (modelHintT2I) modelHintT2I.textContent = T2I_MODEL_HINTS[modelSelect.value] || '输入描述即可生成图片。';
 });
 
 modelSelectI2I.addEventListener('change', () => {
@@ -2515,6 +2606,81 @@ generateBtnI2I.addEventListener('click', async () => {
         apiKey, model, resultType: 'image', title: '图片换装',
         onTaskUpdate: (taskData, status) => { upsertImageTaskRecord({ id: activeTaskId, taskId: activeTaskId, status, imageUrls: taskData.imageUrls }); },
       });
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
+
+  // 人像融合
+  if (provider === 'volcengine' && (model === 'jimeng-faceswap' || model === 'jimeng-faceswap-ai')) {
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交人像融合任务...');
+    downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    fd.append('model', model);
+    if (uploadedImageFile) fd.append('images', uploadedImageFile);
+    const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
+    if (urls.length > 0) fd.append('imageUrls', JSON.stringify(urls));
+    try {
+      const res = await fetch('/api/volcengine-faceswap', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        displayImages(data.imageUrls);
+        upsertImageTaskRecord({ id: Date.now().toString(), mode: 'image2image', provider: 'volcengine', model, status: 'SUCCEEDED', imageUrls: data.imageUrls });
+      }
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
+
+  // 智能变美
+  if (provider === 'volcengine' && model === 'jimeng-facepretty') {
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交智能变美任务...');
+    downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    if (uploadedImageFile) fd.append('image', uploadedImageFile);
+    else {
+      const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
+      if (urls.length > 0) fd.append('imageUrl', urls[0]);
+    }
+    fd.append('beautyLevel', '1.0');
+    try {
+      const res = await fetch('/api/volcengine-facepretty', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.imageData) {
+        displayImages([`data:image/png;base64,${data.imageData}`]);
+      }
+      setLoading(false);
+    } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
+    return;
+  }
+
+  // 图像修复与增强
+  if (provider === 'volcengine' && (model === 'jimeng-lqir' || model === 'jimeng-nnsr2')) {
+    alertContainer.innerHTML = '';
+    setLoading(true, '正在提交图像修复任务...');
+    downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    fd.append('model', model);
+    if (uploadedImageFile) fd.append('image', uploadedImageFile);
+    else {
+      const urls = (volcengineImageUrls?.value || '').split(/[\n,\s]+/).map(v => v.trim()).filter(v => /^https?:\/\//i.test(v));
+      if (urls.length > 0) fd.append('imageUrl', urls[0]);
+    }
+    try {
+      const res = await fetch('/api/volcengine-restoration', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        displayImages(data.imageUrls);
+        upsertImageTaskRecord({ id: Date.now().toString(), mode: 'image2image', provider: 'volcengine', model, status: 'SUCCEEDED', imageUrls: data.imageUrls });
+      }
       setLoading(false);
     } catch (err) { setLoading(false); showAlert(`生成失败: ${err.message}`); }
     return;

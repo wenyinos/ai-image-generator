@@ -206,6 +206,11 @@
 | `jimeng-seededit` | `seededit_v3.0` | 智能绘图 — 文字指令编辑图片（SeedEdit 3.0） |
 | `jimeng-effect` | `i2i_multi_style_zx2x` | 图像特效 — 23 种创意模板（需单人正面照） |
 | `jimeng-dressing` | `dressing_diffusionV2` | 图片换装 — 模特图 + 服装图虚拟试穿 |
+| `jimeng-faceswap` | `face_swap3_6` | 人像融合 — 多人（最多3张人脸） |
+| `jimeng-faceswap-ai` | `faceswap_ai` | 人像融合 — 单人美颜写真 |
+| `jimeng-facepretty` | `FacePretty` | 智能变美 — 自动美颜处理 |
+| `jimeng-lqir` | `lens_lqir` | 图像修复 — 智能画质增强 |
+| `jimeng-nnsr2` | `lens_nnsr2_pic_common` | 图像修复 — 2倍超分辨率 |
 
 ## 快速开始
 
@@ -484,6 +489,15 @@ server {
 - `POST /api/volcengine-effect`
   - multipart：`image`（可选）+ 字段（`apiKey`、`templateId`、`imageUrl`、`width`、`height`）
   - 响应：异步任务信息，`queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-faceswap`
+  - multipart：`images`（最多4张）+ 字段（`apiKey`、`model`、`faceType`、`sourceSimilarity`、`imageUrls`）
+  - 响应：`{ imageUrls: string[] }`（同步）
+- `POST /api/volcengine-facepretty`
+  - multipart：`image`（可选）+ 字段（`apiKey`、`beautyLevel`、`multiFace`、`imageUrl`）
+  - 响应：`{ imageData: string }`（同步，base64）
+- `POST /api/volcengine-restoration`
+  - multipart：`image`（可选）+ 字段（`apiKey`、`model`、`imageUrl`、`resolutionBoundary`、`enableHdr`、`enableWb`、`hdrStrength`）
+  - 响应：`{ imageUrls: string[] }`（同步）
 - `POST /api/agnes-video`
   - multipart：可选 `firstFrame` + 字段（`apiKey`、`model`、`prompt`、`parameters`）
   - 响应：异步任务信息（Agnes 视频）

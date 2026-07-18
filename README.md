@@ -206,6 +206,11 @@ Video translation takes a public video URL and source/target language codes. The
 | `jimeng-seededit` | `seededit_v3.0` | Smart drawing — text-guided image editing (SeedEdit 3.0) |
 | `jimeng-effect` | `i2i_multi_style_zx2x` | Image effects — 23 creative templates (requires 1 face photo) |
 | `jimeng-dressing` | `dressing_diffusionV2` | Virtual try-on — model image + garment image |
+| `jimeng-faceswap` | `face_swap3_6` | Face swap — multi-person (up to 3 faces) |
+| `jimeng-faceswap-ai` | `faceswap_ai` | Face swap — single person with beauty enhancement |
+| `jimeng-facepretty` | `FacePretty` | Face beauty — auto face enhancement |
+| `jimeng-lqir` | `lens_lqir` | Image restoration — smart quality enhancement |
+| `jimeng-nnsr2` | `lens_nnsr2_pic_common` | Image restoration — 2x super resolution |
 
 ## Quick Start
 
@@ -485,6 +490,15 @@ server {
 - `POST /api/volcengine-effect`
   - multipart: `image` (optional) + fields (`apiKey`, `templateId`, `imageUrl`, `width`, `height`)
   - response: async task metadata with `queryAction: "CVSync2AsyncGetResult"`
+- `POST /api/volcengine-faceswap`
+  - multipart: `images` (up to 4) + fields (`apiKey`, `model`, `faceType`, `sourceSimilarity`, `imageUrls`)
+  - response: `{ imageUrls: string[] }` (synchronous)
+- `POST /api/volcengine-facepretty`
+  - multipart: `image` (optional) + fields (`apiKey`, `beautyLevel`, `multiFace`, `imageUrl`)
+  - response: `{ imageData: string }` (synchronous, base64)
+- `POST /api/volcengine-restoration`
+  - multipart: `image` (optional) + fields (`apiKey`, `model`, `imageUrl`, `resolutionBoundary`, `enableHdr`, `enableWb`, `hdrStrength`)
+  - response: `{ imageUrls: string[] }` (synchronous)
 - `POST /api/agnes-video`
   - multipart: optional `firstFrame` + fields (`apiKey`, `model`, `prompt`, `parameters`)
   - response: async task metadata (Agnes video)
