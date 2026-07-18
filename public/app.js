@@ -844,8 +844,9 @@ function updateI2ISpecialParamState() {
   if (seededitParamsGroup) seededitParamsGroup.classList.toggle('d-none', !isSeededit);
   if (effectParamsGroup) effectParamsGroup.classList.toggle('d-none', !isEffect);
   if (dressingParamsGroup) dressingParamsGroup.classList.toggle('d-none', !isDressing);
-  if (templateUploadGroup) templateUploadGroup.classList.toggle('d-none', !isFaceSwap);
-  if (!isFaceSwap) {
+  const isFaceSwapOrDressing = isFaceSwap || isDressing;
+  if (templateUploadGroup) templateUploadGroup.classList.toggle('d-none', !isFaceSwapOrDressing);
+  if (!isFaceSwapOrDressing) {
     uploadedTemplateFile = null;
     if (templateImageUpload) templateImageUpload.value = '';
     if (templateImagePreview) templateImagePreview.classList.add('d-none');
@@ -2657,21 +2658,20 @@ generateBtnI2I.addEventListener('click', async () => {
 
   // 图片换装
   if (provider === 'volcengine' && model === 'jimeng-dressing') {
-    const modelUrl = dressingModelUrl ? dressingModelUrl.value.trim() : '';
-    const garmentUrl = dressingGarmentUrl ? dressingGarmentUrl.value.trim() : '';
+    if (!uploadedImageFile) { showAlert('请上传模特图'); return; }
+    if (!uploadedTemplateFile) { showAlert('请上传服装图'); return; }
     const garmentType = dressingGarmentType ? dressingGarmentType.value : 'full';
-    if (!modelUrl) { showAlert('请输入模特图 URL'); return; }
-    if (!garmentUrl) { showAlert('请输入服装图 URL'); return; }
     alertContainer.innerHTML = '';
     setLoading(true, '正在提交图片换装任务...');
     downloadBtn.classList.add('d-none');
+    const fd = new FormData();
+    fd.append('apiKey', apiKey);
+    fd.append('images', uploadedImageFile);
+    fd.append('images', uploadedTemplateFile);
+    fd.append('garmentType', garmentType);
     let activeTaskId = '';
     try {
-      const res = await fetch('/api/volcengine-dressing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey, modelUrl, garmentData: [{ type: garmentType, url: garmentUrl }] }),
-      });
+      const res = await fetch('/api/volcengine-dressing', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error || data, '生成失败', true));
       if (data.taskId) {
