@@ -156,9 +156,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | UI Model ID | Upstream `req_key` | Notes |
 |---|---|---|
 | `jimeng-v3.0-t2v-1080p` | `jimeng_t2v_v30_1080p` | Text-to-video 1080P |
+| `jimeng-v3.0-t2v` | `jimeng_t2v_v30` | Text-to-video 720P |
 | `jimeng-v3.0-i2v-first-1080p` | `jimeng_i2v_first_v30_1080` | Image-to-video first frame 1080P |
 | `jimeng-v3.0-i2v-tail-1080p` | `jimeng_i2v_first_tail_v30_1080` | Image-to-video first+last frame 1080P |
+| `jimeng-v3.0-i2v-first` | `jimeng_i2v_first_v30` | Image-to-video first frame 720P |
+| `jimeng-v3.0-i2v-tail` | `jimeng_i2v_first_tail_v30` | Image-to-video first+last frame 720P |
 | `jimeng-v3.0-pro` | `jimeng_ti2v_v30_pro` | Pro mode (text/image-to-video) |
+| `jimeng-v3.0-recamera` | `jimeng_i2v_recamera_v30` | Camera movement templates (11 templates) |
 
 ### Motion Imitation (Volcengine)
 

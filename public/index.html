@@ -509,6 +509,32 @@
                   <input class="form-control" type="file" id="r2vFiles" accept="image/jpeg,image/jpg,image/png,image/bmp,image/webp" multiple>
                   <div class="form-text" id="r2vFilesHint">支持 JPG/PNG/BMP/WebP 图片，最大 20MB</div>
                 </div>
+                <div class="row g-3 mb-3 d-none" id="recameraGroup">
+                  <div class="col-md-6">
+                    <label for="recameraTemplate" class="form-label fw-semibold">运镜模板</label>
+                    <select class="form-select" id="recameraTemplate">
+                      <option value="hitchcock_dolly_in">希区柯克推进</option>
+                      <option value="hitchcock_dolly_out">希区柯克拉远</option>
+                      <option value="robo_arm">机械臂</option>
+                      <option value="dynamic_orbit">动感环绕</option>
+                      <option value="central_orbit">中心环绕</option>
+                      <option value="crane_push">起重机</option>
+                      <option value="quick_pull_back">超级拉远</option>
+                      <option value="counterclockwise_swivel">逆时针回旋</option>
+                      <option value="clockwise_swivel">顺时针回旋</option>
+                      <option value="handheld">手持运镜</option>
+                      <option value="rapid_push_pull">快速推拉</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="recameraStrength" class="form-label fw-semibold">运镜强度</label>
+                    <select class="form-select" id="recameraStrength">
+                      <option value="weak">弱</option>
+                      <option value="medium" selected>中</option>
+                      <option value="strong">强</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="row g-3 mb-3 d-none" id="motionUploadGroup">
                   <div class="col-md-6">
                     <label for="motionImage" class="form-label fw-semibold">人物图片</label>

@@ -156,6 +156,11 @@ const fetchI2ITaskIdBtn = document.getElementById('fetchI2ITaskIdBtn');
 const r2vUploadGroup = document.getElementById('r2vUploadGroup');
 const r2vFiles = document.getElementById('r2vFiles');
 const r2vFilesHint = document.getElementById('r2vFilesHint');
+
+// 运镜模板
+const recameraGroup = document.getElementById('recameraGroup');
+const recameraTemplate = document.getElementById('recameraTemplate');
+const recameraStrength = document.getElementById('recameraStrength');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
@@ -368,12 +373,16 @@ let VIDEO_MODELS = {
 const JIMENG_VIDEO_MODELS = {
   text2video: [
     { value: 'jimeng-v3.0-t2v-1080p', label: '即梦视频3.0-文生视频1080P' },
+    { value: 'jimeng-v3.0-t2v', label: '即梦视频3.0-文生视频720P' },
     { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
   ],
   image2video: [
     { value: 'jimeng-v3.0-pro', label: '即梦视频3.0 Pro（文/图生视频）' },
     { value: 'jimeng-v3.0-i2v-first-1080p', label: '即梦视频3.0-图生视频首帧1080P' },
     { value: 'jimeng-v3.0-i2v-tail-1080p', label: '即梦视频3.0-图生视频首尾帧1080P' },
+    { value: 'jimeng-v3.0-i2v-first', label: '即梦视频3.0-图生视频首帧720P' },
+    { value: 'jimeng-v3.0-i2v-tail', label: '即梦视频3.0-图生视频首尾帧720P' },
+    { value: 'jimeng-v3.0-recamera', label: '即梦视频3.0-运镜模板' },
   ],
 };
 
@@ -762,8 +771,11 @@ function updateVideoUiState() {
   const isVideoedit = videoMode && videoMode.value === 'videoedit';
   const isR2V = videoMode && videoMode.value === 'r2v';
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
-  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo);
+  const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
+  const isRecamera = isImageVideo && selectedVideoModel === 'jimeng-v3.0-recamera';
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera);
   if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
+  if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
     const r2vModel = videoModelSelect ? videoModelSelect.value : '';
     const isWan27R2V = r2vModel === 'wan2.7-r2v' || r2vModel === 'wan2.7-r2v-2026-06-12';
@@ -1959,6 +1971,7 @@ if (generateBtnVideo) {
     setLoading(true, '正在生成视频，请耐心等待...');
     downloadBtn.classList.add('d-none');
 
+    const isRecameraModel = model === 'jimeng-v3.0-recamera';
     const videoParams = {
       duration: parseInt(videoDuration.value, 10),
       resolution: videoResolution.value,
@@ -1969,6 +1982,8 @@ if (generateBtnVideo) {
       watermark: watermarkToggle.checked,
       frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121) : undefined,
       aspect_ratio: provider === 'volcengine' && mode === 'text2video' ? videoRatio.value : undefined,
+      template_id: isRecameraModel && recameraTemplate ? recameraTemplate.value : undefined,
+      camera_strength: isRecameraModel && recameraStrength ? recameraStrength.value : undefined,
     };
     const formData = new FormData();
     formData.append('apiKey', apiKey);

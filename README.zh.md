@@ -156,9 +156,13 @@
 | 前端模型 ID | 上游 `req_key` | 说明 |
 |---|---|---|
 | `jimeng-v3.0-t2v-1080p` | `jimeng_t2v_v30_1080p` | 文生视频 1080P |
+| `jimeng-v3.0-t2v` | `jimeng_t2v_v30` | 文生视频 720P |
 | `jimeng-v3.0-i2v-first-1080p` | `jimeng_i2v_first_v30_1080` | 图生视频首帧 1080P |
 | `jimeng-v3.0-i2v-tail-1080p` | `jimeng_i2v_first_tail_v30_1080` | 图生视频首尾帧 1080P |
+| `jimeng-v3.0-i2v-first` | `jimeng_i2v_first_v30` | 图生视频首帧 720P |
+| `jimeng-v3.0-i2v-tail` | `jimeng_i2v_first_tail_v30` | 图生视频首尾帧 720P |
 | `jimeng-v3.0-pro` | `jimeng_ti2v_v30_pro` | Pro 模式（文/图生视频） |
+| `jimeng-v3.0-recamera` | `jimeng_i2v_recamera_v30` | 运镜模板（11种运镜效果） |
 
 ### 动作模仿（Volcengine）
 
