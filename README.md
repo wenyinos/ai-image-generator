@@ -72,6 +72,22 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Endpoint: `https://apihub.agnes-ai.com` (configurable via `AGNES_BASE_URL`)
 - Supports: text-to-image, image-to-image, text-to-video, image-to-video
 
+### OpenAI (GPT)
+- Frontend key or `OPENAI_API_KEY`
+- Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`)
+- Supports: text-to-image, image-to-image (via `gpt-image-2`)
+
+### xAI (Grok Video)
+- Frontend key or `XAI_API_KEY`
+- Endpoint: `https://api.x.ai/v1` (configurable via `XAI_BASE_URL`)
+- Supports: text-to-video, image-to-video
+  - `grok-video-1.0`: text/image-to-video, up to 7 reference images, 16:9/9:16/1:1, 4-15s, 480p/720p
+  - `grok-video-1.5`: single-image-to-video (exactly 1 reference), 16:9/9:16, 4-15s, 480p/720p
+
+### HTTP Proxy
+- Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (Gemini, OpenAI) through a proxy
+- Example: `HTTP_PROXY=http://127.0.0.1:7890`
+
 ## Supported DashScope Models
 
 | Model | Type | Sync/Async | Notes |
@@ -95,7 +111,18 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `qwen-image` | qwen | async | |
 | `z-image-turbo` | wan | async | Lightweight |
 
-**Gemini**: `gemini-2.5-flash-image` (default)
+**Gemini**: `gemini-3.1-flash-image-preview` (default)
+
+| Model | Type | Notes |
+|---|---|---|
+| `gemini-3-pro-image-preview` | gemini | Text & image-to-image, preview |
+| `gemini-3.1-flash-image-preview` | gemini | Text & image-to-image, fast preview |
+
+**OpenAI (GPT)**:
+
+| Model | Type | Notes |
+|---|---|---|
+| `gpt-image-2` | openai | Text & image-to-image |
 
 **Agnes AI**:
 
@@ -148,6 +175,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | Model | Notes |
 |---|---|
 | `agnes-video-v2.0` | Text-to-video, image-to-video (async) |
+
+### Grok Video (xAI)
+
+| Model | Notes |
+|---|---|
+| `grok-video-1.0` | Text/image-to-video, up to 7 reference images, 16:9/9:16/1:1, 480p/720p |
+| `grok-video-1.5` | Single-image-to-video (exactly 1 reference), 16:9/9:16, 480p/720p |
 
 ## Supported Jimeng Video Models
 

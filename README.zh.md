@@ -72,6 +72,22 @@
 - 端点：`https://apihub.agnes-ai.com`（可通过 `AGNES_BASE_URL` 配置）
 - 支持：文生图、图生图、文生视频、图生视频
 
+### OpenAI (GPT)
+- 前端输入，或配置 `OPENAI_API_KEY`
+- 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置）
+- 支持：文生图、图生图（通过 `gpt-image-2`）
+
+### xAI (Grok 视频)
+- 前端输入，或配置 `XAI_API_KEY`
+- 端点：`https://api.x.ai/v1`（可通过 `XAI_BASE_URL` 配置）
+- 支持：文生视频、图生视频
+  - `grok-video-1.0`：文/图生视频，最多 7 张参考图，16:9/9:16/1:1，4-15 秒，480p/720p
+  - `grok-video-1.5`：单图生视频（必须且只能 1 张参考图），16:9/9:16，4-15 秒，480p/720p
+
+### HTTP 代理
+- 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（Gemini、OpenAI）路由到代理
+- 示例：`HTTP_PROXY=http://127.0.0.1:7890`
+
 ## 支持的 DashScope / Gemini 模型
 
 | 模型 | 类型 | 同步/异步 | 说明 |
@@ -95,7 +111,18 @@
 | `qwen-image` | qwen | 异步 | |
 | `z-image-turbo` | wan | 异步 | 轻量快速 |
 
-**Gemini**：`gemini-2.5-flash-image`（默认）
+**Gemini**：`gemini-3.1-flash-image-preview`（默认）
+
+| 模型 | 类型 | 说明 |
+|---|---|---|
+| `gemini-3-pro-image-preview` | gemini | 文生图、图生图，预览版 |
+| `gemini-3.1-flash-image-preview` | gemini | 文生图、图生图，高速预览版 |
+
+**OpenAI (GPT)**：
+
+| 模型 | 类型 | 说明 |
+|---|---|---|
+| `gpt-image-2` | openai | 文生图、图生图 |
 
 **Agnes AI**：
 
@@ -148,6 +175,13 @@
 | 模型 | 说明 |
 |---|---|
 | `agnes-video-v2.0` | 文生视频、图生视频（异步） |
+
+### Grok 视频（xAI）
+
+| 模型 | 说明 |
+|---|---|
+| `grok-video-1.0` | 文/图生视频，最多 7 张参考图，16:9/9:16/1:1，480p/720p |
+| `grok-video-1.5` | 单图生视频（必须且只能 1 张参考图），16:9/9:16，480p/720p |
 
 ## 支持的即梦视频模型
 

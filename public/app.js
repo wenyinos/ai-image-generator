@@ -209,8 +209,7 @@ let foregroundRecoveryNeeded = false;
 let foregroundRecoveryPromise = null;
 let lastForegroundRecoveryAt = 0;
 let activeTaskContext = null;
-const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
-const GEMINI_MODEL_LEGACY_ID = 'gemini-2.5-flash-preview-image';
+const GEMINI_MODEL_ID = 'gemini-3.1-flash-image-preview';
 
 // "记住我"复选框
 const rememberApiKey = document.getElementById('rememberApiKey');
@@ -249,6 +248,20 @@ const PROVIDER_CONFIG = {
     helpLink: 'https://agnes-ai.com/docs',
     consoleLink: 'https://agnes-ai.com',
   },
+  openai: {
+    label: 'OpenAI API Key（可选）',
+    envName: 'OPENAI_API_KEY',
+    placeholder: 'sk-...',
+    helpLink: 'https://platform.openai.com/docs/api-reference',
+    consoleLink: 'https://platform.openai.com/api-keys',
+  },
+  xai: {
+    label: 'xAI API Key（可选）',
+    envName: 'XAI_API_KEY',
+    placeholder: 'xai-...',
+    helpLink: 'https://docs.x.ai/',
+    consoleLink: 'https://console.x.ai/',
+  },
 };
 
 const MODELS_T2I = {
@@ -286,7 +299,13 @@ const MODELS_T2I = {
   ],
   gemini: [
     { group: '✨ Gemini', options: [
-      { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
+      { value: GEMINI_MODEL_ID, label: 'Gemini 3.1 Flash Image (预览)' },
+      { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (预览)' },
+    ] },
+  ],
+  openai: [
+    { group: '🤖 GPT', options: [
+      { value: 'gpt-image-2', label: 'GPT Image 2' },
     ] },
   ],
   volcengine: [
@@ -317,7 +336,13 @@ const MODELS_I2I = {
   ],
   gemini: [
     { group: '✨ Gemini', options: [
-      { value: GEMINI_MODEL_ID, label: 'Gemini 2.5 Flash Image' },
+      { value: GEMINI_MODEL_ID, label: 'Gemini 3.1 Flash Image (预览)' },
+      { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (预览)' },
+    ] },
+  ],
+  openai: [
+    { group: '🤖 GPT', options: [
+      { value: 'gpt-image-2', label: 'GPT Image 2' },
     ] },
   ],
   volcengine: [
@@ -373,7 +398,9 @@ const T2I_MODEL_HINTS = {
   'qwen-image-plus': '千问图片Plus：艺术风格，适合插画和创意场景。',
   'qwen-image': '千问图片：基础版。',
   'z-image-turbo': 'Z-Image Turbo：轻量快速模型。',
-  'gemini-2.5-flash-image': 'Gemini 2.5 Flash Image：Google 多模态模型，支持图文混合理解。',
+  'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
+  'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
+  'gpt-image-2': 'GPT Image 2：OpenAI 图像模型，支持文生图和图生图编辑。',
   'jimeng-3.0': '即梦文生图3.0：基础文生图。',
   'jimeng-3.1': '即梦文生图3.1：画质提升版。',
   'jimeng-4.0': '即梦图片生成4.0：高质量生成。',
@@ -419,6 +446,8 @@ const VIDEO_MODEL_HINTS = {
   'jimeng-motion-2.0': '动作模仿2.0：支持多人、非真人，上传人物图+模板视频。',
   'jimeng-motion-1.0': '动作模仿1.0：单人动作模仿。',
   'agnes-video-v2.0': 'Agnes Video V2.0：支持文生视频和图生视频。',
+  'grok-video-1.0': 'Grok Video 1.0：文生视频/图生视频，最多7张参考图，支持16:9/9:16/1:1，480p/720p。',
+  'grok-video-1.5': 'Grok Video 1.5：单图生视频（必须1张参考图），支持16:9/9:16，480p/720p。',
 };
 
 let VIDEO_MODELS = {
@@ -527,7 +556,7 @@ const MODEL_SIZES_I2I = {
 };
 
 function normalizeGeminiModel(model) {
-  return model === GEMINI_MODEL_LEGACY_ID ? GEMINI_MODEL_ID : model;
+  return model || GEMINI_MODEL_ID;
 }
 
 function getApiKeyStorageKey(mode, provider) {
@@ -625,6 +654,14 @@ function renderVideoModelOptions() {
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
+  } else if (provider === 'xai') {
+    const grokOptions = mode === 'image2video'
+      ? [
+        { value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' },
+        { value: 'grok-video-1.5', label: 'Grok Video 1.5（单图生视频）' },
+      ]
+      : [{ value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' }];
+    renderModelOptions(videoModelSelect, [{ group: 'Grok 视频模型', options: grokOptions }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
@@ -868,11 +905,12 @@ function updateVideoUiState() {
   const isTranslate = videoMode && videoMode.value === 'translate';
   const isVideoedit = videoMode && videoMode.value === 'videoedit';
   const isR2V = videoMode && videoMode.value === 'r2v';
+  const isXaiGrok = videoProvider && videoProvider.value === 'xai' && isImageVideo;
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
   const isRecamera = isImageVideo && selectedVideoModel === 'jimeng-v3.0-recamera';
-  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera);
-  if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isXaiGrok);
+  if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V && !isXaiGrok);
   if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
     const r2vModel = videoModelSelect ? videoModelSelect.value : '';
@@ -884,6 +922,15 @@ function updateVideoUiState() {
       r2vFilesHint.textContent = isWan27R2V
         ? '最多9个：图片（JPG/PNG/BMP/WebP，最大20MB）或视频（MP4/MOV，1-30秒，最大100MB）'
         : '最多9张图片：JPG/PNG/BMP/WebP，最大 20MB';
+    }
+  }
+  if (isXaiGrok && r2vFiles) {
+    const grokModel = videoModelSelect ? videoModelSelect.value : '';
+    r2vFiles.accept = 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
+    if (r2vFilesHint) {
+      r2vFilesHint.textContent = grokModel === 'grok-video-1.5'
+        ? '必须且只能上传 1 张参考图（JPG/PNG/BMP/WebP）'
+        : '最多上传 7 张参考图（JPG/PNG/BMP/WebP）';
     }
   }
   if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate || isVideoedit);
@@ -903,10 +950,12 @@ function updateVideoUiState() {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
     const agnesOption = videoProvider.querySelector('option[value="agnes"]');
+    const xaiOption = videoProvider.querySelector('option[value="xai"]');
     const agnesSupported = videoMode && (videoMode.value === 'text2video' || videoMode.value === 'image2video');
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
     if (volcengineOption) volcengineOption.hidden = isVideoedit || isR2V;
     if (agnesOption) agnesOption.hidden = !agnesSupported;
+    if (xaiOption) xaiOption.hidden = !agnesSupported;
     if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
@@ -915,7 +964,7 @@ function updateVideoUiState() {
       videoProvider.value = 'dashscope';
       updateVideoProviderState();
     }
-    if (!agnesSupported && videoProvider.value === 'agnes') {
+    if (!agnesSupported && (videoProvider.value === 'agnes' || videoProvider.value === 'xai')) {
       videoProvider.value = 'dashscope';
       updateVideoProviderState();
     }
@@ -1028,6 +1077,14 @@ function updateVideoProviderState() {
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
+  } else if (provider === 'xai') {
+    const grokOptions = isImageVideo
+      ? [
+        { value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' },
+        { value: 'grok-video-1.5', label: 'Grok Video 1.5（单图生视频）' },
+      ]
+      : [{ value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' }];
+    renderModelOptions(videoModelSelect, [{ group: 'Grok 视频模型', options: grokOptions }], savedModel);
   } else if (isVolcengine) {
     const videoModeKey = isImageVideo ? 'image2video' : 'text2video';
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
@@ -1559,6 +1616,7 @@ async function handleGenerationResult(data, { apiKey, model, resultType, title, 
   if (data.taskId) {
     const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status'
       : data.provider === 'agnes' ? '/api/agnes-task-status'
+      : data.provider === 'xai' ? '/api/grok-task-status'
       : '/api/dashscope-task-status';
     setLoading(true, `${title}：${getTaskStatusText(data.taskStatus)}，任务ID ${data.taskId}`);
     await pollGenerationTask({
@@ -2079,16 +2137,19 @@ if (generateBtnVideo) {
     downloadBtn.classList.add('d-none');
 
     const isRecameraModel = model === 'jimeng-v3.0-recamera';
+    const isXai = provider === 'xai';
     const videoParams = {
       duration: parseInt(videoDuration.value, 10),
-      resolution: videoResolution.value,
+      resolution: isXai
+        ? (videoResolution.value === '1080P' ? '720p' : (videoResolution.value === '720P' ? '720p' : videoResolution.value.toLowerCase()))
+        : videoResolution.value,
       ratio: mode === 'text2video' ? videoRatio.value : undefined,
       seed,
       negative_prompt: negativePrompt.value.trim() || undefined,
       prompt_extend: promptExtend.checked,
       watermark: watermarkToggle.checked,
       frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121) : undefined,
-      aspect_ratio: provider === 'volcengine' && mode === 'text2video' ? videoRatio.value : undefined,
+      aspect_ratio: (provider === 'volcengine' || isXai) && mode === 'text2video' ? videoRatio.value : undefined,
       template_id: isRecameraModel && recameraTemplate ? recameraTemplate.value : undefined,
       camera_strength: isRecameraModel && recameraStrength ? recameraStrength.value : undefined,
     };
@@ -2100,6 +2161,9 @@ if (generateBtnVideo) {
     formData.append('progressMode', 'true');
     if (mode === 'r2v' && r2vFileList.length > 0) {
       r2vFileList.forEach((file) => formData.append('r2vFiles', file));
+    } else if (isXai && mode === 'image2video' && r2vFileList.length > 0) {
+      // Grok 参考生视频：复用 r2vFiles 多图上传
+      r2vFileList.forEach((file) => formData.append('grokImages', file));
     } else {
       if (firstFrame) formData.append('firstFrame', firstFrame);
       if (lastFrame) formData.append('lastFrame', lastFrame);
@@ -2108,6 +2172,7 @@ if (generateBtnVideo) {
 
     const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video'
       : provider === 'agnes' ? '/api/agnes-video'
+      : provider === 'xai' ? '/api/grok-video'
       : '/api/generate-video';
     let activeVideoTaskId = '';
     try {
