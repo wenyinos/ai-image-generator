@@ -59,6 +59,8 @@
 
 ### Gemini
 - 前端输入，或配置 `GEMINI_API_KEY`（未配置时回退 `GOOGLE_API_KEY`）
+- 使用 OpenAI 兼容网关（`POST /v1/images/generations` + `/images/edits`）
+- 端点可通过 `GEMINI_BASE_URL` 配置（例如 OpenAI 兼容中转 `https://api.openox.tech/v1`）
 
 ### 火山引擎（即梦）
 - 前端输入 `AK:SK`
@@ -74,18 +76,19 @@
 
 ### OpenAI (GPT)
 - 前端输入，或配置 `OPENAI_API_KEY`
-- 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置）
+- 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
 - 支持：文生图、图生图（通过 `gpt-image-2`）
 
 ### xAI (Grok 视频)
 - 前端输入，或配置 `XAI_API_KEY`
-- 端点：`https://api.x.ai/v1`（可通过 `XAI_BASE_URL` 配置）
+- 端点：`https://api.x.ai/v1`（可通过 `XAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
+- 时长参数使用 `seconds`（字符串）
 - 支持：文生视频、图生视频
   - `grok-video-1.0`：文/图生视频，最多 7 张参考图，16:9/9:16/1:1，4-15 秒，480p/720p
   - `grok-video-1.5`：单图生视频（必须且只能 1 张参考图），16:9/9:16，4-15 秒，480p/720p
 
 ### HTTP 代理
-- 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（Gemini、OpenAI）路由到代理
+- 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（Gemini、OpenAI、Grok）路由到代理
 - 示例：`HTTP_PROXY=http://127.0.0.1:7890`
 
 ## 支持的 DashScope / Gemini 模型

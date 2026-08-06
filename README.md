@@ -59,6 +59,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ### Gemini
 - Frontend key or `GEMINI_API_KEY` (fallback: `GOOGLE_API_KEY`)
+- Uses OpenAI-compatible gateway (`POST /v1/images/generations` + `/images/edits`)
+- Endpoint configurable via `GEMINI_BASE_URL` (e.g. an OpenAI-compatible relay like `https://api.openox.tech/v1`)
 
 ### Volcengine (Jimeng)
 - Frontend uses `AK:SK` format
@@ -74,18 +76,19 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ### OpenAI (GPT)
 - Frontend key or `OPENAI_API_KEY`
-- Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`)
+- Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`, e.g. an OpenAI-compatible relay)
 - Supports: text-to-image, image-to-image (via `gpt-image-2`)
 
 ### xAI (Grok Video)
 - Frontend key or `XAI_API_KEY`
-- Endpoint: `https://api.x.ai/v1` (configurable via `XAI_BASE_URL`)
+- Endpoint: `https://api.x.ai/v1` (configurable via `XAI_BASE_URL`, e.g. an OpenAI-compatible relay)
+- Uses `seconds` (string) for duration parameter
 - Supports: text-to-video, image-to-video
   - `grok-video-1.0`: text/image-to-video, up to 7 reference images, 16:9/9:16/1:1, 4-15s, 480p/720p
   - `grok-video-1.5`: single-image-to-video (exactly 1 reference), 16:9/9:16, 4-15s, 480p/720p
 
 ### HTTP Proxy
-- Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (Gemini, OpenAI) through a proxy
+- Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (Gemini, OpenAI, Grok) through a proxy
 - Example: `HTTP_PROXY=http://127.0.0.1:7890`
 
 ## Supported DashScope Models
