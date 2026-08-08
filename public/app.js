@@ -273,6 +273,8 @@ const PROVIDER_CONFIG = {
 const MODELS_T2I = {
   dashscope: [
     { group: '💬 千问 Qwen-Image', options: [
+      { value: 'qwen-image-3.0-pro', label: 'qwen-image-3.0-pro (最强)' },
+      { value: 'qwen-image-3.0', label: 'qwen-image-3.0' },
       { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
     ] },
     { group: '⭐ 万相 2.7 (最新)', options: [
@@ -313,6 +315,10 @@ const MODELS_T2I = {
 
 const MODELS_I2I = {
   dashscope: [
+    { group: '💬 千问 Qwen-Image', options: [
+      { value: 'qwen-image-3.0-pro', label: 'qwen-image-3.0-pro (最强)' },
+      { value: 'qwen-image-3.0', label: 'qwen-image-3.0' },
+    ] },
     { group: '⭐ 万相 2.7 (推荐)', options: [
       { value: 'wan2.7-image', label: 'wan2.7-image (快速)' },
       { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强)' },
@@ -372,6 +378,8 @@ const T2I_MODEL_HINTS = {
   'wan2.6-image': '万相2.6：支持图文混排输入，适合需要文字渲染的场景。',
   'wan2.6-t2i': '万相2.6标准版：基础文生图能力。',
   'qwen-image-2.0-pro': '千问图片2.0 Pro：擅长文字渲染，支持中英文。',
+  'qwen-image-3.0': '千问图片3.0：支持图文指令，10px小字、12国语言清晰渲染，1K/2K。',
+  'qwen-image-3.0-pro': '千问图片3.0 Pro：最强版，复杂版面/密集信息/微细节，支持2K。',
   'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
   'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
   'gpt-image-2': 'GPT Image 2：OpenAI 图像模型，支持文生图和图生图编辑。',
@@ -397,6 +405,7 @@ const VIDEO_MODEL_HINTS = {
   'wan2.6-t2v': '万相2.6 文生视频。',
   'wan2.6-i2v-flash': '万相2.6 图生视频快速版。',
   'wan2.7-videoedit': '万相2.7 视频编辑：上传视频+参考图，用文字指令编辑视频元素。',
+  'wan3.0-video': '万相3.0 视频：all-in-one，支持文/图生视频、参考、编辑、复刻、驱动，最长30秒。',
   'jimeng-v3.0-t2v-1080p': '即梦视频3.0 文生视频1080P：高质量文生视频。',
   'jimeng-v3.0-t2v': '即梦视频3.0 文生视频720P。',
   'jimeng-v3.0-pro': '即梦视频3.0 Pro：文/图生视频，综合能力最强。',
@@ -417,12 +426,14 @@ let VIDEO_MODELS = {
   text2video: [
     { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
     { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
+    { value: 'wan3.0-video', label: 'wan3.0-video（文生视频）' },
     { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
   ],
   image2video: [
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
     { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
+    { value: 'wan3.0-video', label: 'wan3.0-video（图生视频）' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
   ],
@@ -469,6 +480,8 @@ const MODEL_SIZES = {
   'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   // 千问 Qwen-Image
   'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-3.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-3.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   // Gemini
   [GEMINI_MODEL_ID]: [],
   // Volcengine Jimeng
@@ -480,6 +493,8 @@ const MODEL_SIZES = {
 };
 
 const MODEL_SIZES_I2I = {
+  'qwen-image-3.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-3.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   'wan2.7-image-pro': ['1K', '2K'],
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],

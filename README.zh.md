@@ -102,6 +102,8 @@
 | `wan2.7-image` | wan | 同步 | 快速，支持 2K |
 | `wan2.6-image` | wan | 同步 | 图文混排 |
 | `wan2.6-t2i` | wan | 异步 | 标准 |
+| `qwen-image-3.0-pro` | qwen | 同步 | 复杂版面/密集信息，2K |
+| `qwen-image-3.0` | qwen | 同步 | 文生图、图生图，1K/2K |
 | `qwen-image-2.0-pro` | qwen | 同步 | 擅长文字渲染 |
 
 **Gemini**：`gemini-3.1-flash-image-preview`（默认）
@@ -132,6 +134,7 @@
 |---|---|
 | `happyhorse-1.1-t2v` | 推荐 |
 | `happyhorse-1.0-t2v` | |
+| `wan3.0-video` | 万相 3.0 all-in-one，文/图生视频，支持参考、编辑，最长 30 秒 |
 | `wan2.7-t2v` | 万相 2.7 文生视频 |
 | `wan2.6-t2v` | 万相 2.6 文生视频 |
 
@@ -143,6 +146,7 @@
 | `happyhorse-1.1-i2v` | 图生视频 |
 | `wan2.7-r2v` | 万相 2.7 参考生视频 |
 | `happyhorse-1.0-i2v` | |
+| `wan3.0-video` | 万相 3.0 all-in-one 图生视频（首帧） |
 | `wan2.7-i2v` | 万相 2.7 图生视频 |
 | `wan2.6-i2v-flash` | 极速 |
 
