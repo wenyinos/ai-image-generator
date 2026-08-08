@@ -93,6 +93,12 @@ const apiEnvNameI2I = document.getElementById('apiEnvNameI2I');
 const modelHintI2I = document.getElementById('modelHintI2I');
 const modelHintT2I = document.getElementById('modelHintT2I');
 const modelHintVideo = document.getElementById('modelHintVideo');
+const modelSnapshotGroupT2I = document.getElementById('modelSnapshotGroupT2I');
+const modelSnapshotT2I = document.getElementById('modelSnapshotT2I');
+const modelSnapshotGroupI2I = document.getElementById('modelSnapshotGroupI2I');
+const modelSnapshotI2I = document.getElementById('modelSnapshotI2I');
+const modelSnapshotGroupVideo = document.getElementById('modelSnapshotGroupVideo');
+const modelSnapshotVideo = document.getElementById('modelSnapshotVideo');
 const toggleApiKeyBtnI2I = document.getElementById('toggleApiKeyBtnI2I');
 const modelSelectI2I = document.getElementById('modelSelectI2I');
 const promptInputI2I = document.getElementById('promptInputI2I');
@@ -491,6 +497,15 @@ function normalizeGeminiModel(model) {
   return model || GEMINI_MODEL_ID;
 }
 
+// DashScope 模型快照拼接：选择模型 + 输入快照日期 → 拼接为 model-snapshot
+function applyModelSnapshot(model, provider, inputEl) {
+  if (provider === 'dashscope' && inputEl) {
+    const snap = inputEl.value.trim();
+    if (snap) return `${model}-${snap}`;
+  }
+  return model;
+}
+
 function getApiKeyStorageKey(mode, provider) {
   if (mode === 'video') return 'apiKey_video_dashscope';
   return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
@@ -754,6 +769,7 @@ function updateTextProviderState() {
   setTextApiKeyMeta(provider);
   updateSizeOptions();
   localStorage.setItem('provider', provider);
+  if (modelSnapshotGroupT2I) modelSnapshotGroupT2I.classList.toggle('d-none', provider !== 'dashscope');
 }
 
 function updateImageProviderState() {
@@ -769,6 +785,7 @@ function updateImageProviderState() {
     updateSizeOptionsI2I();
   }
   localStorage.setItem('providerI2I', provider);
+  if (modelSnapshotGroupI2I) modelSnapshotGroupI2I.classList.toggle('d-none', provider !== 'dashscope');
 }
 
 function getActiveProvider() {
@@ -979,6 +996,7 @@ function updateVideoProviderState() {
   const isVolcengine = provider === 'volcengine';
   const isMotion = videoMode && videoMode.value === 'motion';
   const isImageVideo = videoMode && videoMode.value === 'image2video';
+  if (modelSnapshotGroupVideo) modelSnapshotGroupVideo.classList.toggle('d-none', provider !== 'dashscope');
   if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.toggle('d-none', isVolcengine);
   if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.toggle('d-none', !isVolcengine);
   if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
@@ -1763,7 +1781,7 @@ generateBtn.addEventListener('click', async () => {
   const apiKey = provider === 'volcengine'
     ? (volcAk && volcSk ? `${volcAk}:${volcSk}` : '')
     : apiKeyInput.value.trim();
-  const model = modelSelect.value;
+  const model = applyModelSnapshot(modelSelect.value, provider, modelSnapshotT2I);
   const prompt = promptInput.value.trim();
   const n = parseInt(imageCount.value, 10);
   const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;
@@ -1876,7 +1894,7 @@ if (generateBtnVideo) {
     } else {
       apiKey = videoApiKeyInput.value.trim();
     }
-    const model = videoModelSelect.value;
+    const model = applyModelSnapshot(videoModelSelect.value, provider, modelSnapshotVideo);
     const prompt = videoPromptInput.value.trim();
     const firstFrame = videoFirstFrame.files[0];
     const lastFrame = videoLastFrame.files[0];
@@ -2487,7 +2505,7 @@ generateBtnI2I.addEventListener('click', async () => {
   const apiKey = provider === 'volcengine'
     ? (volcAkI2I && volcSkI2I ? `${volcAkI2I}:${volcSkI2I}` : '')
     : apiKeyInputI2I.value.trim();
-  const model = modelSelectI2I.value;
+  const model = applyModelSnapshot(modelSelectI2I.value, provider, modelSnapshotI2I);
   const prompt = promptInputI2I.value.trim();
   const n = parseInt(imageCount.value, 10);
   const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;

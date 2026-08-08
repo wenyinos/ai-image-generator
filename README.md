@@ -18,6 +18,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Multi-model support with model-specific size constraints
 - Parameters: image count, size, seed, negative prompt, prompt extension, watermark
 - Sync/async protocol handling for DashScope models
+- DashScope model snapshot input: select a model + enter a snapshot date (e.g. `2026-06-22`) to auto-compose `model-snapshot` (e.g. `qwen-image-2.0-pro-2026-06-22`)
 
 ### Image-to-Image
 - Drag & drop upload with client-side compression (max 10MB upload)
@@ -29,11 +30,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
   - uploaded local image (server stores temp file and exposes HTTP URL)
   - external HTTP(S) image URLs input
 - Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
+- DashScope model snapshot input: select a model + enter a snapshot date to auto-compose `model-snapshot`
 
 ### Video Generation
 - Provider switching in UI (DashScope / Volcengine)
 - DashScope text-to-video and image-to-video workflows
 - Built-in model options for `happyhorse-1.1-*`, `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
+- DashScope model snapshot input: select a model + enter a snapshot date to auto-compose `model-snapshot`
 - Jimeng (Volcengine) 1080P video generation: text-to-video, image-to-video (first frame / first+last frame), Pro mode
 - Motion imitation (v1.0 / v2.0): upload a person image + template video to generate animated video
 - Long-running task progress display through async polling

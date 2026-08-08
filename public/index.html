@@ -269,6 +269,9 @@
                         <option value="z-image-turbo">z-image-turbo (轻量快速)</option>
                       </optgroup>
                     </select>
+                    <div class="input-group input-group-sm mt-2 d-none" id="modelSnapshotGroupT2I">
+                      <input type="text" class="form-control" id="modelSnapshotT2I" placeholder="模型快照（如 2026-06-22，可选）">
+                    </div>
                     <div class="form-text" id="modelHintT2I">文生图模式：输入描述即可生成图片。</div>
                   </div>
                 </div>
@@ -358,6 +361,9 @@
                         <option value="wan2.6-image" selected>wan2.6-image (图文混排)</option>
                       </optgroup>
                     </select>
+                    <div class="input-group input-group-sm mt-2 d-none" id="modelSnapshotGroupI2I">
+                      <input type="text" class="form-control" id="modelSnapshotI2I" placeholder="模型快照（如 2026-06-22，可选）">
+                    </div>
                     <div class="form-text" id="modelHintI2I">图生图模式：上传参考图并输入提示词即可生成。</div>
                   </div>
                 </div>
@@ -504,6 +510,9 @@
                       <option value="wan2.2-t2v-flash">wan2.2-t2v-flash</option>
                       <option value="wanx2.1-t2v-turbo">wanx2.1-t2v-turbo</option>
                     </select>
+                    <div class="input-group input-group-sm mt-2 d-none" id="modelSnapshotGroupVideo">
+                      <input type="text" class="form-control" id="modelSnapshotVideo" placeholder="模型快照（如 2026-06-12，可选）">
+                    </div>
                     <div class="form-text" id="modelHintVideo">文生视频模式：输入描述即可生成视频。</div>
                     <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="refreshVideoModelsBtn">
                       <i class="bi bi-arrow-clockwise"></i> 获取可用模型
