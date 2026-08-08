@@ -99,20 +99,9 @@
 | `wan2.7-image` | wan | 同步 | 快速，支持 2K |
 | `wan2.6-image` | wan | 同步 | 图文混排 |
 | `wan2.6-t2i` | wan | 异步 | 标准 |
-| `wan2.5-t2i-preview` | wan | 异步 | 预览 |
-| `wan2.2-t2i-flash` | wan | 异步 | 极速 |
-| `wan2.2-t2i-plus` | wan | 异步 | 增强 |
-| `wanx2.1-t2i-turbo` | wan | 异步 | |
-| `wanx2.1-t2i-plus` | wan | 异步 | |
-| `wanx2.0-t2i-turbo` | wan | 异步 | |
 | `qwen-image-2.0-pro` | qwen | 同步 | 擅长文字渲染 |
 | `qwen-image-2.0-pro-2026-06-22` | qwen | 同步 | 快照 |
 | `qwen-image-2.0-pro-2026-04-22` | qwen | 同步 | 快照 |
-| `qwen-image-2.0` | qwen | 同步 | |
-| `qwen-image-max` | qwen | 异步 | 真实感 |
-| `qwen-image-plus` | qwen | 异步 | 艺术风格 |
-| `qwen-image` | qwen | 异步 | |
-| `z-image-turbo` | wan | 异步 | 轻量快速 |
 
 **Gemini**：`gemini-3.1-flash-image-preview`（默认）
 
@@ -146,10 +135,6 @@
 | `wan2.7-t2v-2026-06-12` | 万相 2.7 文生视频快照 |
 | `wan2.7-t2v-2026-04-25` | 万相 2.7 文生视频快照 |
 | `wan2.6-t2v` | 万相 2.6 文生视频 |
-| `wan2.5-t2v-preview` | 预览 |
-| `wan2.2-t2v-plus` | 增强 |
-| `wan2.2-t2v-flash` | 极速 |
-| `wanx2.1-t2v-turbo` | Turbo |
 
 ### 图生视频
 
@@ -163,9 +148,6 @@
 | `wan2.7-i2v` | 万相 2.7 图生视频 |
 | `wan2.7-i2v-2026-04-25` | 万相 2.7 图生视频快照 |
 | `wan2.6-i2v-flash` | 极速 |
-| `wan2.5-i2v-preview` | 预览 |
-| `wan2.2-i2v-plus` | 增强 |
-| `wanx2.1-i2v-turbo` | Turbo |
 
 ### 视频编辑
 

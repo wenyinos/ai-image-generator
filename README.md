@@ -99,20 +99,9 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.7-image` | wan | sync | Fast, up to 2K |
 | `wan2.6-image` | wan | sync | Image+text mixed |
 | `wan2.6-t2i` | wan | async | Standard |
-| `wan2.5-t2i-preview` | wan | async | Preview |
-| `wan2.2-t2i-flash` | wan | async | Fast |
-| `wan2.2-t2i-plus` | wan | async | Enhanced |
-| `wanx2.1-t2i-turbo` | wan | async | |
-| `wanx2.1-t2i-plus` | wan | async | |
-| `wanx2.0-t2i-turbo` | wan | async | |
 | `qwen-image-2.0-pro` | qwen | sync | Text rendering |
 | `qwen-image-2.0-pro-2026-06-22` | qwen | sync | Snapshot |
 | `qwen-image-2.0-pro-2026-04-22` | qwen | sync | Snapshot |
-| `qwen-image-2.0` | qwen | sync | |
-| `qwen-image-max` | qwen | async | Realistic |
-| `qwen-image-plus` | qwen | async | Artistic |
-| `qwen-image` | qwen | async | |
-| `z-image-turbo` | wan | async | Lightweight |
 
 **Gemini**: `gemini-3.1-flash-image-preview` (default)
 
@@ -146,10 +135,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.7-t2v-2026-06-12` | Wan 2.7 text-to-video snapshot |
 | `wan2.7-t2v-2026-04-25` | Wan 2.7 text-to-video snapshot |
 | `wan2.6-t2v` | Wan 2.6 text-to-video |
-| `wan2.5-t2v-preview` | Preview |
-| `wan2.2-t2v-plus` | Enhanced |
-| `wan2.2-t2v-flash` | Fast |
-| `wanx2.1-t2v-turbo` | Turbo |
 
 ### Image-to-Video
 
@@ -163,9 +148,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.7-i2v` | Wan 2.7 image-to-video |
 | `wan2.7-i2v-2026-04-25` | Wan 2.7 image-to-video snapshot |
 | `wan2.6-i2v-flash` | Fast |
-| `wan2.5-i2v-preview` | Preview |
-| `wan2.2-i2v-plus` | Enhanced |
-| `wanx2.1-i2v-turbo` | Turbo |
 
 ### Video Editing
 

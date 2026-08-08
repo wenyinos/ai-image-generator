@@ -270,10 +270,6 @@ const MODELS_T2I = {
       { value: 'qwen-image-2.0-pro-2026-04-22', label: 'qwen-image-2.0-pro-2026-04-22（快照）' },
       { value: 'qwen-image-2.0-pro-2026-06-22', label: 'qwen-image-2.0-pro-2026-06-22（快照）' },
       { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
-      { value: 'qwen-image-2.0', label: 'qwen-image-2.0' },
-      { value: 'qwen-image-max', label: 'qwen-image-max (真实感)' },
-      { value: 'qwen-image-plus', label: 'qwen-image-plus (艺术风格)' },
-      { value: 'qwen-image', label: 'qwen-image' },
     ] },
     { group: '⭐ 万相 2.7 (最新)', options: [
       { value: 'wan2.7-image-pro', label: 'wan2.7-image-pro (最强, 支持4K)' },
@@ -282,19 +278,6 @@ const MODELS_T2I = {
     { group: '🎨 万相 2.6', options: [
       { value: 'wan2.6-image', label: 'wan2.6-image (图文混排)' },
       { value: 'wan2.6-t2i', label: 'wan2.6-t2i (标准)' },
-    ] },
-    { group: '⚡ 万相 2.5/2.2', options: [
-      { value: 'wan2.5-t2i-preview', label: 'wan2.5-t2i-preview (预览)' },
-      { value: 'wan2.2-t2i-flash', label: 'wan2.2-t2i-flash (极速)' },
-      { value: 'wan2.2-t2i-plus', label: 'wan2.2-t2i-plus (增强)' },
-    ] },
-    { group: '万相 2.1/2.0', options: [
-      { value: 'wanx2.1-t2i-turbo', label: 'wanx2.1-t2i-turbo' },
-      { value: 'wanx2.1-t2i-plus', label: 'wanx2.1-t2i-plus' },
-      { value: 'wanx2.0-t2i-turbo', label: 'wanx2.0-t2i-turbo' },
-    ] },
-    { group: '🚀 Z-Image', options: [
-      { value: 'z-image-turbo', label: 'z-image-turbo (轻量快速)' },
     ] },
   ],
   gemini: [
@@ -384,20 +367,9 @@ const T2I_MODEL_HINTS = {
   'wan2.7-image': '万相2.7：快速生成，最高2K，平衡速度与质量。',
   'wan2.6-image': '万相2.6：支持图文混排输入，适合需要文字渲染的场景。',
   'wan2.6-t2i': '万相2.6标准版：基础文生图能力。',
-  'wan2.5-t2i-preview': '万相2.5预览版：实验性模型，效果可能不稳定。',
-  'wan2.2-t2i-flash': '万相2.2极速版：生成速度最快，适合快速迭代。',
-  'wan2.2-t2i-plus': '万相2.2增强版：画质优于flash版。',
-  'wanx2.1-t2i-turbo': '万相2.1 Turbo：快速生成。',
-  'wanx2.1-t2i-plus': '万相2.1 Plus：画质增强版。',
-  'wanx2.0-t2i-turbo': '万相2.0 Turbo：早期快速模型。',
   'qwen-image-2.0-pro-2026-04-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
   'qwen-image-2.0-pro-2026-06-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
   'qwen-image-2.0-pro': '千问图片2.0 Pro：擅长文字渲染，支持中英文。',
-  'qwen-image-2.0': '千问图片2.0：基础文生图能力。',
-  'qwen-image-max': '千问图片Max：真实感画质，适合摄影风格。',
-  'qwen-image-plus': '千问图片Plus：艺术风格，适合插画和创意场景。',
-  'qwen-image': '千问图片：基础版。',
-  'z-image-turbo': 'Z-Image Turbo：轻量快速模型。',
   'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
   'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
   'gpt-image-2': 'GPT Image 2：OpenAI 图像模型，支持文生图和图生图编辑。',
@@ -426,13 +398,6 @@ const VIDEO_MODEL_HINTS = {
   'wan2.7-r2v-2026-06-12': '万相2.7 参考生视频快照（06-12）。',
   'wan2.6-t2v': '万相2.6 文生视频。',
   'wan2.6-i2v-flash': '万相2.6 图生视频快速版。',
-  'wan2.5-t2v-preview': '万相2.5 文生视频预览版。',
-  'wan2.5-i2v-preview': '万相2.5 图生视频预览版。',
-  'wan2.2-t2v-plus': '万相2.2 文生视频增强版。',
-  'wan2.2-t2v-flash': '万相2.2 文生视频快速版。',
-  'wan2.2-i2v-plus': '万相2.2 图生视频增强版。',
-  'wanx2.1-t2v-turbo': '万相2.1 文生视频 Turbo。',
-  'wanx2.1-i2v-turbo': '万相2.1 图生视频 Turbo。',
   'wan2.7-videoedit': '万相2.7 视频编辑：上传视频+参考图，用文字指令编辑视频元素。',
   'jimeng-v3.0-t2v-1080p': '即梦视频3.0 文生视频1080P：高质量文生视频。',
   'jimeng-v3.0-t2v': '即梦视频3.0 文生视频720P。',
@@ -458,10 +423,6 @@ let VIDEO_MODELS = {
     { value: 'wan2.7-t2v-2026-06-12', label: 'wan2.7-t2v-2026-06-12（文生视频2.7）' },
     { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
-    { value: 'wan2.5-t2v-preview', label: 'wan2.5-t2v-preview' },
-    { value: 'wan2.2-t2v-plus', label: 'wan2.2-t2v-plus' },
-    { value: 'wan2.2-t2v-flash', label: 'wan2.2-t2v-flash' },
-    { value: 'wanx2.1-t2v-turbo', label: 'wanx2.1-t2v-turbo' },
   ],
   image2video: [
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
@@ -469,9 +430,6 @@ let VIDEO_MODELS = {
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
     { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
-    { value: 'wan2.5-i2v-preview', label: 'wan2.5-i2v-preview' },
-    { value: 'wan2.2-i2v-plus', label: 'wan2.2-i2v-plus' },
-    { value: 'wanx2.1-i2v-turbo', label: 'wanx2.1-i2v-turbo' },
   ],
   r2v: [
     { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
@@ -515,22 +473,10 @@ const MODEL_SIZES = {
   // 万相 2.6
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  // 万相 2.5/2.2
-  'wan2.5-t2i-preview': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wan2.2-t2i-flash': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wan2.2-t2i-plus': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
-  // 万相 2.1/2.0
-  'wanx2.1-t2i-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wanx2.1-t2i-plus': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wanx2.0-t2i-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
   // 千问 Qwen-Image
   'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  'qwen-image-2.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  'qwen-image-max': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
-  'qwen-image-plus': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
-  'qwen-image': ['1664*928', '928*1664', '1328*1328', '1472*1104', '1104*1472', '1024*1024'],
-  // Z-Image
-  'z-image-turbo': ['1024*1024', '1024*768', '768*1024', '1280*720', '720*1280'],
+  'qwen-image-2.0-pro-2026-06-22': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
+  'qwen-image-2.0-pro-2026-04-22': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   // Gemini
   [GEMINI_MODEL_ID]: [],
   // Volcengine Jimeng
