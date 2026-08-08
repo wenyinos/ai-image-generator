@@ -267,8 +267,6 @@ const PROVIDER_CONFIG = {
 const MODELS_T2I = {
   dashscope: [
     { group: '💬 千问 Qwen-Image', options: [
-      { value: 'qwen-image-2.0-pro-2026-04-22', label: 'qwen-image-2.0-pro-2026-04-22（快照）' },
-      { value: 'qwen-image-2.0-pro-2026-06-22', label: 'qwen-image-2.0-pro-2026-06-22（快照）' },
       { value: 'qwen-image-2.0-pro', label: 'qwen-image-2.0-pro (擅长文字)' },
     ] },
     { group: '⭐ 万相 2.7 (最新)', options: [
@@ -367,8 +365,6 @@ const T2I_MODEL_HINTS = {
   'wan2.7-image': '万相2.7：快速生成，最高2K，平衡速度与质量。',
   'wan2.6-image': '万相2.6：支持图文混排输入，适合需要文字渲染的场景。',
   'wan2.6-t2i': '万相2.6标准版：基础文生图能力。',
-  'qwen-image-2.0-pro-2026-04-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
-  'qwen-image-2.0-pro-2026-06-22': '千问图片2.0 Pro快照：擅长文字渲染，支持中英文。',
   'qwen-image-2.0-pro': '千问图片2.0 Pro：擅长文字渲染，支持中英文。',
   'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
   'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
@@ -390,12 +386,8 @@ const VIDEO_MODEL_HINTS = {
   'happyhorse-1.0-r2v': 'HappyHorse 1.0 参考生视频：最多上传9张参考图。',
   'happyhorse-1.0-i2v': 'HappyHorse 1.0 图生视频：基础版。',
   'wan2.7-t2v': '万相2.7 文生视频：支持文生视频。',
-  'wan2.7-t2v-2026-06-12': '万相2.7 文生视频快照（06-12）。',
-  'wan2.7-t2v-2026-04-25': '万相2.7 文生视频快照（04-25）。',
   'wan2.7-i2v': '万相2.7 图生视频：支持首帧/首尾帧。',
-  'wan2.7-i2v-2026-04-25': '万相2.7 图生视频快照（04-25）。',
   'wan2.7-r2v': '万相2.7 参考生视频：支持图片+视频参考，最多5个。',
-  'wan2.7-r2v-2026-06-12': '万相2.7 参考生视频快照（06-12）。',
   'wan2.6-t2v': '万相2.6 文生视频。',
   'wan2.6-i2v-flash': '万相2.6 图生视频快速版。',
   'wan2.7-videoedit': '万相2.7 视频编辑：上传视频+参考图，用文字指令编辑视频元素。',
@@ -420,22 +412,18 @@ let VIDEO_MODELS = {
     { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
     { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
     { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
-    { value: 'wan2.7-t2v-2026-06-12', label: 'wan2.7-t2v-2026-06-12（文生视频2.7）' },
-    { value: 'wan2.7-t2v-2026-04-25', label: 'wan2.7-t2v-2026-04-25（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
   ],
   image2video: [
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
     { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
-    { value: 'wan2.7-i2v-2026-04-25', label: 'wan2.7-i2v-2026-04-25（图生视频2.7）' },
     { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
   ],
   r2v: [
     { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
     { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
     { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
-    { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
   ],
   videoedit: [
     { value: 'wan2.7-videoedit', label: 'wan2.7-videoedit（视频编辑）' },
@@ -475,8 +463,6 @@ const MODEL_SIZES = {
   'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
   // 千问 Qwen-Image
   'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  'qwen-image-2.0-pro-2026-06-22': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  'qwen-image-2.0-pro-2026-04-22': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   // Gemini
   [GEMINI_MODEL_ID]: [],
   // Volcengine Jimeng
@@ -594,7 +580,6 @@ function renderVideoModelOptions() {
       { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
       { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
       { value: 'wan2.7-r2v', label: 'wan2.7-r2v（最多5个参考）' },
-      { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
     ] }], savedModel);
   } else if (provider === 'agnes') {
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
@@ -860,7 +845,7 @@ function updateVideoUiState() {
   if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
     const r2vModel = videoModelSelect ? videoModelSelect.value : '';
-    const isWan27R2V = r2vModel === 'wan2.7-r2v' || r2vModel === 'wan2.7-r2v-2026-06-12';
+    const isWan27R2V = r2vModel === 'wan2.7-r2v';
     r2vFiles.accept = isWan27R2V
       ? 'image/jpeg,image/jpg,image/png,image/bmp,image/webp,video/mp4,video/quicktime'
       : 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
@@ -1043,7 +1028,6 @@ function updateVideoProviderState() {
         { value: 'happyhorse-1.1-r2v', label: 'happyhorse-1.1-r2v（推荐，最多9图）' },
         { value: 'happyhorse-1.0-r2v', label: 'happyhorse-1.0-r2v（最多9图）' },
         { value: 'wan2.7-r2v', label: 'wan2.7-r2v（支持图片+视频）' },
-        { value: 'wan2.7-r2v-2026-06-12', label: 'wan2.7-r2v-2026-06-12（参考生视频）' },
       ] }], savedModel);
     } else {
       renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);

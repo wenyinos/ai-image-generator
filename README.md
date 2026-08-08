@@ -100,8 +100,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `wan2.6-image` | wan | sync | Image+text mixed |
 | `wan2.6-t2i` | wan | async | Standard |
 | `qwen-image-2.0-pro` | qwen | sync | Text rendering |
-| `qwen-image-2.0-pro-2026-06-22` | qwen | sync | Snapshot |
-| `qwen-image-2.0-pro-2026-04-22` | qwen | sync | Snapshot |
 
 **Gemini**: `gemini-3.1-flash-image-preview` (default)
 
@@ -132,8 +130,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `happyhorse-1.1-t2v` | Recommended |
 | `happyhorse-1.0-t2v` | |
 | `wan2.7-t2v` | Wan 2.7 text-to-video |
-| `wan2.7-t2v-2026-06-12` | Wan 2.7 text-to-video snapshot |
-| `wan2.7-t2v-2026-04-25` | Wan 2.7 text-to-video snapshot |
 | `wan2.6-t2v` | Wan 2.6 text-to-video |
 
 ### Image-to-Video
@@ -143,10 +139,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `happyhorse-1.1-r2v` | Reference-to-video, stable subject & scene, Recommended |
 | `happyhorse-1.1-i2v` | Image-to-video |
 | `wan2.7-r2v` | Wan 2.7 reference-to-video |
-| `wan2.7-r2v-2026-06-12` | Wan 2.7 reference-to-video snapshot |
 | `happyhorse-1.0-i2v` | |
 | `wan2.7-i2v` | Wan 2.7 image-to-video |
-| `wan2.7-i2v-2026-04-25` | Wan 2.7 image-to-video snapshot |
 | `wan2.6-i2v-flash` | Fast |
 
 ### Video Editing
