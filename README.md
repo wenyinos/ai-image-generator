@@ -281,7 +281,7 @@ Provider keys:
 Timeouts:
 - `GENERATION_MAX_POLL_ATTEMPTS` (default `90`)
 - `GENERATION_POLL_INTERVAL_MS` (default `5000`)
-- `GENERATION_REQUEST_TIMEOUT_MS` (default `450000`)
+- `GENERATION_REQUEST_TIMEOUT_MS` (default `900000`)
 - `VIDEO_GENERATION_MAX_POLL_ATTEMPTS` (default `288`)
 - `VIDEO_GENERATION_REQUEST_TIMEOUT_MS` (default `1800000`)
 - `DASHSCOPE_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
@@ -336,6 +336,15 @@ PUBLIC_BASE_URL=https://image.example.com
 ```
 
 If your app resolves host to `localhost` or private network, Volcengine will fail to fetch the image.
+
+### `TRUST_PROXY`
+Enable only when deployed behind a reverse proxy:
+
+```env
+TRUST_PROXY=1
+```
+
+When enabled, `X-Forwarded-For`/`X-Forwarded-Host` headers are trusted (rate limiting, brute-force lockout, public upload URLs). Keep it off for direct deployments to prevent clients from spoofing these headers.
 
 ### Jimeng model-specific rules (implemented)
 

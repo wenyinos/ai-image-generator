@@ -7,7 +7,7 @@
  * @see https://github.com/wenyinos/ai-image-generator
  */
 
-const GENERATION_REQUEST_TIMEOUT_MS = 450000; // 与后端默认补偿窗口保持一致
+const GENERATION_REQUEST_TIMEOUT_MS = 900000; // 与后端 config.js 默认值保持一致
 const GENERATION_PROGRESS_POLL_INTERVAL_MS = 5000;
 const GENERATION_PROGRESS_MAX_POLL_ATTEMPTS = 90;
 const VIDEO_PROGRESS_MAX_POLL_ATTEMPTS = 0; // 0 表示不因前端轮询次数触发超时
@@ -637,11 +637,7 @@ function renderVideoModelOptions() {
 async function loadVideoModels() {
   const apiKey = videoApiKeyInput ? videoApiKeyInput.value.trim() : '';
   try {
-    const res = await fetch('/api/video-models', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey }),
-    });
+    const res = await fetch(`/api/video-models?apiKey=${encodeURIComponent(apiKey)}`);
     const data = await res.json();
     if (res.ok && data.models) {
       VIDEO_MODELS = data.models;
@@ -875,7 +871,10 @@ function updateVideoUiState() {
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
   const isRecamera = isImageVideo && selectedVideoModel === 'jimeng-v3.0-recamera';
-  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isXaiGrok);
+  // 即梦 720P i2v 模型不支持帧上传（后端会拒绝），隐藏入口避免误用
+  const isJimeng720I2V = videoProvider && videoProvider.value === 'volcengine' && isImageVideo
+    && ['jimeng-v3.0-i2v-first', 'jimeng-v3.0-i2v-tail'].includes(selectedVideoModel);
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isXaiGrok || isJimeng720I2V);
   if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V && !isXaiGrok);
   if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
@@ -1006,6 +1005,7 @@ if (videoModelSelect) {
     const provider = videoProvider ? videoProvider.value : 'dashscope';
     localStorage.setItem(getModelStorageKey('video', provider), videoModelSelect.value);
     if (modelHintVideo) modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
+    updateVideoUiState();
   });
 }
 

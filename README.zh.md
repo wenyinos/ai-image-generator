@@ -281,7 +281,7 @@ Provider 凭证：
 超时与轮询：
 - `GENERATION_MAX_POLL_ATTEMPTS`（默认 `90`）
 - `GENERATION_POLL_INTERVAL_MS`（默认 `5000`）
-- `GENERATION_REQUEST_TIMEOUT_MS`（默认 `450000`）
+- `GENERATION_REQUEST_TIMEOUT_MS`（默认 `900000`）
 - `VIDEO_GENERATION_MAX_POLL_ATTEMPTS`（默认 `288`）
 - `VIDEO_GENERATION_REQUEST_TIMEOUT_MS`（默认 `1800000`）
 - `DASHSCOPE_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
@@ -335,6 +335,15 @@ PUBLIC_BASE_URL=https://image.example.com
 ```
 
 若服务端识别到 `localhost` 或内网地址，火山无法回源拉图，会直接失败。
+
+### `TRUST_PROXY`
+仅在反向代理后部署时开启：
+
+```env
+TRUST_PROXY=1
+```
+
+开启后 `X-Forwarded-For`/`X-Forwarded-Host` 等代理头才会被采信（限流、防爆破锁定、上传文件公网 URL）。直连部署保持关闭，防止客户端伪造这些头绕过限流。
 
 ### 即梦模型差异规则（已实现）
 

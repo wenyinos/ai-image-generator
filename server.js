@@ -12,11 +12,14 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs/promises');
 
-const { PORT, DEBUG, PUBLIC_DIR, UPLOADS_DIR, UPLOAD_FILE_CLEANUP_DELAY_MS } = require('./lib/config');
+const { PORT, DEBUG, PUBLIC_DIR, UPLOADS_DIR, UPLOAD_FILE_CLEANUP_DELAY_MS, TRUST_PROXY, FRONTEND_ACCESS_CONTROL_ENABLED, FRONTEND_ACCESS_KEY } = require('./lib/config');
 const { createRateLimiter, isAccessAuthorized, setAccessCookie, clearAccessCookie, checkAccessAuthThrottle, markAccessAuthFailure, clearAccessAuthFailure } = require('./lib/middleware');
-const { FRONTEND_ACCESS_CONTROL_ENABLED, FRONTEND_ACCESS_KEY } = require('./lib/config');
+const crypto = require('crypto');
 
 const app = express();
+
+// 反向代理后部署时设置 TRUST_PROXY=1，让 Express 的 req.ip/req.protocol 读取代理头
+if (TRUST_PROXY) app.set('trust proxy', true);
 
 // CORS
 const corsOriginsEnv = process.env.CORS_ORIGIN;
@@ -33,7 +36,7 @@ app.use(cors({
   },
 }));
 
-// 安全头
+// 安全头（CSP 使用 per-request nonce，替代 script-src 'unsafe-inline'）
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -42,9 +45,10 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
+  res.locals.cspNonce = crypto.randomBytes(16).toString('hex');
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'nonce-${res.locals.cspNonce}'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self'",
@@ -115,7 +119,7 @@ body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh
 <small>&copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.</small>
 </footer>
 </div>
-<script>
+<script nonce="${res.locals.cspNonce}">
 (function(){
 const form=document.getElementById('unlockForm');
 const input=document.getElementById('accessKeyInput');
