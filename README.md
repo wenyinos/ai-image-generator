@@ -134,7 +134,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 |---|---|
 | `happyhorse-1.1-t2v` | Recommended |
 | `happyhorse-1.0-t2v` | |
-| `wan3.0-video` | Wan 3.0 all-in-one, text/image-to-video, reference/edit, up to 30s |
+| `wan3.0-video-prime` | Wan 3.0 video high-speed version, capabilities aligned with wan3.0-video, text/image/video-to-video, up to 30s |
 | `wan2.7-t2v` | Wan 2.7 text-to-video |
 | `wan2.6-t2v` | Wan 2.6 text-to-video |
 
@@ -146,7 +146,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `happyhorse-1.1-i2v` | Image-to-video |
 | `wan2.7-r2v` | Wan 2.7 reference-to-video |
 | `happyhorse-1.0-i2v` | |
-| `wan3.0-video` | Wan 3.0 all-in-one image-to-video (first frame) |
+| `wan3.0-video-prime` | Wan 3.0 video high-speed image-to-video (first frame) |
 | `wan2.7-i2v` | Wan 2.7 image-to-video |
 | `wan2.6-i2v-flash` | Fast |
 

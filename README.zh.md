@@ -134,7 +134,7 @@
 |---|---|
 | `happyhorse-1.1-t2v` | 推荐 |
 | `happyhorse-1.0-t2v` | |
-| `wan3.0-video` | 万相 3.0 all-in-one，文/图生视频，支持参考、编辑，最长 30 秒 |
+| `wan3.0-video-prime` | 万相 3.0 视频高速版，能力对齐 wan3.0-video，支持文/图/视频生视频，最长 30 秒 |
 | `wan2.7-t2v` | 万相 2.7 文生视频 |
 | `wan2.6-t2v` | 万相 2.6 文生视频 |
 
@@ -146,7 +146,7 @@
 | `happyhorse-1.1-i2v` | 图生视频 |
 | `wan2.7-r2v` | 万相 2.7 参考生视频 |
 | `happyhorse-1.0-i2v` | |
-| `wan3.0-video` | 万相 3.0 all-in-one 图生视频（首帧） |
+| `wan3.0-video-prime` | 万相 3.0 视频高速版图生视频（首帧） |
 | `wan2.7-i2v` | 万相 2.7 图生视频 |
 | `wan2.6-i2v-flash` | 极速 |
 

@@ -406,6 +406,7 @@ const VIDEO_MODEL_HINTS = {
   'wan2.6-i2v-flash': '万相2.6 图生视频快速版。',
   'wan2.7-videoedit': '万相2.7 视频编辑：上传视频+参考图，用文字指令编辑视频元素。',
   'wan3.0-video': '万相3.0 视频：all-in-one，支持文/图生视频、参考、编辑、复刻、驱动，最长30秒。',
+  'wan3.0-video-prime': '万相3.0 视频高速版：能力对齐 wan3.0-video，支持文/图生视频、视频生视频，最长30秒，端到端速度显著提升。',
   'jimeng-v3.0-t2v-1080p': '即梦视频3.0 文生视频1080P：高质量文生视频。',
   'jimeng-v3.0-t2v': '即梦视频3.0 文生视频720P。',
   'jimeng-v3.0-pro': '即梦视频3.0 Pro：文/图生视频，综合能力最强。',
@@ -426,6 +427,7 @@ let VIDEO_MODELS = {
   text2video: [
     { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
     { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
+    { value: 'wan3.0-video-prime', label: 'wan3.0-video-prime（文生视频）' },
     { value: 'wan3.0-video', label: 'wan3.0-video（文生视频）' },
     { value: 'wan2.7-t2v', label: 'wan2.7-t2v（文生视频2.7）' },
     { value: 'wan2.6-t2v', label: 'wan2.6-t2v（文生视频2.6）' },
@@ -433,6 +435,7 @@ let VIDEO_MODELS = {
   image2video: [
     { value: 'happyhorse-1.1-i2v', label: 'happyhorse-1.1-i2v（图生视频）' },
     { value: 'happyhorse-1.0-i2v', label: 'happyhorse-1.0-i2v' },
+    { value: 'wan3.0-video-prime', label: 'wan3.0-video-prime（图生视频）' },
     { value: 'wan3.0-video', label: 'wan3.0-video（图生视频）' },
     { value: 'wan2.7-i2v', label: 'wan2.7-i2v（图生视频2.7）' },
     { value: 'wan2.6-i2v-flash', label: 'wan2.6-i2v-flash' },
