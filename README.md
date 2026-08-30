@@ -18,11 +18,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Multi-model support with model-specific size constraints
 - Parameters: image count, size, seed, negative prompt, prompt extension, watermark
 - Sync/async protocol handling for DashScope models
+- DashScope qwen-image-3.0 / qwen-image-3.0-pro, wan2.7-image / wan2.7-image-pro text-to-image uses async task polling: shows "queued/generating + elapsed time"
 - DashScope model snapshot input: select a model + enter a snapshot date (e.g. `2026-06-22`) to auto-compose `model-snapshot` (e.g. `qwen-image-2.0-pro-2026-06-22`)
 
 ### Image-to-Image
 - Drag & drop upload with client-side compression (max 10MB upload)
-- Upload progress indicator
+- Upload progress indicator; after upload completes the UI shows "AI generating + elapsed time"
+- DashScope qwen-image-3.0 / qwen-image-3.0-pro, wan2.7-image / wan2.7-image-pro image-to-image uses async task polling: shows "queued/generating + elapsed time" instead of being stuck at "upload 100%"
 - Reference strength slider (`image_strength`)
 - PNG transparency preserved during compression
 - Click generated images to download individually

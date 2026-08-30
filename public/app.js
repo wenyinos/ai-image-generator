@@ -1855,6 +1855,21 @@ generateBtn.addEventListener('click', async () => {
   setLoading(true);
   downloadBtn.classList.add('d-none');
 
+  // 生成阶段等待提示：同步模型（响应不带 taskId）也能看到“已等待 X”；
+  // 一旦进入任务轮询（activeTaskContext 已设置），文案由轮询接管。
+  const t2iElapsedStartedAt = Date.now();
+  let t2iElapsedTimer = null;
+  const t2iStopTimer = () => {
+    if (t2iElapsedTimer) {
+      clearInterval(t2iElapsedTimer);
+      t2iElapsedTimer = null;
+    }
+  };
+  t2iElapsedTimer = setInterval(() => {
+    if (activeTaskContext) return;
+    setLoading(true, `正在生成图片（已等待 ${formatElapsed(Date.now() - t2iElapsedStartedAt)}）...`);
+  }, 1000);
+
   try {
     const res = await fetch('/api/generate-image', {
       method: 'POST',
@@ -1893,8 +1908,10 @@ generateBtn.addEventListener('click', async () => {
       onTaskUpdate: () => loadImageTaskRecords('text2image'),
     });
     await loadImageTaskRecords('text2image');
+    t2iStopTimer();
     setLoading(false);
   } catch (err) {
+    t2iStopTimer();
     setLoading(false);
     showAlert(`生成失败: ${err.message}`);
   }
@@ -2809,7 +2826,7 @@ generateBtnI2I.addEventListener('click', async () => {
   }
   formData.append('apiKey', apiKey);
   formData.append('model', model);
-  formData.append('progressMode', provider === 'volcengine' ? 'true' : 'false');
+  formData.append('progressMode', (provider === 'volcengine' || provider === 'dashscope') ? 'true' : 'false');
   if (prompt) formData.append('prompt', prompt);
   if (provider === 'volcengine' && volcengineImageUrls) {
     const urls = volcengineImageUrls.value
@@ -2881,16 +2898,37 @@ generateBtnI2I.addEventListener('click', async () => {
     // 使用 XMLHttpRequest 以便监听上传进度
     const xhr = new XMLHttpRequest();
 
+    // 上传完成后进入生成阶段：持续显示“已等待”时长，避免一直停在 100%
+    let uploadFinished = false;
+    let uploadFinishedAt = 0;
+    let generatingTimer = null;
+    const stopGeneratingTimer = () => {
+      if (generatingTimer) {
+        clearInterval(generatingTimer);
+        generatingTimer = null;
+      }
+    };
+
     // 上传进度
     xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable) {
-        const percent = Math.round((e.loaded / e.total) * 100);
+      if (!e.lengthComputable) return;
+      const percent = Math.round((e.loaded / e.total) * 100);
+      if (uploadFinished) return;
+      if (percent >= 100) {
+        uploadFinished = true;
+        uploadFinishedAt = Date.now();
+        setLoading(true, '上传完成，AI 正在生成（已等待 0 秒）...');
+        generatingTimer = setInterval(() => {
+          setLoading(true, `上传完成，AI 正在生成（已等待 ${formatElapsed(Date.now() - uploadFinishedAt)}）...`);
+        }, 1000);
+      } else {
         setLoading(true, `正在上传图片 (${percent}%)...`);
       }
     });
 
     // 请求完成
     xhr.addEventListener('load', async () => {
+      stopGeneratingTimer();
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText);
@@ -2928,12 +2966,14 @@ generateBtnI2I.addEventListener('click', async () => {
 
     // 请求错误
     xhr.addEventListener('error', () => {
+      stopGeneratingTimer();
       setLoading(false);
       showAlert('网络错误,请检查网络连接后重试');
     });
 
     // 请求超时
     xhr.addEventListener('timeout', () => {
+      stopGeneratingTimer();
       setLoading(false);
       showAlert('请求超时,图片可能较大,请稍后重试');
     });
@@ -2942,6 +2982,7 @@ generateBtnI2I.addEventListener('click', async () => {
     xhr.timeout = GENERATION_REQUEST_TIMEOUT_MS;
     xhr.send(formData);
   } catch (err) {
+    if (typeof stopGeneratingTimer === 'function') stopGeneratingTimer();
     setLoading(false);
     showAlert(`生成失败: ${err.message}`);
   }

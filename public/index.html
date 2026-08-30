@@ -187,7 +187,7 @@
                         </a>
                       </label>
                       <div class="input-group">
-                        <input type="password" class="form-control" id="apiKeyInput" placeholder="sk-...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="apiKeyInput" placeholder="sk-..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
                           <i class="bi bi-eye"></i>
                         </button>
@@ -210,14 +210,14 @@
                     <div id="volcengineCredGroup" class="d-none">
                       <label for="volcengineAkInput" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
                       <div class="input-group mb-2">
-                        <input type="password" class="form-control" id="volcengineAkInput" placeholder="AK...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineAkInput" placeholder="AK..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtn">
                           <i class="bi bi-eye"></i>
                         </button>
                       </div>
                       <label for="volcengineSkInput" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
                       <div class="input-group">
-                        <input type="password" class="form-control" id="volcengineSkInput" placeholder="SK...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineSkInput" placeholder="SK..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtn">
                           <i class="bi bi-eye"></i>
                         </button>
@@ -308,7 +308,7 @@
                         <span id="apiKeyLabelTextI2I">DashScope API Key（可选）</span>
                       </label>
                       <div class="input-group">
-                        <input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
                           <i class="bi bi-eye"></i>
                         </button>
@@ -327,14 +327,14 @@
                     <div id="volcengineCredGroupI2I" class="d-none">
                       <label for="volcengineAkInputI2I" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
                       <div class="input-group mb-2">
-                        <input type="password" class="form-control" id="volcengineAkInputI2I" placeholder="AK...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineAkInputI2I" placeholder="AK..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtnI2I">
                           <i class="bi bi-eye"></i>
                         </button>
                       </div>
                       <label for="volcengineSkInputI2I" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
                       <div class="input-group">
-                        <input type="password" class="form-control" id="volcengineSkInputI2I" placeholder="SK...">
+                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineSkInputI2I" placeholder="SK..."></form>
                         <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtnI2I">
                           <i class="bi bi-eye"></i>
                         </button>
@@ -468,7 +468,7 @@
                   <div class="col-md-3" id="videoApiKeyDashscopeGroup">
                     <label for="videoApiKeyInput" class="form-label fw-semibold" id="videoApiKeyLabel">DashScope API Key（可选）</label>
                     <div class="input-group">
-                      <input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-...">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-..."></form>
                       <button class="btn btn-outline-secondary" type="button" id="toggleVideoApiKeyBtn"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text" id="videoApiKeyHelpText">留空将使用服务端环境变量 <code id="videoApiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。</div>
@@ -482,12 +482,12 @@
                   <div class="col-md-3 d-none" id="videoApiKeyVolcengineGroup">
                     <label for="videoVolcengineAk" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
                     <div class="input-group mb-2">
-                      <input type="password" class="form-control" id="videoVolcengineAk" placeholder="AK...">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoVolcengineAk" placeholder="AK..."></form>
                       <button class="btn btn-outline-secondary" type="button" id="toggleVideoVolcengineAkBtn"><i class="bi bi-eye"></i></button>
                     </div>
                     <label for="videoVolcengineSk" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
                     <div class="input-group">
-                      <input type="password" class="form-control" id="videoVolcengineSk" placeholder="SK...">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoVolcengineSk" placeholder="SK..."></form>
                       <button class="btn btn-outline-secondary" type="button" id="toggleVideoVolcengineSkBtn"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。</div>
