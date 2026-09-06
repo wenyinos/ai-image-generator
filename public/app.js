@@ -20,18 +20,6 @@ const FOREGROUND_RECOVERY_MIN_INTERVAL_MS = 3000;
 // DOM 元素引用
 const providerSelect = document.getElementById('providerSelect');
 const providerSelectI2I = document.getElementById('providerSelectI2I');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const standardApiKeyGroup = document.getElementById('standardApiKeyGroup');
-const volcengineCredGroup = document.getElementById('volcengineCredGroup');
-const volcengineAkInput = document.getElementById('volcengineAkInput');
-const volcengineSkInput = document.getElementById('volcengineSkInput');
-const toggleVolcengineAkBtn = document.getElementById('toggleVolcengineAkBtn');
-const toggleVolcengineSkBtn = document.getElementById('toggleVolcengineSkBtn');
-const apiKeyLabelText = document.getElementById('apiKeyLabelText');
-const apiKeyHelpLink = document.getElementById('apiKeyHelpLink');
-const apiKeyConsoleLink = document.getElementById('apiKeyConsoleLink');
-const apiEnvName = document.getElementById('apiEnvName');
-const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
 const modelSelect = document.getElementById('modelSelect');
 const promptInput = document.getElementById('promptInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -81,15 +69,6 @@ const materialPodHeight = document.getElementById('materialPodHeight');
 const materialPodLoraWeight = document.getElementById('materialPodLoraWeight');
 
 // 图生图相关元素
-const apiKeyInputI2I = document.getElementById('apiKeyInputI2I');
-const standardApiKeyGroupI2I = document.getElementById('standardApiKeyGroupI2I');
-const volcengineCredGroupI2I = document.getElementById('volcengineCredGroupI2I');
-const volcengineAkInputI2I = document.getElementById('volcengineAkInputI2I');
-const volcengineSkInputI2I = document.getElementById('volcengineSkInputI2I');
-const toggleVolcengineAkBtnI2I = document.getElementById('toggleVolcengineAkBtnI2I');
-const toggleVolcengineSkBtnI2I = document.getElementById('toggleVolcengineSkBtnI2I');
-const apiKeyLabelTextI2I = document.getElementById('apiKeyLabelTextI2I');
-const apiEnvNameI2I = document.getElementById('apiEnvNameI2I');
 const modelHintI2I = document.getElementById('modelHintI2I');
 const modelHintT2I = document.getElementById('modelHintT2I');
 const modelHintVideo = document.getElementById('modelHintVideo');
@@ -99,7 +78,6 @@ const modelSnapshotGroupI2I = document.getElementById('modelSnapshotGroupI2I');
 const modelSnapshotI2I = document.getElementById('modelSnapshotI2I');
 const modelSnapshotGroupVideo = document.getElementById('modelSnapshotGroupVideo');
 const modelSnapshotVideo = document.getElementById('modelSnapshotVideo');
-const toggleApiKeyBtnI2I = document.getElementById('toggleApiKeyBtnI2I');
 const modelSelectI2I = document.getElementById('modelSelectI2I');
 const promptInputI2I = document.getElementById('promptInputI2I');
 const uploadArea = document.getElementById('uploadArea');
@@ -178,8 +156,6 @@ const recameraStrength = document.getElementById('recameraStrength');
 const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
-const videoApiKeyInput = document.getElementById('videoApiKeyInput');
-const toggleVideoApiKeyBtn = document.getElementById('toggleVideoApiKeyBtn');
 const videoModelSelect = document.getElementById('videoModelSelect');
 const refreshVideoModelsBtn = document.getElementById('refreshVideoModelsBtn');
 const videoPromptInput = document.getElementById('videoPromptInput');
@@ -217,58 +193,37 @@ let lastForegroundRecoveryAt = 0;
 let activeTaskContext = null;
 const GEMINI_MODEL_ID = 'gemini-3.1-flash-image-preview';
 
-// "记住我"复选框
-const rememberApiKey = document.getElementById('rememberApiKey');
-const rememberVolcengine = document.getElementById('rememberVolcengine');
-const rememberApiKeyI2I = document.getElementById('rememberApiKeyI2I');
-const rememberVolcengineI2I = document.getElementById('rememberVolcengineI2I');
-const rememberApiKeyVideo = document.getElementById('rememberApiKeyVideo');
-const rememberVolcengineVideo = document.getElementById('rememberVolcengineVideo');
+// 统一凭证存储键（文生图 / 图生图 / 视频生成共用）
+const SETTINGS_PROVIDERS = ['dashscope', 'volcengine', 'gemini', 'agnes', 'openai', 'xai'];
 
-const PROVIDER_CONFIG = {
-  dashscope: {
-    label: 'DashScope API Key（可选）',
-    envName: 'DASHSCOPE_API_KEY',
-    placeholder: 'sk-...',
-    helpLink: 'https://help.aliyun.com/zh/model-studio/get-api-key',
-    consoleLink: 'https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key',
-  },
-  gemini: {
-    label: 'Gemini API Key（可选）',
-    envName: 'GEMINI_API_KEY',
-    placeholder: 'AIza...',
-    helpLink: 'https://ai.google.dev/gemini-api/docs/api-key',
-    consoleLink: 'https://aistudio.google.com/apikey',
-  },
-  volcengine: {
-    label: 'Volcengine AK:SK（可选）',
-    envName: 'VOLCENGINE_ACCESS_KEY / VOLCENGINE_SECRET_KEY',
-    placeholder: 'AK:SK',
-    helpLink: 'https://www.volcengine.com/docs/82379/1666945',
-    consoleLink: 'https://console.volcengine.com/ark',
-  },
-  agnes: {
-    label: 'Agnes API Key（可选）',
-    envName: 'AGNES_API_KEY',
-    placeholder: 'agnes-...',
-    helpLink: 'https://agnes-ai.com/docs',
-    consoleLink: 'https://agnes-ai.com',
-  },
-  openai: {
-    label: 'OpenAI API Key（可选）',
-    envName: 'OPENAI_API_KEY',
-    placeholder: 'sk-...',
-    helpLink: 'https://platform.openai.com/docs/api-reference',
-    consoleLink: 'https://platform.openai.com/api-keys',
-  },
-  xai: {
-    label: 'xAI API Key（可选）',
-    envName: 'XAI_API_KEY',
-    placeholder: 'xai-...',
-    helpLink: 'https://docs.x.ai/',
-    consoleLink: 'https://console.x.ai/',
-  },
-};
+// 旧版按模式拆分的存储键一次性迁移到统一键
+function migrateLegacyApiKeys() {
+  SETTINGS_PROVIDERS.forEach((p) => {
+    if (!localStorage.getItem(`apiKey_${p}`)) {
+      const legacy = loadCredential(`apiKeyI2I_${p}`)
+        || (p === 'dashscope' ? loadCredential('apiKey_video_dashscope') : '');
+      if (legacy) localStorage.setItem(`apiKey_${p}`, legacy);
+    }
+  });
+  ['volcengineAk', 'volcengineSk'].forEach((k) => {
+    if (!localStorage.getItem(k)) {
+      const legacy = loadCredential(`${k}I2I`) || loadCredential(`${k}Video`);
+      if (legacy) localStorage.setItem(k, legacy);
+    }
+  });
+}
+migrateLegacyApiKeys();
+
+// 读取指定提供商的 API Key（火山引擎为 AK:SK 拼接）；留空则走服务端环境变量回退
+function getStoredApiKey(provider) {
+  if (provider === 'volcengine') {
+    const ak = loadCredential('volcengineAk');
+    const sk = loadCredential('volcengineSk');
+    return ak && sk ? `${ak}:${sk}` : '';
+  }
+  return loadCredential(`apiKey_${provider}`);
+}
+
 
 const MODELS_T2I = {
   dashscope: [
@@ -524,46 +479,9 @@ function applyModelSnapshot(model, provider, inputEl) {
   return model;
 }
 
-function getApiKeyStorageKey(mode, provider) {
-  if (mode === 'video') return 'apiKey_video_dashscope';
-  return mode === 'image2image' ? `apiKeyI2I_${provider}` : `apiKey_${provider}`;
-}
-
-function getVolcengineAkStorageKey(mode) {
-  if (mode === 'image2image') return 'volcengineAkI2I';
-  if (mode === 'video') return 'volcengineAkVideo';
-  return 'volcengineAk';
-}
-
-function getVolcengineSkStorageKey(mode) {
-  if (mode === 'image2image') return 'volcengineSkI2I';
-  if (mode === 'video') return 'volcengineSkVideo';
-  return 'volcengineSk';
-}
-
 function getModelStorageKey(mode, provider) {
   if (mode === 'video') return `model_video_${provider || 'dashscope'}`;
   return mode === 'image2image' ? `modelI2I_${provider}` : `model_${provider}`;
-}
-
-/**
- * 根据"记住我"状态获取存储对象
- * @param {boolean} remember - 是否勾选"记住我"
- * @returns {Storage} localStorage 或 sessionStorage
- */
-function getStorage(remember) {
-  return remember ? localStorage : sessionStorage;
-}
-
-/**
- * 保存凭证到存储
- * @param {string} key - 存储键
- * @param {string} value - 存储值
- * @param {boolean} remember - 是否持久保存
- */
-function saveCredential(key, value, remember) {
-  const storage = getStorage(remember);
-  storage.setItem(key, value);
 }
 
 /**
@@ -635,7 +553,7 @@ function renderVideoModelOptions() {
 }
 
 async function loadVideoModels() {
-  const apiKey = videoApiKeyInput ? videoApiKeyInput.value.trim() : '';
+  const apiKey = getStoredApiKey('dashscope');
   try {
     const res = await fetch(`/api/video-models?apiKey=${encodeURIComponent(apiKey)}`);
     const data = await res.json();
@@ -648,47 +566,10 @@ async function loadVideoModels() {
   }
 }
 
-function setTextApiKeyMeta(provider) {
-  if (provider === 'volcengine') {
-    standardApiKeyGroup.classList.add('d-none');
-    volcengineCredGroup.classList.remove('d-none');
-    // 读取凭证（优先从 localStorage）
-    volcengineAkInput.value = loadCredential(getVolcengineAkStorageKey('text2image'));
-    volcengineSkInput.value = loadCredential(getVolcengineSkStorageKey('text2image'));
-    return;
-  }
-
-  standardApiKeyGroup.classList.remove('d-none');
-  volcengineCredGroup.classList.add('d-none');
-
-  const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
-  apiKeyLabelText.textContent = cfg.label;
-  apiEnvName.textContent = cfg.envName;
-  apiKeyInput.placeholder = cfg.placeholder;
-  apiKeyHelpLink.href = cfg.helpLink;
-  apiKeyConsoleLink.href = cfg.consoleLink;
-
-  // 读取 API Key（优先从 localStorage）
-  apiKeyInput.value = loadCredential(getApiKeyStorageKey('text2image', provider));
-}
-
 function setImageApiKeyMeta(provider) {
   if (provider === 'volcengine') {
-    standardApiKeyGroupI2I.classList.add('d-none');
-    volcengineCredGroupI2I.classList.remove('d-none');
-    // 读取凭证（优先从 localStorage）
-    volcengineAkInputI2I.value = loadCredential(getVolcengineAkStorageKey('image2image'));
-    volcengineSkInputI2I.value = loadCredential(getVolcengineSkStorageKey('image2image'));
     modelHintI2I.textContent = '即梦AI 4.0/4.6 支持参考图与多图生成';
-  } else {
-    standardApiKeyGroupI2I.classList.remove('d-none');
-    volcengineCredGroupI2I.classList.add('d-none');
   }
-
-  const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
-  apiKeyLabelTextI2I.textContent = cfg.label;
-  apiEnvNameI2I.textContent = cfg.envName;
-  apiKeyInputI2I.placeholder = cfg.placeholder;
 
   if (provider === 'gemini') {
     modelHintI2I.textContent = 'Gemini 图生图支持参考图+文本联合生成';
@@ -705,13 +586,12 @@ function setImageApiKeyMeta(provider) {
     } else {
       modelHintI2I.textContent = '即梦图生图：支持本地上传参考图，也支持 image_urls（HTTP/HTTPS）输入。';
     }
-  } else {
-    modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
   }
 
-  // 读取 API Key（优先从 localStorage）
-  apiKeyInputI2I.value = loadCredential(getApiKeyStorageKey('image2image', provider));
-
+  // 图生图模式：上传参考图并输入提示词即可生成（非火山/Gemini 时）
+  if (provider !== 'gemini' && provider !== 'volcengine') {
+    modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
+  }
   if (provider === 'volcengine') {
     volcengineImageUrlsGroup.classList.remove('d-none');
     if (volcengineLocalUploadHint) volcengineLocalUploadHint.classList.remove('d-none');
@@ -780,7 +660,6 @@ function updateTextProviderState() {
     localStorage.setItem(modelStorageKey, GEMINI_MODEL_ID);
   }
   renderModelOptions(modelSelect, MODELS_T2I[provider], savedModel);
-  setTextApiKeyMeta(provider);
   updateSizeOptions();
   localStorage.setItem('provider', provider);
   if (modelSnapshotGroupT2I) modelSnapshotGroupT2I.classList.toggle('d-none', provider !== 'dashscope');
@@ -939,7 +818,6 @@ function updateVideoUiState() {
 // 从 localStorage 恢复用户设置
 providerSelect.value = localStorage.getItem('provider') || 'dashscope';
 providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
-if (videoApiKeyInput) videoApiKeyInput.value = loadCredential(getApiKeyStorageKey('video', 'dashscope'));
 if (videoMode && localStorage.getItem('videoMode')) videoMode.value = localStorage.getItem('videoMode');
 if (videoProvider && localStorage.getItem('videoProvider')) videoProvider.value = localStorage.getItem('videoProvider');
 
@@ -955,18 +833,6 @@ if (localStorage.getItem('promptExtend') !== null) {
 if (localStorage.getItem('watermark') !== null) {
   watermarkToggle.checked = localStorage.getItem('watermark') === 'true';
 }
-
-// 视频提供商切换 DOM 元素（必须在 updateVideoUiState 调用前声明）
-const videoApiKeyDashscopeGroup = document.getElementById('videoApiKeyDashscopeGroup');
-const videoApiKeyLabel = document.getElementById('videoApiKeyLabel');
-const videoApiEnvName = document.getElementById('videoApiEnvName');
-const videoApiKeyVolcengineGroup = document.getElementById('videoApiKeyVolcengineGroup');
-const videoVolcengineAk = document.getElementById('videoVolcengineAk');
-const toggleVideoVolcengineAkBtn = document.getElementById('toggleVideoVolcengineAkBtn');
-const videoVolcengineSk = document.getElementById('videoVolcengineSk');
-const toggleVideoVolcengineSkBtn = document.getElementById('toggleVideoVolcengineSkBtn');
-if (videoVolcengineAk) videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
-if (videoVolcengineSk) videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
 
 updateTextProviderState();
 updateImageProviderState();
@@ -1015,21 +881,7 @@ function updateVideoProviderState() {
   const isMotion = videoMode && videoMode.value === 'motion';
   const isImageVideo = videoMode && videoMode.value === 'image2video';
   if (modelSnapshotGroupVideo) modelSnapshotGroupVideo.classList.toggle('d-none', provider !== 'dashscope');
-  if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.toggle('d-none', isVolcengine);
-  if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.toggle('d-none', !isVolcengine);
   if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
-  // 更新 API Key 标签和占位符
-  if (!isVolcengine) {
-    const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.dashscope;
-    if (videoApiKeyLabel) videoApiKeyLabel.textContent = cfg.label;
-    if (videoApiEnvName) videoApiEnvName.textContent = cfg.envName;
-    if (videoApiKeyInput) videoApiKeyInput.placeholder = cfg.placeholder;
-  }
-  // 切换到火山引擎时加载已保存的 AK/SK
-  if (isVolcengine && videoVolcengineAk && videoVolcengineSk) {
-    videoVolcengineAk.value = loadCredential(getVolcengineAkStorageKey('video'));
-    videoVolcengineSk.value = loadCredential(getVolcengineSkStorageKey('video'));
-  }
 
   // 渲染模型列表
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
@@ -1037,8 +889,6 @@ function updateVideoProviderState() {
     // 动作模仿模式：强制使用即梦AI
     renderModelOptions(videoModelSelect, [{ group: '即梦动作模仿', options: JIMENG_MOTION_MODELS }], savedModel);
     if (videoProvider) videoProvider.value = 'volcengine';
-    if (videoApiKeyDashscopeGroup) videoApiKeyDashscopeGroup.classList.add('d-none');
-    if (videoApiKeyVolcengineGroup) videoApiKeyVolcengineGroup.classList.remove('d-none');
   } else if (provider === 'agnes') {
     // Agnes 视频模型
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
@@ -1088,12 +938,6 @@ if (videoProvider) {
     }
   });
 }
-if (toggleVideoVolcengineAkBtn && videoVolcengineAk) {
-  bindPasswordToggle(toggleVideoVolcengineAkBtn, videoVolcengineAk);
-}
-if (toggleVideoVolcengineSkBtn && videoVolcengineSk) {
-  bindPasswordToggle(toggleVideoVolcengineSkBtn, videoVolcengineSk);
-}
 
 // 更新视频提供商状态
 updateVideoProviderState();
@@ -1133,9 +977,7 @@ async function fetchTaskById(inputEl, typeEl, providerEl) {
   const resultType = typeEl ? typeEl.value : 'image';
   const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
   const isVolcengine = provider === 'volcengine';
-  const apiKey = isVolcengine
-    ? ((videoVolcengineAk?.value?.trim() || '') + ':' + (videoVolcengineSk?.value?.trim() || ''))
-    : (videoApiKeyInput?.value?.trim() || '');
+  const apiKey = getStoredApiKey(provider);
   setLoading(true, '正在查询任务状态...');
   try {
     const res = await fetch(endpoint, {
@@ -1209,20 +1051,6 @@ watermarkToggle.addEventListener('change', () => {
 });
 
 // API Key 显示/隐藏切换
-toggleApiKeyBtn.addEventListener('click', () => {
-  const isPassword = apiKeyInput.type === 'password';
-  apiKeyInput.type = isPassword ? 'text' : 'password';
-  toggleApiKeyBtn.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
-});
-
-if (toggleApiKeyBtnI2I) {
-  toggleApiKeyBtnI2I.addEventListener('click', () => {
-    const isPassword = apiKeyInputI2I.type === 'password';
-    apiKeyInputI2I.type = isPassword ? 'text' : 'password';
-    toggleApiKeyBtnI2I.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
-  });
-}
-
 function bindPasswordToggle(buttonEl, inputEl) {
   if (!buttonEl || !inputEl) return;
   buttonEl.addEventListener('click', () => {
@@ -1232,11 +1060,303 @@ function bindPasswordToggle(buttonEl, inputEl) {
   });
 }
 
-bindPasswordToggle(toggleVolcengineAkBtn, volcengineAkInput);
-bindPasswordToggle(toggleVolcengineSkBtn, volcengineSkInput);
-bindPasswordToggle(toggleVolcengineAkBtnI2I, volcengineAkInputI2I);
-bindPasswordToggle(toggleVolcengineSkBtnI2I, volcengineSkInputI2I);
-bindPasswordToggle(toggleVideoApiKeyBtn, videoApiKeyInput);
+// 设置页：按提供商统一保存 API Key（文生图 / 图生图 / 视频生成共用）
+document.querySelectorAll('.settings-api-key-input').forEach((el) => {
+  const provider = el.dataset.provider;
+  el.value = loadCredential(`apiKey_${provider}`);
+  el.addEventListener('input', () => {
+    localStorage.setItem(`apiKey_${provider}`, el.value.trim());
+  });
+});
+document.querySelectorAll('.settings-cred-input').forEach((el) => {
+  el.value = loadCredential(el.dataset.cred);
+  el.addEventListener('input', () => {
+    localStorage.setItem(el.dataset.cred, el.value.trim());
+  });
+});
+document.querySelectorAll('.settings-toggle-visibility').forEach((btn) => {
+  bindPasswordToggle(btn, document.getElementById(btn.dataset.target));
+});
+
+// 设置/历史页只显示各自内容：隐藏/恢复三个生成模式共享的参数与结果区
+const settingsTabEl = document.getElementById('settings-tab');
+if (settingsTabEl) {
+  const enterNonGenMode = () => document.body.classList.add('settings-active');
+  settingsTabEl.addEventListener('shown.bs.tab', enterNonGenMode);
+  const historyTabEl = document.getElementById('history-tab');
+  if (historyTabEl) {
+    historyTabEl.addEventListener('shown.bs.tab', () => { enterNonGenMode(); loadHistoryRecords(true); });
+  }
+  ['text2image-tab', 'image2image-tab', 'video-tab'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('shown.bs.tab', () => document.body.classList.remove('settings-active'));
+  });
+}
+
+// ---------- 生成内容历史与存储备份 ----------
+
+// 当前生成上下文：供历史上报补充模型/提供商信息
+let currentGenContext = { provider: '', model: '' };
+
+function reportHistory(type, url) {
+  if (!url || (!url.startsWith('http') && !url.startsWith('data:'))) return;
+  fetch('/api/history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, url, provider: currentGenContext.provider, model: currentGenContext.model }),
+  }).then(async (res) => {
+    if (!res.ok) console.warn('历史记录上报失败：', (await res.json().catch(() => ({}))).error || res.status);
+  }).catch((e) => console.warn('历史记录上报失败：', e.message));
+}
+
+// ---------- 存储备份配置（设置页弹窗） ----------
+
+const storageConfigBtn = document.getElementById('storageConfigBtn');
+const storageStatusText = document.getElementById('storageStatusText');
+const storageConfigModalEl = document.getElementById('storageConfigModal');
+const storagePresetSelect = document.getElementById('storagePresetSelect');
+const storageEndpointInput = document.getElementById('storageEndpointInput');
+const storageRegionInput = document.getElementById('storageRegionInput');
+const storageBucketInput = document.getElementById('storageBucketInput');
+const storageAkInput = document.getElementById('storageAkInput');
+const storageSkInput = document.getElementById('storageSkInput');
+const storagePathStyleCheck = document.getElementById('storagePathStyleCheck');
+const storageSaveBtn = document.getElementById('storageSaveBtn');
+const storageDisableBtn = document.getElementById('storageDisableBtn');
+const storageConfigAlert = document.getElementById('storageConfigAlert');
+let storagePresets = {};
+let storageModalInstance = null;
+
+function showStorageAlert(message, type = 'danger') {
+  storageConfigAlert.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${escapeHtml(message)}</div>`;
+}
+
+function applyStoragePresetMeta(preset, cfg = {}) {
+  const def = storagePresets[preset] || {};
+  if (!cfg.endpoint) storageEndpointInput.placeholder = def.endpointPlaceholder || '';
+  if (!cfg.region) storageRegionInput.value = def.region || '';
+  storagePathStyleCheck.checked = cfg.pathStyle !== undefined ? !!cfg.pathStyle : !!def.pathStyle;
+}
+
+async function refreshStorageStatus() {
+  try {
+    const res = await fetch('/api/storage-config/view');
+    const data = await res.json();
+    storagePresets = data.presets || {};
+    applyStoragePresetMeta(storagePresetSelect.value, data.config || {});
+    const cfg = data.config;
+    if (cfg.configured) {
+      const state = cfg.enabled
+        ? `已启用：${cfg.presetLabel} · 桶 ${cfg.bucket}`
+        : `已配置但已停用：${cfg.presetLabel} · 桶 ${cfg.bucket}`;
+      storageStatusText.textContent = state;
+      storageDisableBtn.classList.toggle('d-none', !cfg.enabled);
+    } else {
+      storageStatusText.textContent = '未配置 — 生成内容不会备份，可对接 Cloudflare R2 / AWS S3 / OSS / COS / MinIO。';
+      storageDisableBtn.classList.add('d-none');
+    }
+  } catch (e) {
+    console.warn('读取存储配置失败：', e.message);
+  }
+}
+
+if (storageConfigBtn) {
+  storageConfigBtn.addEventListener('click', async () => {
+    storageConfigAlert.innerHTML = '';
+    await refreshStorageStatus();
+    try {
+      const res = await fetch('/api/storage-config/view');
+      const { config } = await res.json();
+      if (config.configured) {
+        storagePresetSelect.value = config.preset || 'custom';
+        storageEndpointInput.value = config.endpoint || '';
+        storageEndpointInput.placeholder = '';
+        storageRegionInput.value = config.region || '';
+        storageBucketInput.value = config.bucket || '';
+        storagePathStyleCheck.checked = !!config.pathStyle;
+      }
+    } catch { /* 打开弹窗时回填失败不阻塞 */ }
+    if (!storageModalInstance) storageModalInstance = new bootstrap.Modal(storageConfigModalEl);
+    storageModalInstance.show();
+  });
+}
+
+if (storagePresetSelect) {
+  storagePresetSelect.addEventListener('change', () => {
+    storageEndpointInput.value = '';
+    applyStoragePresetMeta(storagePresetSelect.value);
+  });
+}
+
+if (storageSaveBtn) {
+  storageSaveBtn.addEventListener('click', async () => {
+    const payload = {
+      preset: storagePresetSelect.value,
+      endpoint: storageEndpointInput.value.trim(),
+      region: storageRegionInput.value.trim(),
+      bucket: storageBucketInput.value.trim(),
+      accessKeyId: storageAkInput.value.trim(),
+      secretAccessKey: storageSkInput.value.trim(),
+      pathStyle: storagePathStyleCheck.checked,
+    };
+    if (!payload.endpoint || !payload.bucket || !payload.accessKeyId || !payload.secretAccessKey) {
+      showStorageAlert('Endpoint、Bucket、Access Key ID、Secret Access Key 均为必填');
+      return;
+    }
+    storageSaveBtn.disabled = true;
+    storageSaveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>正在验证连接...';
+    try {
+      const res = await fetch('/api/storage-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '保存失败');
+      showStorageAlert('连接验证通过，备份已启用', 'success');
+      storageSkInput.value = '';
+      await refreshStorageStatus();
+      setTimeout(() => storageModalInstance && storageModalInstance.hide(), 800);
+    } catch (e) {
+      showStorageAlert(`验证失败：${e.message}`);
+    } finally {
+      storageSaveBtn.disabled = false;
+      storageSaveBtn.innerHTML = '<i class="bi bi-plug me-1"></i>测试并保存';
+    }
+  });
+}
+
+if (storageDisableBtn) {
+  storageDisableBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/storage-config/disable', { method: 'POST' });
+      if (!res.ok) throw new Error('停用失败');
+      showStorageAlert('备份已停用', 'warning');
+      await refreshStorageStatus();
+    } catch (e) {
+      showStorageAlert(e.message);
+    }
+  });
+}
+
+// ---------- 历史页 ----------
+
+const historyListEl = document.getElementById('historyList');
+const historyEmptyEl = document.getElementById('historyEmpty');
+const historyLoadMoreBtn = document.getElementById('historyLoadMoreBtn');
+const historyFilterGroup = document.getElementById('historyFilterGroup');
+let historyFilter = '';
+let historyOffset = 0;
+
+const HISTORY_PAGE_SIZE = 50;
+
+function formatHistoryTime(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function formatHistorySize(bytes) {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderHistoryBadge(record) {
+  switch (record.backupStatus) {
+    case 'success': {
+      const size = formatHistorySize(record.sizeBytes);
+      return `<span class="badge bg-success"><i class="bi bi-cloud-check"></i> 已备份${size ? ` ${size}` : ''}</span>`;
+    }
+    case 'pending':
+      return '<span class="badge bg-warning"><i class="bi bi-hourglass-split"></i> 备份中</span>';
+    case 'failed':
+      return `<span class="badge bg-danger" title="${escapeHtml(record.backupError)}"><i class="bi bi-cloud-slash"></i> 备份失败</span>`;
+    default:
+      return '<span class="badge bg-secondary">未启用备份</span>';
+  }
+}
+
+function renderHistoryRecords(records, append) {
+  if (!append) historyListEl.innerHTML = '';
+  records.forEach((record) => {
+    const isImage = record.type === 'image';
+    const item = document.createElement('div');
+    item.className = 'border rounded p-2 mb-2 d-flex align-items-center gap-2 flex-wrap';
+    item.innerHTML = `
+      <span class="badge ${isImage ? 'bg-primary' : 'bg-info'}">
+        <i class="bi ${isImage ? 'bi-image' : 'bi-camera-video'}"></i> ${isImage ? '图片' : '视频'}
+      </span>
+      <span class="text-muted small">${escapeHtml(formatHistoryTime(record.createdAt))}</span>
+      <span class="small">${escapeHtml([record.provider, record.model].filter(Boolean).join(' · ') || '未知模型')}</span>
+      ${renderHistoryBadge(record)}
+      <div class="ms-auto d-flex gap-2">
+        ${record.sourceUrl && record.sourceUrl.startsWith('http') ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(record.sourceUrl)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> 原始链接</a>` : ''}
+        ${record.backupStatus === 'success' ? `<a class="btn btn-sm btn-outline-primary" href="/api/history/${encodeURIComponent(record.id)}/download"><i class="bi bi-download"></i> 下载${isImage ? '图片' : '视频'}</a>` : ''}
+        <button class="btn btn-sm btn-outline-danger history-delete-btn" type="button" data-id="${escapeHtml(record.id)}" data-backedup="${record.backupStatus === 'success' ? '1' : ''}"><i class="bi bi-trash"></i> 删除</button>
+      </div>`;
+    historyListEl.appendChild(item);
+  });
+  historyEmptyEl.classList.toggle('d-none', historyListEl.children.length > 0);
+  historyLoadMoreBtn.classList.toggle('d-none', records.length < HISTORY_PAGE_SIZE);
+}
+
+async function loadHistoryRecords(reset = false) {
+  if (reset) historyOffset = 0;
+  try {
+    const params = new URLSearchParams({ limit: String(HISTORY_PAGE_SIZE), offset: String(historyOffset) });
+    if (historyFilter) params.set('type', historyFilter);
+    const res = await fetch(`/api/history?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '加载失败');
+    renderHistoryRecords(data.records || [], !reset);
+    historyOffset += (data.records || []).length;
+  } catch (e) {
+    showAlert(`加载历史记录失败：${e.message}`);
+  }
+}
+
+if (historyFilterGroup) {
+  historyFilterGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-filter]');
+    if (!btn) return;
+    historyFilterGroup.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    historyFilter = btn.dataset.filter;
+    loadHistoryRecords(true);
+  });
+}
+
+if (historyLoadMoreBtn) {
+  historyLoadMoreBtn.addEventListener('click', () => loadHistoryRecords(false));
+}
+
+// 删除历史记录：已备份的会同时删除存储桶文件
+if (historyListEl) {
+  historyListEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.history-delete-btn');
+    if (!btn || btn.disabled) return;
+    const id = btn.dataset.id;
+    const willAlsoDeleteFile = btn.dataset.backedup === '1';
+    const confirmed = window.confirm(willAlsoDeleteFile
+      ? '确定删除这条记录吗？存储桶中已备份的文件将一并删除，且不可恢复。'
+      : '确定删除这条记录吗？');
+    if (!confirmed) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    try {
+      const res = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '删除失败');
+      loadHistoryRecords(true);
+    } catch (err) {
+      showAlert(`删除失败：${err.message}`);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-trash"></i> 删除';
+    }
+  });
+}
+
+refreshStorageStatus();
 
 /**
  * 转义 HTML 特殊字符，防止 XSS
@@ -1579,6 +1699,7 @@ async function pollGenerationTask({ endpoint, payload, resultType, title, maxAtt
 }
 
 async function handleGenerationResult(data, { apiKey, model, resultType, title, mode, onTaskUpdate }) {
+  currentGenContext.model = data.model || model || currentGenContext.model;
   if (data.taskId) {
     const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status'
       : data.provider === 'agnes' ? '/api/agnes-task-status'
@@ -1693,6 +1814,8 @@ function validateVolcengineImageUrls(urls, model) {
  * @param {string[]} imageUrls - 图片 URL 数组
  */
 function displayImages(imageUrls) {
+  // 上报历史（后端按配置决定是否转存到存储桶）
+  (imageUrls || []).forEach((url) => reportHistory('image', url));
   // 隐藏 placeholder 和加载状态，显示图片容器
   const imageContainer = document.getElementById('imageContainer');
   imageContainer.classList.add('has-images');
@@ -1771,6 +1894,8 @@ function setupDownloadLink(url, filename) {
 }
 
 function displayVideos(videoUrls) {
+  // 上报历史（后端按配置决定是否转存到存储桶）
+  (videoUrls || []).forEach((url) => reportHistory('video', url));
   const imageContainer = document.getElementById('imageContainer');
   imageContainer.classList.add('has-images');
   placeholder.classList.add('d-none');
@@ -1794,12 +1919,9 @@ function displayVideos(videoUrls) {
 // 生成按钮点击事件
 generateBtn.addEventListener('click', async () => {
   const provider = providerSelect.value;
-  const volcAk = (volcengineAkInput.value || '').trim();
-  const volcSk = (volcengineSkInput.value || '').trim();
-  const apiKey = provider === 'volcengine'
-    ? (volcAk && volcSk ? `${volcAk}:${volcSk}` : '')
-    : apiKeyInput.value.trim();
+  const apiKey = getStoredApiKey(provider);
   const model = applyModelSnapshot(modelSelect.value, provider, modelSnapshotT2I);
+  currentGenContext = { provider, model };
   const prompt = promptInput.value.trim();
   const n = parseInt(imageCount.value, 10);
   const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;
@@ -1819,8 +1941,8 @@ generateBtn.addEventListener('click', async () => {
     return;
   }
 
-  if (provider === 'volcengine' && ((volcAk && !volcSk) || (!volcAk && volcSk))) {
-    showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
+  if (provider === 'volcengine' && !!loadCredential('volcengineAk') !== !!loadCredential('volcengineSk')) {
+    showAlert('Volcengine AK/SK 需同时填写，或同时留空使用服务端环境变量（请在"设置"页修改）。');
     return;
   }
 
@@ -1839,15 +1961,6 @@ generateBtn.addEventListener('click', async () => {
 
   if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
 
-  // 根据"记住我"状态存储凭证
-  if (provider === 'volcengine') {
-    const rememberVolc = rememberVolcengine?.checked ?? true;
-    saveCredential(getVolcengineAkStorageKey('text2image'), (volcengineAkInput.value || '').trim(), rememberVolc);
-    saveCredential(getVolcengineSkStorageKey('text2image'), (volcengineSkInput.value || '').trim(), rememberVolc);
-  } else if (apiKey) {
-    const remember = rememberApiKey?.checked ?? true;
-    saveCredential(getApiKeyStorageKey('text2image', provider), apiKey, remember);
-  }
   localStorage.setItem(getModelStorageKey('text2image', provider), model);
   if (genericSize) localStorage.setItem('imageSize', imageSize.value);
 
@@ -1921,15 +2034,9 @@ if (generateBtnVideo) {
   generateBtnVideo.addEventListener('click', async () => {
     const provider = videoProvider ? videoProvider.value : 'dashscope';
     const mode = videoMode.value;
-    let apiKey;
-    if (provider === 'volcengine') {
-      const ak = videoVolcengineAk ? videoVolcengineAk.value.trim() : '';
-      const sk = videoVolcengineSk ? videoVolcengineSk.value.trim() : '';
-      apiKey = ak && sk ? `${ak}:${sk}` : '';
-    } else {
-      apiKey = videoApiKeyInput.value.trim();
-    }
+    const apiKey = getStoredApiKey(provider);
     const model = applyModelSnapshot(videoModelSelect.value, provider, modelSnapshotVideo);
+    currentGenContext = { provider, model };
     const prompt = videoPromptInput.value.trim();
     const firstFrame = videoFirstFrame.files[0];
     const lastFrame = videoLastFrame.files[0];
@@ -1944,8 +2051,6 @@ if (generateBtnVideo) {
       if (!videoFile) { showAlert('请上传待编辑的视频'); return; }
       if (!prompt) { showAlert('请输入视频编辑指令'); return; }
       if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
-      const rememberDash = rememberApiKeyVideo?.checked ?? true;
-      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, rememberDash);
       localStorage.setItem(getModelStorageKey('video', provider), model);
       alertContainer.innerHTML = '';
       setLoading(true, '正在提交视频编辑任务...');
@@ -2000,9 +2105,6 @@ if (generateBtnVideo) {
       if (!srcLang) { showAlert('请选择原始语种'); return; }
       if (!targetLang) { showAlert('请选择目标语种'); return; }
       if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
-      const rememberVolcTrans = rememberVolcengineVideo?.checked ?? true;
-      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolcTrans);
-      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolcTrans);
       localStorage.setItem(getModelStorageKey('video', provider), model);
       alertContainer.innerHTML = '';
       setLoading(true, '正在提交视频翻译任务...');
@@ -2045,9 +2147,6 @@ if (generateBtnVideo) {
       if (!motionImageFile) { showAlert('请上传人物图片'); return; }
       if (!motionVideoFile) { showAlert('请上传模板视频'); return; }
       if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
-      const rememberVolcMotion = rememberVolcengineVideo?.checked ?? true;
-      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolcMotion);
-      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolcMotion);
       localStorage.setItem(getModelStorageKey('video', provider), model);
       alertContainer.innerHTML = '';
       setLoading(true, '正在生成动作模仿视频，请耐心等待...');
@@ -2105,15 +2204,6 @@ if (generateBtnVideo) {
 
     if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
 
-    // 保存凭证
-    if (provider === 'volcengine') {
-      const rememberVolc = rememberVolcengineVideo?.checked ?? true;
-      if (videoVolcengineAk && videoVolcengineAk.value.trim()) saveCredential(getVolcengineAkStorageKey('video'), videoVolcengineAk.value.trim(), rememberVolc);
-      if (videoVolcengineSk && videoVolcengineSk.value.trim()) saveCredential(getVolcengineSkStorageKey('video'), videoVolcengineSk.value.trim(), rememberVolc);
-    } else {
-      const remember = rememberApiKeyVideo?.checked ?? true;
-      if (apiKey) saveCredential(getApiKeyStorageKey('video', 'dashscope'), apiKey, remember);
-    }
     localStorage.setItem(getModelStorageKey('video', provider), model);
     alertContainer.innerHTML = '';
     setLoading(true, '正在生成视频，请耐心等待...');
@@ -2535,12 +2625,9 @@ if (removeMaskImageBtn) {
 // 图生图生成按钮点击
 generateBtnI2I.addEventListener('click', async () => {
   const provider = providerSelectI2I.value;
-  const volcAkI2I = (volcengineAkInputI2I.value || '').trim();
-  const volcSkI2I = (volcengineSkInputI2I.value || '').trim();
-  const apiKey = provider === 'volcengine'
-    ? (volcAkI2I && volcSkI2I ? `${volcAkI2I}:${volcSkI2I}` : '')
-    : apiKeyInputI2I.value.trim();
+  const apiKey = getStoredApiKey(provider);
   const model = applyModelSnapshot(modelSelectI2I.value, provider, modelSnapshotI2I);
+  currentGenContext = { provider, model };
   const prompt = promptInputI2I.value.trim();
   const n = parseInt(imageCount.value, 10);
   const genericSize = imageSize.value === 'auto' ? undefined : imageSize.value;
@@ -2610,8 +2697,8 @@ generateBtnI2I.addEventListener('click', async () => {
     return;
   }
 
-  if (provider === 'volcengine' && ((volcAkI2I && !volcSkI2I) || (!volcAkI2I && volcSkI2I))) {
-    showAlert('Volcengine 凭证需同时填写 AK 和 SK，或同时留空使用服务端环境变量。');
+  if (provider === 'volcengine' && !!loadCredential('volcengineAk') !== !!loadCredential('volcengineSk')) {
+    showAlert('Volcengine AK/SK 需同时填写，或同时留空使用服务端环境变量（请在"设置"页修改）。');
     return;
   }
 
@@ -2622,15 +2709,6 @@ generateBtnI2I.addEventListener('click', async () => {
 
   if (!(await ensureForegroundRecoveredBeforeGenerate())) return;
 
-  // 根据"记住我"状态存储凭证
-  const rememberI2I = rememberApiKeyI2I?.checked ?? true;
-  if (provider === 'volcengine') {
-    const rememberVolc = rememberVolcengineI2I?.checked ?? true;
-    saveCredential(getVolcengineAkStorageKey('image2image'), (volcengineAkInputI2I.value || '').trim(), rememberVolc);
-    saveCredential(getVolcengineSkStorageKey('image2image'), (volcengineSkInputI2I.value || '').trim(), rememberVolc);
-  } else if (apiKey) {
-    saveCredential(getApiKeyStorageKey('image2image', provider), apiKey, rememberI2I);
-  }
   localStorage.setItem(getModelStorageKey('image2image', provider), model);
 
   // 智能绘图(图生图 SeedEdit)

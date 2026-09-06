@@ -109,6 +109,10 @@
       color: #667eea;
       font-weight: 600;
     }
+    /* 设置页只显示 API Key 配置，隐藏三个生成模式共享的参数/结果区 */
+    body.settings-active .settings-hide {
+      display: none !important;
+    }
     .image-wrapper {
       overflow: hidden;
       border-radius: 0.25rem;
@@ -160,6 +164,16 @@
                   <i class="bi bi-camera-video me-1"></i> 视频生成
                 </button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                  <i class="bi bi-gear me-1"></i> 设置
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                  <i class="bi bi-clock-history me-1"></i> 历史
+                </button>
+              </li>
             </ul>
 
             <div class="tab-content" id="modeTabContent">
@@ -168,7 +182,7 @@
                 <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine、Gemini 与 Agnes 生成图片</p>
 
                 <div class="row g-3 mb-3">
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <label for="providerSelect" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelect">
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
@@ -178,66 +192,7 @@
                       <option value="openai">GPT (OpenAI)</option>
                     </select>
                   </div>
-                  <div class="col-md-4">
-                    <div id="standardApiKeyGroup">
-                      <label for="apiKeyInput" class="form-label fw-semibold">
-                        <span id="apiKeyLabelText">DashScope API Key（可选）</span>
-                        <a href="https://help.aliyun.com/zh/model-studio/get-api-key" target="_blank" class="ms-1" title="获取 API Key" id="apiKeyHelpLink">
-                          <i class="bi bi-question-circle text-muted"></i>
-                        </a>
-                      </label>
-                      <div class="input-group">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="apiKeyInput" placeholder="sk-..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtn">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <div class="form-text" id="apiKeyHelpText">
-                        留空将使用服务端环境变量 <code id="apiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。
-                        <br>
-                        <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none" id="apiKeyConsoleLink">
-                          <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
-                        </a>
-                      </div>
-                      <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="rememberApiKey" checked>
-                        <label class="form-check-label" for="rememberApiKey">
-                          <small>记住 API Key <span class="text-muted">（保存在浏览器本地）</span></small>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div id="volcengineCredGroup" class="d-none">
-                      <label for="volcengineAkInput" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
-                      <div class="input-group mb-2">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineAkInput" placeholder="AK..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtn">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <label for="volcengineSkInput" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
-                      <div class="input-group">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineSkInput" placeholder="SK..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtn">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <div class="form-text">
-                        留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。
-                        <br>
-                        <a href="https://console.volcengine.com/iam/keymanage" target="_blank" class="text-decoration-none">
-                          <i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key
-                        </a>
-                      </div>
-                      <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="rememberVolcengine" checked>
-                        <label class="form-check-label" for="rememberVolcengine">
-                          <small>记住 AK/SK <span class="text-muted">（保存在浏览器本地）</span></small>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <label for="modelSelect" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="modelSelect">
                       <optgroup label="⭐ 万相 2.7 (最新)">
@@ -292,7 +247,7 @@
                 <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Gemini、Volcengine 与 Agnes 图生图</p>
 
                 <div class="row g-3 mb-3">
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <label for="providerSelectI2I" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelectI2I">
                       <option value="dashscope" selected>DashScope (阿里云百炼)</option>
@@ -302,55 +257,7 @@
                       <option value="openai">GPT (OpenAI)</option>
                     </select>
                   </div>
-                  <div class="col-md-4">
-                    <div id="standardApiKeyGroupI2I">
-                      <label for="apiKeyInputI2I" class="form-label fw-semibold">
-                        <span id="apiKeyLabelTextI2I">DashScope API Key（可选）</span>
-                      </label>
-                      <div class="input-group">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="apiKeyInputI2I" placeholder="sk-..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleApiKeyBtnI2I">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <div class="form-text">
-                        留空将使用服务端环境变量 <code id="apiEnvNameI2I">DASHSCOPE_API_KEY</code>（如已配置）。
-                      </div>
-                      <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="rememberApiKeyI2I" checked>
-                        <label class="form-check-label" for="rememberApiKeyI2I">
-                          <small>记住 API Key <span class="text-muted">（保存在浏览器本地）</span></small>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div id="volcengineCredGroupI2I" class="d-none">
-                      <label for="volcengineAkInputI2I" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
-                      <div class="input-group mb-2">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineAkInputI2I" placeholder="AK..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineAkBtnI2I">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <label for="volcengineSkInputI2I" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
-                      <div class="input-group">
-                        <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="volcengineSkInputI2I" placeholder="SK..."></form>
-                        <button class="btn btn-outline-secondary" type="button" id="toggleVolcengineSkBtnI2I">
-                          <i class="bi bi-eye"></i>
-                        </button>
-                      </div>
-                      <div class="form-text">
-                        留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。
-                      </div>
-                      <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="rememberVolcengineI2I" checked>
-                        <label class="form-check-label" for="rememberVolcengineI2I">
-                          <small>记住 AK/SK <span class="text-muted">（保存在浏览器本地）</span></small>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <label for="modelSelectI2I" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="modelSelectI2I">
                       <optgroup label="⭐ 万相 2.7 (推荐)">
@@ -445,7 +352,7 @@
               <div class="tab-pane fade" id="video" role="tabpanel">
                 <p class="text-center text-muted mb-4">支持阿里云百炼、即梦AI、Agnes AI 生成视频</p>
                 <div class="row g-3 mb-3">
-                  <div class="col-md-3">
+                  <div class="col-md-4">
                     <label for="videoMode" class="form-label fw-semibold">生成方式</label>
                     <select class="form-select" id="videoMode">
                       <option value="text2video" selected>文生视频</option>
@@ -456,7 +363,7 @@
                       <option value="translate">视频翻译</option>
                     </select>
                   </div>
-                  <div class="col-md-3">
+                  <div class="col-md-4">
                     <label for="videoProvider" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="videoProvider">
                       <option value="dashscope" selected>阿里云百炼</option>
@@ -465,40 +372,7 @@
                       <option value="xai">Grok (xAI)</option>
                     </select>
                   </div>
-                  <div class="col-md-3" id="videoApiKeyDashscopeGroup">
-                    <label for="videoApiKeyInput" class="form-label fw-semibold" id="videoApiKeyLabel">DashScope API Key（可选）</label>
-                    <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoApiKeyInput" placeholder="sk-..."></form>
-                      <button class="btn btn-outline-secondary" type="button" id="toggleVideoApiKeyBtn"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <div class="form-text" id="videoApiKeyHelpText">留空将使用服务端环境变量 <code id="videoApiEnvName">DASHSCOPE_API_KEY</code>（如已配置）。</div>
-                    <div class="form-check mt-2">
-                      <input class="form-check-input" type="checkbox" id="rememberApiKeyVideo" checked>
-                      <label class="form-check-label" for="rememberApiKeyVideo">
-                        <small>记住 API Key <span class="text-muted">（保存在浏览器本地）</span></small>
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-md-3 d-none" id="videoApiKeyVolcengineGroup">
-                    <label for="videoVolcengineAk" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
-                    <div class="input-group mb-2">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoVolcengineAk" placeholder="AK..."></form>
-                      <button class="btn btn-outline-secondary" type="button" id="toggleVideoVolcengineAkBtn"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <label for="videoVolcengineSk" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
-                    <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control" id="videoVolcengineSk" placeholder="SK..."></form>
-                      <button class="btn btn-outline-secondary" type="button" id="toggleVideoVolcengineSkBtn"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <div class="form-text">留空将使用服务端环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>。</div>
-                    <div class="form-check mt-2">
-                      <input class="form-check-input" type="checkbox" id="rememberVolcengineVideo" checked>
-                      <label class="form-check-label" for="rememberVolcengineVideo">
-                        <small>记住 AK/SK <span class="text-muted">（保存在浏览器本地）</span></small>
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-md-3">
+                  <div class="col-md-4">
                     <label for="videoModelSelect" class="form-label fw-semibold">模型</label>
                     <select class="form-select" id="videoModelSelect">
                       <option value="happyhorse-1.0-t2v" selected>happyhorse-1.0-t2v（推荐）</option>
@@ -725,9 +599,98 @@
                   </div>
                 </div>
               </div>
+              <!-- 设置模式 -->
+              <div class="tab-pane fade" id="settings" role="tabpanel">
+                <p class="text-center text-muted mb-4">统一配置 API Key：文生图、图生图、视频生成共用；留空将使用服务端环境变量（如已配置）。</p>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="settingsDashscopeKey" class="form-label fw-semibold">DashScope API Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsDashscopeKey" data-provider="dashscope" placeholder="sk-..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsDashscopeKey"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>DASHSCOPE_API_KEY</code> · <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="settingsGeminiKey" class="form-label fw-semibold">Gemini API Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsGeminiKey" data-provider="gemini" placeholder="AIza..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsGeminiKey"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>GEMINI_API_KEY</code> · <a href="https://aistudio.google.com/apikey" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="settingsOpenaiKey" class="form-label fw-semibold">OpenAI API Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsOpenaiKey" data-provider="openai" placeholder="sk-..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsOpenaiKey"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>OPENAI_API_KEY</code> · <a href="https://platform.openai.com/api-keys" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="settingsAgnesKey" class="form-label fw-semibold">Agnes API Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsAgnesKey" data-provider="agnes" placeholder="agnes-..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsAgnesKey"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>AGNES_API_KEY</code> · <a href="https://agnes-ai.com" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="settingsXaiKey" class="form-label fw-semibold">xAI API Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsXaiKey" data-provider="xai" placeholder="xai-..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsXaiKey"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>XAI_API_KEY</code> · <a href="https://console.x.ai/" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="settingsVolcengineAk" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
+                    <div class="input-group mb-2">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-cred-input" id="settingsVolcengineAk" data-cred="volcengineAk" placeholder="AK..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsVolcengineAk"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <label for="settingsVolcengineSk" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
+                    <div class="input-group">
+                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-cred-input" id="settingsVolcengineSk" data-cred="volcengineSk" placeholder="SK..."></form>
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsVolcengineSk"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>，AK 与 SK 需同时填写 · <a href="https://console.volcengine.com/iam/keymanage" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                </div>
+                <div class="form-text mt-3"><i class="bi bi-info-circle"></i> 配置自动保存在当前浏览器本地，不会上传到服务器。</div>
+
+                <div class="border-top pt-3 mt-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="fw-semibold mb-1"><i class="bi bi-cloud-arrow-up"></i> 存储备份（可选，S3 兼容）</h6>
+                      <div class="form-text" id="storageStatusText">未配置 — 生成内容不会备份，可对接 Cloudflare R2 / AWS S3 / OSS / COS / MinIO。</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" type="button" id="storageConfigBtn">配置存储</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 历史记录模式 -->
+              <div class="tab-pane fade" id="history" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                  <p class="text-muted mb-0">生成内容历史记录，已备份的内容可随时下载。</p>
+                  <div class="btn-group btn-group-sm" id="historyFilterGroup" role="group">
+                    <button class="btn btn-outline-secondary active" type="button" data-filter="">全部</button>
+                    <button class="btn btn-outline-secondary" type="button" data-filter="image">图片</button>
+                    <button class="btn btn-outline-secondary" type="button" data-filter="video">视频</button>
+                  </div>
+                </div>
+                <div id="historyList"></div>
+                <div class="text-center text-muted py-4 d-none" id="historyEmpty">
+                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无历史记录
+                </div>
+                <div class="text-center mt-3">
+                  <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="historyLoadMoreBtn">加载更多</button>
+                </div>
+              </div>
             </div>
 
-            <div class="mb-3" id="imageParamsPanel">
+            <div class="mb-3 settings-hide" id="imageParamsPanel">
               <div class="d-flex align-items-center mb-2">
                 <label class="form-label fw-semibold mb-0">生成参数</label>
                 <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#advancedParams" aria-expanded="false" aria-controls="advancedParams">
@@ -935,7 +898,7 @@
               </div>
             </div>
 
-            <div class="d-grid mb-2">
+            <div class="d-grid mb-2 settings-hide">
               <button class="btn btn-primary btn-lg btn-pill" id="generateBtn" type="button">
                 <i class="bi bi-magic me-1"></i> 生成图片
               </button>
@@ -947,7 +910,7 @@
               </button>
             </div>
 
-            <div class="border-top pt-3 mb-4" id="textImageTaskRecordsPanel">
+            <div class="border-top pt-3 mb-4 settings-hide" id="textImageTaskRecordsPanel">
               <button class="btn btn-sm btn-outline-tertiary" type="button" data-bs-toggle="collapse" data-bs-target="#textImageTaskRecordsCollapse" aria-expanded="false" aria-controls="textImageTaskRecordsCollapse">
                 <i class="bi bi-clock-history me-1"></i> 任务记录
               </button>
@@ -972,7 +935,7 @@
               </div>
             </div>
 
-            <div class="border-top pt-3 mb-4 d-none" id="imageTaskRecordsPanel">
+            <div class="border-top pt-3 mb-4 d-none settings-hide" id="imageTaskRecordsPanel">
               <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#imageTaskRecordsCollapse" aria-expanded="false" aria-controls="imageTaskRecordsCollapse">
                 <i class="bi bi-clock-history"></i> 任务记录
               </button>
@@ -997,9 +960,9 @@
               </div>
             </div>
 
-            <div id="alertContainer"></div>
+            <div class="settings-hide" id="alertContainer"></div>
 
-            <div class="image-container" id="imageContainer">
+            <div class="image-container settings-hide" id="imageContainer">
               <p class="placeholder-text mb-0" id="placeholder">
                 <i class="bi bi-image fs-1 d-block mb-2"></i>
                 生成结果将在这里显示
@@ -1011,12 +974,79 @@
               <div id="resultImages" class="d-none w-100"></div>
             </div>
 
-            <div class="text-center mt-3 d-none" id="downloadBtn">
+            <div class="text-center mt-3 d-none settings-hide" id="downloadBtn">
               <a class="btn btn-outline-success" id="downloadLink" download="generated-image.png">
                 <i class="bi bi-download"></i> 下载结果
               </a>
               <div class="form-text mt-2"><i class="bi bi-info-circle"></i> 生成内容为临时链接，请及时下载保存，约 12 小时后过期失效。</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 存储备份配置模态框 -->
+    <div class="modal fade" id="storageConfigModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="bi bi-cloud-arrow-up me-2"></i>存储备份配置（S3 兼容）</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="storagePresetSelect" class="form-label fw-semibold">存储服务商</label>
+                <select class="form-select" id="storagePresetSelect">
+                  <option value="r2" selected>Cloudflare R2（推荐）</option>
+                  <option value="s3">AWS S3</option>
+                  <option value="oss">阿里云 OSS（S3 兼容）</option>
+                  <option value="cos">腾讯云 COS（S3 兼容）</option>
+                  <option value="minio">MinIO（自建）</option>
+                  <option value="custom">自定义（S3 兼容）</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="storageEndpointInput" class="form-label fw-semibold">Endpoint</label>
+                <input type="text" class="form-control" id="storageEndpointInput" placeholder="https://{accountId}.r2.cloudflarestorage.com">
+              </div>
+              <div class="col-md-6">
+                <label for="storageRegionInput" class="form-label fw-semibold">Region</label>
+                <input type="text" class="form-control" id="storageRegionInput" placeholder="auto">
+              </div>
+              <div class="col-md-6">
+                <label for="storageBucketInput" class="form-label fw-semibold">Bucket</label>
+                <input type="text" class="form-control" id="storageBucketInput" placeholder="my-backup-bucket">
+              </div>
+              <div class="col-md-6">
+                <label for="storageAkInput" class="form-label fw-semibold">Access Key ID</label>
+                <input type="password" class="form-control" id="storageAkInput" placeholder="AK...">
+              </div>
+              <div class="col-md-6">
+                <label for="storageSkInput" class="form-label fw-semibold">Secret Access Key</label>
+                <input type="password" class="form-control" id="storageSkInput" placeholder="SK...">
+              </div>
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="storagePathStyleCheck" checked>
+                  <label class="form-check-label" for="storagePathStyleCheck">
+                    Path-Style 访问 <span class="text-muted">（R2 / MinIO / OSS / COS 勾选；AWS S3 取消勾选）</span>
+                  </label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-text">
+                  <i class="bi bi-info-circle"></i> 保存时自动验证<b>读取、写入、删除</b>完整权限，全部通过后才会启用备份；备份内容按 <code>backups/年/月/</code> 分类存放（生成后自动备份，可在历史页删除记录及备份文件）。
+                  密钥仅保存在服务端数据库（SQLite），不会回传浏览器。
+                </div>
+              </div>
+            </div>
+            <div id="storageConfigAlert" class="mt-3"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline-danger me-auto d-none" type="button" id="storageDisableBtn">停用备份</button>
+            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
+            <button class="btn btn-primary" type="button" id="storageSaveBtn"><i class="bi bi-plug me-1"></i>测试并保存</button>
           </div>
         </div>
       </div>
