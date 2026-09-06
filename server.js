@@ -212,6 +212,7 @@ app.use('/api', require('./lib/routes/video'));
 app.use('/api', require('./lib/routes/image'));
 app.use('/api', require('./lib/routes/task'));
 app.use('/api', require('./lib/routes/volcengine-tools'));
+app.use('/api', require('./lib/routes/history'));
 
 // 健康检查
 app.get('/health', (req, res) => {
