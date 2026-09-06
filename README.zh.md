@@ -10,6 +10,7 @@
 - 后端：Express (Node.js)
 - Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**、**Agnes AI**
 - 本地任务记录：SQLite（默认 `data/video-tasks.sqlite`）
+- 存储备份：S3 兼容对象存储（Cloudflare R2 / AWS S3 / 阿里云 OSS / 腾讯云 COS / MinIO）
 
 ## 功能特性
 
@@ -44,8 +45,28 @@
 - 长任务通过异步轮询实时显示进度
 - 视频任务记录保存到本地 SQLite，并在前端展示
 
+### 设置页与统一凭证（2.0 新增）
+- 顶部新增"设置"页：按提供商（DashScope / Gemini / OpenAI / Agnes / xAI / 火山 AK+SK）集中配置 API Key
+- 文生图、图生图、视频生成**共用同一套 Key**，输入即自动保存到浏览器本地
+- 旧版按模式拆分的 Key 存储自动迁移，无感升级
+- Key 留空时仍回退服务端 `.env` 环境变量（原有通道不变）
+
+### 存储备份（S3 兼容，可选，2.0 新增）
+- 设置页弹窗配置，内置预设：**Cloudflare R2（推荐）**、AWS S3、阿里云 OSS、腾讯云 COS、MinIO、自定义端点
+- 保存前自动验证**读取、写入、删除**完整权限，全部通过才启用（删除功能依赖 DELETE 权限）
+- 生成内容自动备份到存储桶，按 **`backups/年/月/`** 分类存放
+- 密钥仅保存在服务端 SQLite（`storage_config` 表），接口脱敏返回，不回传浏览器
+- 支持一键停用；停用后生成不受影响，仅不再备份
+
+### 历史记录页（2.0 新增）
+- 生成内容（图片/视频）自动记录到本地 SQLite `history` 表
+- 每条记录显示：类型徽标（图片/视频）、时间、提供商·模型、备份状态（已备份+大小 / 备份中 / 失败原因 / 未启用）
+- **下载按钮**：后端代理从存储桶流式下载，文件名含类型与日期
+- **删除**：同步删除数据库记录与存储桶中的备份文件
+- 支持 全部 / 图片 / 视频 过滤与分页加载
+
 ### 安全与稳定性
-- API Key 支持前端输入，也支持服务端 `.env` 回退
+- API Key 支持设置页统一配置，也支持服务端 `.env` 回退
 - 火山 AK/SK 鉴权签名流程
 - XSS 安全的错误信息显示（HTML 转义输出）
 - Provider 级超时配置
@@ -395,6 +416,8 @@ FRONTEND_ACCESS_KEY=your_secret_key
 - 默认路径：`data/video-tasks.sqlite`
 - `video_tasks` 表：视频任务记录
 - `image_tasks` 表：文生图与图生图任务记录
+- `history` 表：生成内容历史与备份状态（2.0 新增）
+- `storage_config` 表：存储备份配置（含密钥，敏感文件请勿外传）（2.0 新增）
 
 数据库会在服务启动时自动创建。除非要迁移已有记录，否则部署时无需上传本地数据库文件。
 
@@ -555,6 +578,24 @@ server {
 - `GET /unlock`
   - 访问密钥输入页（前端访问控制开启时显示）
 
+### 存储备份与历史（2.0 新增）
+
+- `GET /api/storage-config/view`
+  - 返回存储预设列表与脱敏后的当前配置（密钥不回传）
+- `POST /api/storage-config`
+  - body: `{ preset, endpoint, region, bucket, accessKeyId, secretAccessKey, pathStyle }`
+  - 保存前自动验证读取/写入/删除权限，全部通过才启用；失败返回 400
+- `POST /api/storage-config/disable`
+  - 停用备份（保留配置）
+- `POST /api/history`
+  - body: `{ type, url, provider, model }`，生成内容上报（启用备份时异步转存 `backups/年/月/`）
+- `GET /api/history?limit=&offset=&type=`
+  - 历史记录列表，`type` 可选 `image` / `video`
+- `DELETE /api/history/:id`
+  - 删除记录；已备份的同步删除存储桶文件，桶删除失败时保留记录
+- `GET /api/history/:id/download`
+  - 从存储桶流式下载备份内容（Content-Disposition 附件下载）
+
 ## 项目结构
 
 ```text
@@ -562,13 +603,15 @@ ai-image-generator/
 ├── server.js              # Express 入口（中间件、访问控制、启动）
 ├── lib/
 │   ├── config.js          # 配置常量、环境变量、模型映射
-│   ├── database.js        # SQLite 初始化、任务 CRUD
+│   ├── database.js        # SQLite 初始化、任务/历史/存储配置 CRUD
+│   ├── storage.js         # S3 兼容存储客户端（SigV4 签名、权限验证、备份/下载/删除）
 │   ├── utils.js           # 签名、验证、文件操作、API 工具
 │   ├── middleware.js       # multer、限流、访问控制
 │   └── routes/
 │       ├── video.js       # 视频生成 API（DashScope、即梦、动作模仿）
 │       ├── image.js       # 图片生成 API（文生图、图生图）
 │       ├── task.js        # 任务记录与状态查询 API
+│       ├── history.js     # 历史记录、存储配置、备份下载代理 API
 │       └── volcengine-tools.js # 火山引擎视频翻译、图片换装、智能绘图、图像特效
 ├── data/
 │   ├── video-tasks.sqlite # 本地图片/视频任务记录数据库

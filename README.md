@@ -10,6 +10,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Backend: Express (Node.js)
 - Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**, **Agnes AI**
 - Local task records: SQLite (`data/video-tasks.sqlite` by default)
+- Storage backup: S3-compatible object storage (Cloudflare R2 / AWS S3 / Aliyun OSS / Tencent COS / MinIO)
 
 ## Features
 
@@ -44,8 +45,28 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Long-running task progress display through async polling
 - Video task records are stored in local SQLite and shown in the UI
 
+### Settings Page & Unified Keys (new in 2.0)
+- New "Settings" tab: configure API keys per provider (DashScope / Gemini / OpenAI / Agnes / xAI / Volcengine AK+SK) in one place
+- One set of keys shared across text-to-image, image-to-image and video generation; saved to the browser automatically as you type
+- Legacy per-mode key storage is migrated automatically on first load
+- Empty keys still fall back to server-side `.env` variables (unchanged)
+
+### Storage Backup (S3-compatible, optional, new in 2.0)
+- Configure via a modal in Settings with presets: **Cloudflare R2 (recommended)**, AWS S3, Aliyun OSS, Tencent COS, MinIO, custom endpoint
+- Before saving, **list / put / delete** permissions are all verified — backup is only enabled when every check passes (delete requires DELETE permission)
+- Generated content is backed up automatically into the bucket under **`backups/YYYY/MM/`**
+- Keys are stored only in server-side SQLite (`storage_config` table); APIs return masked values and never send keys back to the browser
+- One-click disable: generation keeps working, only backups stop
+
+### Generation History (new in 2.0)
+- Every generated image/video is recorded into the local SQLite `history` table
+- Each record shows a type badge (image/video), time, provider·model and backup status (backed up + size / in progress / failed reason / disabled)
+- **Download button**: streamed through a backend proxy from the bucket, filename includes type and date
+- **Delete**: removes the database record together with the backed-up object in the bucket
+- Filter by all / image / video with paged loading
+
 ### Security & Reliability
-- Optional API key input from UI, with server-side `.env` fallback
+- API keys configured in the unified Settings page, with server-side `.env` fallback
 - Volcengine AK/SK parsing and signature request flow
 - XSS-safe error display (HTML-escaped output)
 - Request timeout controls per provider
@@ -396,6 +417,8 @@ Generated image and video task records are stored in local SQLite:
 - default path: `data/video-tasks.sqlite`
 - table `video_tasks`: video task history
 - table `image_tasks`: text-to-image and image-to-image task history
+- table `history`: generation history and backup status (new in 2.0)
+- table `storage_config`: storage backup config incl. keys — keep this file private (new in 2.0)
 
 The database is created automatically on startup. You do not need to upload a local DB file unless you want to migrate existing records.
 
@@ -556,6 +579,24 @@ server {
 - `GET /unlock`
   - Access key entry page (shown when frontend access control is enabled)
 
+### Storage Backup & History (new in 2.0)
+
+- `GET /api/storage-config/view`
+  - Returns storage presets and the masked current config (keys are never returned)
+- `POST /api/storage-config`
+  - body: `{ preset, endpoint, region, bucket, accessKeyId, secretAccessKey, pathStyle }`
+  - Verifies list/put/delete permissions before saving; fails with 400 unless all checks pass
+- `POST /api/storage-config/disable`
+  - Disables backup (keeps the config)
+- `POST /api/history`
+  - body: `{ type, url, provider, model }`; records generated content (async backup to `backups/YYYY/MM/` when enabled)
+- `GET /api/history?limit=&offset=&type=`
+  - History list; `type` is `image` or `video`
+- `DELETE /api/history/:id`
+  - Deletes a record; backed-up objects are removed from the bucket too — the record is kept if bucket deletion fails
+- `GET /api/history/:id/download`
+  - Streams the backed-up object as an attachment download
+
 ## Project Structure
 
 ```text
@@ -563,13 +604,15 @@ ai-image-generator/
 ├── server.js              # Express entry point (middleware, access control, startup)
 ├── lib/
 │   ├── config.js          # Configuration constants, env vars, model mappings
-│   ├── database.js        # SQLite init, task CRUD operations
+│   ├── database.js        # SQLite init, task/history/storage-config CRUD
+│   ├── storage.js         # S3-compatible storage client (SigV4 signing, permission checks, backup/download/delete)
 │   ├── utils.js           # Signing, validation, file ops, API helpers
 │   ├── middleware.js       # Multer, rate limiting, access control
 │   └── routes/
 │       ├── video.js       # Video generation APIs (DashScope, Jimeng, motion)
 │       ├── image.js       # Image generation APIs (text-to-image, image-to-image)
 │       ├── task.js        # Task record & status query APIs
+│       ├── history.js     # History, storage config and backup download proxy APIs
 │       └── volcengine-tools.js # Volcengine video translate, dressing, seededit, effect
 ├── data/
 │   ├── video-tasks.sqlite # Local image/video task record database
