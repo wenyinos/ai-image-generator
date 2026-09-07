@@ -63,7 +63,7 @@
 - 每条记录显示：类型徽标（图片/视频）、时间、提供商·模型、备份状态（已备份+大小 / 备份中 / 失败原因 / 未启用）
 - **下载按钮**：后端代理从存储桶流式下载，文件名含类型与日期
 - **删除**：同步删除数据库记录与存储桶中的备份文件
-- 支持 全部 / 图片 / 视频 过滤与分页加载
+- **分页与筛选（2.0.1 新增）**：每页 10 / 20 / 50 条可选，页码与总数展示；支持按日期范围（起止日期）筛选，可与类型过滤组合
 
 ### 安全与稳定性
 - API Key 支持设置页统一配置，也支持服务端 `.env` 回退
@@ -515,7 +515,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.0.0' }`
+  - 响应: `{ status: 'ok', version: '2.0.1' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
@@ -589,8 +589,8 @@ server {
   - 停用备份（保留配置）
 - `POST /api/history`
   - body: `{ type, url, provider, model }`，生成内容上报（启用备份时异步转存 `backups/年/月/`）
-- `GET /api/history?limit=&offset=&type=`
-  - 历史记录列表，`type` 可选 `image` / `video`
+- `GET /api/history?limit=&offset=&type=&from=&to=`
+  - 历史记录列表，`type` 可选 `image` / `video`，`from`/`to` 为日期范围（`YYYY-MM-DD`，闭区间），返回 `records` 与符合条件的 `total`
 - `DELETE /api/history/:id`
   - 删除记录；已备份的同步删除存储桶文件，桶删除失败时保留记录
 - `GET /api/history/:id/download`

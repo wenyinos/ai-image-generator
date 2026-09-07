@@ -63,7 +63,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Each record shows a type badge (image/video), time, provider·model and backup status (backed up + size / in progress / failed reason / disabled)
 - **Download button**: streamed through a backend proxy from the bucket, filename includes type and date
 - **Delete**: removes the database record together with the backed-up object in the bucket
-- Filter by all / image / video with paged loading
+- **Pagination & filters (new in 2.0.1)**: page size 10 / 20 / 50 with page and total display; filter by date range (from/to), combinable with the type filter
 
 ### Security & Reliability
 - API keys configured in the unified Settings page, with server-side `.env` fallback
@@ -516,7 +516,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.0.0' }`
+  - response: `{ status: 'ok', version: '2.0.1' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
@@ -590,8 +590,8 @@ server {
   - Disables backup (keeps the config)
 - `POST /api/history`
   - body: `{ type, url, provider, model }`; records generated content (async backup to `backups/YYYY/MM/` when enabled)
-- `GET /api/history?limit=&offset=&type=`
-  - History list; `type` is `image` or `video`
+- `GET /api/history?limit=&offset=&type=&from=&to=`
+  - History list; `type` is `image` or `video`, `from`/`to` is a date range (`YYYY-MM-DD`, inclusive); returns `records` plus the matching `total`
 - `DELETE /api/history/:id`
   - Deletes a record; backed-up objects are removed from the bucket too — the record is kept if bucket deletion fails
 - `GET /api/history/:id/download`
