@@ -1085,7 +1085,7 @@ if (settingsTabEl) {
   settingsTabEl.addEventListener('shown.bs.tab', enterNonGenMode);
   const historyTabEl = document.getElementById('history-tab');
   if (historyTabEl) {
-    historyTabEl.addEventListener('shown.bs.tab', () => { enterNonGenMode(); loadHistoryRecords(true); });
+    historyTabEl.addEventListener('shown.bs.tab', () => { enterNonGenMode(); loadHistoryRecords(); });
   }
   ['text2image-tab', 'image2image-tab', 'video-tab'].forEach((id) => {
     const el = document.getElementById(id);
@@ -1243,12 +1243,52 @@ if (storageDisableBtn) {
 
 const historyListEl = document.getElementById('historyList');
 const historyEmptyEl = document.getElementById('historyEmpty');
-const historyLoadMoreBtn = document.getElementById('historyLoadMoreBtn');
 const historyFilterGroup = document.getElementById('historyFilterGroup');
-let historyFilter = '';
-let historyOffset = 0;
+const historyFromInput = document.getElementById('historyFromInput');
+const historyToInput = document.getElementById('historyToInput');
+const historyDateClearBtn = document.getElementById('historyDateClearBtn');
+const historyPageSizeSelect = document.getElementById('historyPageSizeSelect');
+const historyPrevBtn = document.getElementById('historyPrevBtn');
+const historyNextBtn = document.getElementById('historyNextBtn');
+const historyPageInfo = document.getElementById('historyPageInfo');
+const historyPagerEl = document.getElementById('historyPager');
 
-const HISTORY_PAGE_SIZE = 50;
+const historyState = { page: 1, pageSize: 20, type: '', from: '', to: '' };
+let historyTotal = 0;
+let historyLoadSeq = 0;
+
+function historyPageCount() {
+  return Math.max(1, Math.ceil(historyTotal / historyState.pageSize));
+}
+
+async function loadHistoryRecords() {
+  const seq = ++historyLoadSeq;
+  const params = new URLSearchParams({
+    limit: String(historyState.pageSize),
+    offset: String((historyState.page - 1) * historyState.pageSize),
+  });
+  if (historyState.type) params.set('type', historyState.type);
+  if (historyState.from) params.set('from', historyState.from);
+  if (historyState.to) params.set('to', historyState.to);
+  try {
+    const res = await fetch(`/api/history?${params}`);
+    const data = await res.json();
+    if (seq !== historyLoadSeq) return; // 已发起更新的筛选，丢弃过期响应
+    if (!res.ok) throw new Error(data.error || '加载失败');
+    historyTotal = data.total || 0;
+    if (historyState.page > historyPageCount()) {
+      historyState.page = historyPageCount();
+      return loadHistoryRecords();
+    }
+    renderHistoryRecords(data.records || []);
+    historyPageInfo.textContent = `共 ${historyTotal.toLocaleString('zh-CN')} 条记录 · 第 ${historyState.page} / ${historyPageCount()} 页`;
+    historyPrevBtn.disabled = historyState.page <= 1;
+    historyNextBtn.disabled = historyState.page >= historyPageCount();
+    historyPagerEl.classList.toggle('d-none', historyTotal === 0);
+  } catch (e) {
+    if (seq === historyLoadSeq) showAlert(`加载历史记录失败：${e.message}`);
+  }
+}
 
 function formatHistoryTime(ts) {
   const d = new Date(ts);
@@ -1276,8 +1316,8 @@ function renderHistoryBadge(record) {
   }
 }
 
-function renderHistoryRecords(records, append) {
-  if (!append) historyListEl.innerHTML = '';
+function renderHistoryRecords(records) {
+  historyListEl.innerHTML = '';
   records.forEach((record) => {
     const isImage = record.type === 'image';
     const item = document.createElement('div');
@@ -1296,23 +1336,7 @@ function renderHistoryRecords(records, append) {
       </div>`;
     historyListEl.appendChild(item);
   });
-  historyEmptyEl.classList.toggle('d-none', historyListEl.children.length > 0);
-  historyLoadMoreBtn.classList.toggle('d-none', records.length < HISTORY_PAGE_SIZE);
-}
-
-async function loadHistoryRecords(reset = false) {
-  if (reset) historyOffset = 0;
-  try {
-    const params = new URLSearchParams({ limit: String(HISTORY_PAGE_SIZE), offset: String(historyOffset) });
-    if (historyFilter) params.set('type', historyFilter);
-    const res = await fetch(`/api/history?${params}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '加载失败');
-    renderHistoryRecords(data.records || [], !reset);
-    historyOffset += (data.records || []).length;
-  } catch (e) {
-    showAlert(`加载历史记录失败：${e.message}`);
-  }
+  historyEmptyEl.classList.toggle('d-none', historyListEl.children.length === 0);
 }
 
 if (historyFilterGroup) {
@@ -1321,13 +1345,57 @@ if (historyFilterGroup) {
     if (!btn) return;
     historyFilterGroup.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
-    historyFilter = btn.dataset.filter;
-    loadHistoryRecords(true);
+    historyState.type = btn.dataset.filter;
+    historyState.page = 1;
+    loadHistoryRecords();
   });
 }
 
-if (historyLoadMoreBtn) {
-  historyLoadMoreBtn.addEventListener('click', () => loadHistoryRecords(false));
+// 日期筛选与分页控件
+if (historyFromInput) {
+  historyFromInput.addEventListener('change', () => {
+    historyState.from = historyFromInput.value || '';
+    historyState.page = 1;
+    loadHistoryRecords();
+  });
+}
+if (historyToInput) {
+  historyToInput.addEventListener('change', () => {
+    historyState.to = historyToInput.value || '';
+    historyState.page = 1;
+    loadHistoryRecords();
+  });
+}
+if (historyDateClearBtn) {
+  historyDateClearBtn.addEventListener('click', () => {
+    historyFromInput.value = '';
+    historyToInput.value = '';
+    historyState.from = '';
+    historyState.to = '';
+    historyState.page = 1;
+    loadHistoryRecords();
+  });
+}
+if (historyPageSizeSelect) {
+  historyPageSizeSelect.addEventListener('change', () => {
+    historyState.pageSize = Number.parseInt(historyPageSizeSelect.value, 10) || 20;
+    historyState.page = 1;
+    loadHistoryRecords();
+  });
+}
+if (historyPrevBtn) {
+  historyPrevBtn.addEventListener('click', () => {
+    if (historyState.page <= 1) return;
+    historyState.page -= 1;
+    loadHistoryRecords();
+  });
+}
+if (historyNextBtn) {
+  historyNextBtn.addEventListener('click', () => {
+    if (historyState.page >= historyPageCount()) return;
+    historyState.page += 1;
+    loadHistoryRecords();
+  });
 }
 
 // 删除历史记录：已备份的会同时删除存储桶文件
@@ -1347,7 +1415,7 @@ if (historyListEl) {
       const res = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || '删除失败');
-      loadHistoryRecords(true);
+      loadHistoryRecords();
     } catch (err) {
       showAlert(`删除失败：${err.message}`);
       btn.disabled = false;
