@@ -2299,7 +2299,9 @@ if (generateBtnVideo) {
       negative_prompt: negativePrompt.value.trim() || undefined,
       prompt_extend: promptExtend.checked,
       watermark: watermarkToggle.checked,
-      frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121) : undefined,
+      frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121)
+        : (provider === 'agnes' && model === 'agnes-video-v2.0') ? ({ 5: 121, 10: 241, 15: 361 })[parseInt(videoDuration.value, 10)] || 121
+        : undefined,
       aspect_ratio: (provider === 'volcengine' || isXai) && mode === 'text2video' ? videoRatio.value : undefined,
       template_id: isRecameraModel && recameraTemplate ? recameraTemplate.value : undefined,
       camera_strength: isRecameraModel && recameraStrength ? recameraStrength.value : undefined,
