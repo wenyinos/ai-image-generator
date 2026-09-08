@@ -262,6 +262,7 @@ const MODELS_T2I = {
   ],
   agnes: [
     { group: '🤖 Agnes AI', options: [
+      { value: 'agnes-image-2.5-flash', label: 'Agnes Image 2.5 Flash (最新)' },
       { value: 'agnes-image-2.1-flash', label: 'Agnes Image 2.1 Flash (推荐)' },
       { value: 'agnes-image-2.0-flash', label: 'Agnes Image 2.0 Flash' },
     ] },
@@ -320,6 +321,7 @@ const MODELS_I2I = {
   ],
   agnes: [
     { group: '🤖 Agnes AI', options: [
+      { value: 'agnes-image-2.5-flash', label: 'Agnes Image 2.5 Flash (最新)' },
       { value: 'agnes-image-2.1-flash', label: 'Agnes Image 2.1 Flash (推荐)' },
       { value: 'agnes-image-2.0-flash', label: 'Agnes Image 2.0 Flash' },
     ] },
@@ -342,6 +344,7 @@ const T2I_MODEL_HINTS = {
   'jimeng-3.1': '即梦文生图3.1：画质提升版。',
   'jimeng-4.0': '即梦图片生成4.0：高质量生成。',
   'jimeng-4.6': '即梦图片生成4.6：最新版本，画质最佳。',
+  'agnes-image-2.5-flash': 'Agnes Image 2.5 Flash：最新一代，支持 1K-4K 档位与多图合成。',
   'agnes-image-2.1-flash': 'Agnes Image 2.1 Flash：推荐，高性能图像生成。',
   'agnes-image-2.0-flash': 'Agnes Image 2.0 Flash：基础版图像生成。',
 };
@@ -374,6 +377,8 @@ const VIDEO_MODEL_HINTS = {
   'jimeng-motion-2.0': '动作模仿2.0：支持多人、非真人，上传人物图+模板视频。',
   'jimeng-motion-1.0': '动作模仿1.0：单人动作模仿。',
   'agnes-video-v2.0': 'Agnes Video V2.0：支持文生视频和图生视频。',
+  'agnes-video-2.5': 'Agnes Video 2.5：新一代模型，支持 4-12 秒、720P-2K、多宽高比。',
+  'agnes-video-2.5-flash': 'Agnes Video 2.5 Flash：新一代快速版，720P 输出。',
   'grok-video-1.0': 'Grok Video 1.0：文生视频/图生视频，最多7张参考图，支持16:9/9:16/1:1，480p/720p。',
   'grok-video-1.5': 'Grok Video 1.5：单图生视频（必须1张参考图），支持16:9/9:16，480p/720p。',
 };
@@ -534,6 +539,8 @@ function renderVideoModelOptions() {
     ] }], savedModel);
   } else if (provider === 'agnes') {
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
+      { value: 'agnes-video-2.5-flash', label: 'Agnes Video 2.5 Flash (最新)' },
+      { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
   } else if (provider === 'xai') {
@@ -892,6 +899,8 @@ function updateVideoProviderState() {
   } else if (provider === 'agnes') {
     // Agnes 视频模型
     renderModelOptions(videoModelSelect, [{ group: 'Agnes AI 视频模型', options: [
+      { value: 'agnes-video-2.5-flash', label: 'Agnes Video 2.5 Flash (最新)' },
+      { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
   } else if (provider === 'xai') {
@@ -1779,6 +1788,7 @@ async function handleGenerationResult(data, { apiKey, model, resultType, title, 
       payload: {
         apiKey,
         taskId: data.taskId,
+        videoId: data.videoId,
         model: data.model || model,
         resultType,
         mode,

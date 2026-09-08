@@ -146,6 +146,7 @@
 
 | 模型 | 类型 | 说明 |
 |---|---|---|
+| `agnes-image-2.5-flash` | agnes | 最新，支持 1K-4K 档位与多图合成 |
 | `agnes-image-2.1-flash` | agnes | 推荐 |
 | `agnes-image-2.0-flash` | agnes | |
 
@@ -183,6 +184,8 @@
 
 | 模型 | 说明 |
 |---|---|
+| `agnes-video-2.5-flash` | 最新快速版，4-12 秒，720P（异步） |
+| `agnes-video-2.5` | 4-12 秒，720P/1080P/1K/2K（异步） |
 | `agnes-video-v2.0` | 文生视频、图生视频（异步） |
 
 ### Grok 视频（xAI）
@@ -515,7 +518,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.0.1' }`
+  - 响应: `{ status: 'ok', version: '2.1.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息

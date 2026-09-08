@@ -146,6 +146,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Type | Notes |
 |---|---|---|
+| `agnes-image-2.5-flash` | agnes | Latest, 1K-4K presets, multi-image composition |
 | `agnes-image-2.1-flash` | agnes | Recommended |
 | `agnes-image-2.0-flash` | agnes | |
 
@@ -183,6 +184,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Notes |
 |---|---|
+| `agnes-video-2.5-flash` | Latest fast model, 4-12s, 720P (async) |
+| `agnes-video-2.5` | 4-12s, 720P/1080P/1K/2K (async) |
 | `agnes-video-v2.0` | Text-to-video, image-to-video (async) |
 
 ### Grok Video (xAI)
@@ -516,7 +519,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.0.1' }`
+  - response: `{ status: 'ok', version: '2.1.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
