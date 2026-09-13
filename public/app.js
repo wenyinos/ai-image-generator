@@ -984,7 +984,10 @@ async function fetchTaskById(inputEl, typeEl, providerEl) {
   if (!taskId) { showAlert('请输入任务ID'); return; }
   const provider = providerEl ? providerEl.value : 'dashscope';
   const resultType = typeEl ? typeEl.value : 'image';
-  const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status' : '/api/dashscope-task-status';
+  const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status'
+    : provider === 'agnes' ? '/api/agnes-task-status'
+    : provider === 'xai' ? '/api/grok-task-status'
+    : '/api/dashscope-task-status';
   const isVolcengine = provider === 'volcengine';
   const apiKey = getStoredApiKey(provider);
   setLoading(true, '正在查询任务状态...');
