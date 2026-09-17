@@ -103,7 +103,7 @@
 ### OpenAI (GPT)
 - 前端输入，或配置 `OPENAI_API_KEY`
 - 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
-- 支持：文生图、图生图（`gpt-image-2`、`gpt-image-2-4k`、`image2.5`）
+- 支持：文生图、图生图（`gpt-image-2`、`image2.5`）
 
 ### xAI (Grok 视频)
 - 前端输入，或配置 `XAI_API_KEY`
@@ -141,7 +141,6 @@
 | 模型 | 类型 | 说明 |
 |---|---|---|
 | `gpt-image-2` | openai | 文生图、图生图 |
-| `gpt-image-2-4k` | openai | 文生图、图生图，固定 4K 分辨率 |
 | `image2.5` | openai | 文生图、图生图，支持 1K/2K 分辨率 |
 
 **Agnes AI**：
@@ -520,7 +519,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.1.3' }`
+  - 响应: `{ status: 'ok', version: '2.1.4' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
