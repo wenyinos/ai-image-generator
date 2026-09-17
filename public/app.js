@@ -250,6 +250,8 @@ const MODELS_T2I = {
   openai: [
     { group: '🤖 GPT', options: [
       { value: 'gpt-image-2', label: 'GPT Image 2' },
+      { value: 'gpt-image-2-4k', label: 'GPT Image 2 4K' },
+      { value: 'image2.5', label: 'GPT Image 2.5 (1K/2K)' },
     ] },
   ],
   volcengine: [
@@ -292,6 +294,8 @@ const MODELS_I2I = {
   openai: [
     { group: '🤖 GPT', options: [
       { value: 'gpt-image-2', label: 'GPT Image 2' },
+      { value: 'gpt-image-2-4k', label: 'GPT Image 2 4K' },
+      { value: 'image2.5', label: 'GPT Image 2.5 (1K/2K)' },
     ] },
   ],
   volcengine: [
@@ -340,6 +344,8 @@ const T2I_MODEL_HINTS = {
   'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
   'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
   'gpt-image-2': 'GPT Image 2：OpenAI 图像模型，支持文生图和图生图编辑。',
+  'gpt-image-2-4k': 'GPT Image 2 4K：固定 4K 分辨率输出，适合高分辨率需求。',
+  'image2.5': 'GPT Image 2.5：支持 1K/2K 分辨率，兼顾质量与速度。',
   'jimeng-3.0': '即梦文生图3.0：基础文生图。',
   'jimeng-3.1': '即梦文生图3.1：画质提升版。',
   'jimeng-4.0': '即梦图片生成4.0：高质量生成。',
@@ -453,6 +459,9 @@ const MODEL_SIZES = {
   'jimeng-3.0-i2i': ['1K', '2K', '4K'],
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
+  // GPT (OpenAI)
+  'gpt-image-2-4k': ['4K'],
+  'image2.5': ['1K', '2K'],
 };
 
 const MODEL_SIZES_I2I = {
@@ -469,6 +478,9 @@ const MODEL_SIZES_I2I = {
   'jimeng-inpainting': [],
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
+  // GPT (OpenAI)
+  'gpt-image-2-4k': ['4K'],
+  'image2.5': ['1K', '2K'],
 };
 
 function normalizeGeminiModel(model) {
