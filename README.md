@@ -103,7 +103,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 ### OpenAI (GPT)
 - Frontend key or `OPENAI_API_KEY`
 - Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`, e.g. an OpenAI-compatible relay)
-- Supports: text-to-image, image-to-image (via `gpt-image-2`)
+- Supports: text-to-image, image-to-image (`gpt-image-2`, `gpt-image-2-4k`, `image2.5`)
 
 ### xAI (Grok Video)
 - Frontend key or `XAI_API_KEY`
@@ -141,6 +141,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | Model | Type | Notes |
 |---|---|---|
 | `gpt-image-2` | openai | Text & image-to-image |
+| `gpt-image-2-4k` | openai | Text & image-to-image, 4K only |
+| `image2.5` | openai | Text & image-to-image, 1K/2K |
 
 **Agnes AI**:
 
@@ -519,7 +521,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.1.2' }`
+  - response: `{ status: 'ok', version: '2.1.3' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
