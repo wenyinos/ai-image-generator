@@ -670,6 +670,17 @@
                     <button class="btn btn-sm btn-outline-primary" type="button" id="storageConfigBtn">配置存储</button>
                   </div>
                 </div>
+
+                <div class="border-top pt-3 mt-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="fw-semibold mb-1"><i class="bi bi-database"></i> 数据库优化</h6>
+                      <div class="form-text">清理数据库中遗留的图片/视频数据（生成内容已自动转存到存储桶），并压缩数据库文件体积。</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" type="button" id="dbOptimizeBtn">优化数据库</button>
+                  </div>
+                  <div id="dbOptimizeResult" class="mt-2"></div>
+                </div>
               </div>
 
               <!-- 历史记录模式 -->
@@ -737,6 +748,19 @@
                     <option value="auto" selected>自动 (模型默认)</option>
                   </select>
                 </div>
+                <div class="col-md-4 d-none" id="genericRatioGroup">
+                  <label for="imageRatio" class="form-label">宽高比</label>
+                  <select class="form-select" id="imageRatio">
+                    <option value="1:1" selected>1:1</option>
+                    <option value="3:4">3:4</option>
+                    <option value="4:3">4:3</option>
+                    <option value="16:9">16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="2:3">2:3</option>
+                    <option value="3:2">3:2</option>
+                    <option value="21:9">21:9</option>
+                  </select>
+                </div>
                 <div class="col-md-4" id="genericSeedGroup">
                   <label for="seedInput" class="form-label">随机种子</label>
                   <input type="number" class="form-control" id="seedInput" placeholder="留空随机" min="0" max="2147483647">
@@ -744,7 +768,7 @@
               </div>
 
               <div class="row g-3 mt-2 d-none" id="volcengineParams">
-                <div class="col-md-4">
+                <div class="col-md-4" id="volcengineSizeGroup">
                   <label for="volcengineSize" class="form-label">面积 size（可选）</label>
                   <select class="form-select" id="volcengineSize">
                     <option value="auto" selected>自动 (2048*2048)</option>
@@ -762,7 +786,7 @@
                   <input type="number" class="form-control" id="volcengineHeight" placeholder="例如 2048" min="1024" max="8192">
                 </div>
                 <div class="col-12">
-                  <div class="form-text">即梦文档要求 size 与 width/height 二选一；若同时提供 width/height，则优先使用宽高。</div>
+                  <div class="form-text" id="volcengineParamsHint">即梦文档要求 size 与 width/height 二选一；若同时提供 width/height，则优先使用宽高。</div>
                 </div>
               </div>
               

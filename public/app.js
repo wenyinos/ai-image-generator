@@ -35,6 +35,8 @@ const imageCount = document.getElementById('imageCount');
 const imageParamsPanel = document.getElementById('imageParamsPanel');
 const imageSize = document.getElementById('imageSize');
 const genericSizeGroup = document.getElementById('genericSizeGroup');
+const genericRatioGroup = document.getElementById('genericRatioGroup');
+const imageRatio = document.getElementById('imageRatio');
 const genericSeedGroup = document.getElementById('genericSeedGroup');
 const seedInput = document.getElementById('seedInput');
 const negativePrompt = document.getElementById('negativePrompt');
@@ -42,8 +44,10 @@ const promptExtend = document.getElementById('promptExtend');
 const watermarkToggle = document.getElementById('watermarkToggle');
 const volcengineParams = document.getElementById('volcengineParams');
 const volcengineSize = document.getElementById('volcengineSize');
+const volcengineSizeGroup = document.getElementById('volcengineSizeGroup');
 const volcengineWidth = document.getElementById('volcengineWidth');
 const volcengineHeight = document.getElementById('volcengineHeight');
+const volcengineParamsHint = document.getElementById('volcengineParamsHint');
 const volcengineWatermarkGroup = document.getElementById('volcengineWatermarkGroup');
 const volcengineWatermarkToggle = document.getElementById('volcengineWatermarkToggle');
 const imageStrength = document.getElementById('imageStrength');
@@ -437,19 +441,28 @@ const JIMENG_MOTION_MODELS = [
 ];
 
 // 各模型支持的尺寸选项
+// Agnes 档位式尺寸模型（1K-4K + ratio）；2.0 仍为历史精确尺寸写法
+const AGNES_PRESET_MODELS = ['agnes-image-2.1-flash', 'agnes-image-2.5-flash'];
+const AGNES_IMAGE_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '2:3', '3:2', '21:9'];
+
 const MODEL_SIZES = {
   // 万相 2.7
   'wan2.7-image-pro': ['1K', '2K', '4K'],
   'wan2.7-image': ['1K', '2K'],
   // 万相 2.6
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  'wan2.6-t2i': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
+  // wan2.6-t2i 总像素约束 [1280*1280, 1440*1440]，官方推荐尺寸（默认 1280*1280）
+  'wan2.6-t2i': ['1280*1280', '1104*1472', '1472*1104', '960*1696', '1696*960'],
   // 千问 Qwen-Image
   'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   'qwen-image-3.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   'qwen-image-3.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  // Gemini
-  [GEMINI_MODEL_ID]: [],
+  // Gemini（经中转网关，1K/2K 档位）
+  [GEMINI_MODEL_ID]: ['1K', '2K'],
+  'gemini-3-pro-image-preview': ['1K', '2K'],
+  // Agnes (档位式)
+  'agnes-image-2.5-flash': ['1K', '2K', '3K', '4K'],
+  'agnes-image-2.1-flash': ['1K', '2K', '3K', '4K'],
   // Volcengine Jimeng
   'jimeng-3.0': ['1K', '2K', '4K'],
   'jimeng-3.1': ['1K', '2K', '4K'],
@@ -457,6 +470,7 @@ const MODEL_SIZES = {
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
   // GPT (OpenAI)
+  'gpt-image-2': ['1024x1024', '1536x1024', '1024x1536'],
   'image2.5': ['1K', '2K'],
 };
 
@@ -466,7 +480,12 @@ const MODEL_SIZES_I2I = {
   'wan2.7-image-pro': ['1K', '2K'],
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  [GEMINI_MODEL_ID]: [],
+  // Gemini（经中转网关，1K/2K 档位）
+  [GEMINI_MODEL_ID]: ['1K', '2K'],
+  'gemini-3-pro-image-preview': ['1K', '2K'],
+  // Agnes (档位式)
+  'agnes-image-2.5-flash': ['1K', '2K', '3K', '4K'],
+  'agnes-image-2.1-flash': ['1K', '2K', '3K', '4K'],
   'jimeng-3.0-i2i': ['1K', '2K', '4K'],
   'jimeng-material-product': ['1K', '2K', '4K'],
   'jimeng-material-pod': ['1K', '2K', '4K'],
@@ -475,6 +494,7 @@ const MODEL_SIZES_I2I = {
   'jimeng-4.0': ['1K', '2K', '4K'],
   'jimeng-4.6': ['1K', '2K', '4K'],
   // GPT (OpenAI)
+  'gpt-image-2': ['1024x1024', '1536x1024', '1024x1536'],
   'image2.5': ['1K', '2K'],
 };
 
@@ -564,6 +584,54 @@ function renderVideoModelOptions() {
   } else {
     renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
   }
+  updateVideoParamOptions();
+}
+
+function renderSelectOptions(selectEl, values, labelFn) {
+  if (!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = '';
+  values.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = labelFn(value);
+    selectEl.appendChild(option);
+  });
+  if (values.includes(prev)) selectEl.value = prev;
+}
+
+// 视频参数下拉按 provider/模型动态化：火山分辨率由模型名决定（隐藏）、Agnes 2.5 支持 1K/2K 与 21:9、火山时长仅 5/10 秒
+function updateVideoParamOptions() {
+  if (!videoModelSelect || !videoProvider) return;
+  const provider = videoProvider.value;
+  const model = videoModelSelect.value;
+  const isAgnes25 = provider === 'agnes' && (model === 'agnes-video-2.5' || model === 'agnes-video-2.5-flash');
+  const isAgnesFlash = provider === 'agnes' && model === 'agnes-video-2.5-flash';
+  const isDashscope = provider === 'dashscope';
+  const isHappyhorse = isDashscope && model.startsWith('happyhorse-');
+  const isWan30Video = isDashscope && model.startsWith('wan3.0-video');
+
+  const durations = provider === 'volcengine' ? [5, 10] : (isAgnes25 ? [4, 5, 6, 8, 10, 12] : [5, 10, 15]);
+  renderSelectOptions(videoDuration, durations, (value) => `${value} 秒`);
+
+  // happyhorse / wan3.0-video 官方支持 480P
+  const is480pCapable = isDashscope && (model.startsWith('happyhorse-') || isWan30Video);
+  const resolutions = isAgnesFlash
+    ? ['720P']
+    : (isAgnes25 ? ['720P', '1080P', '1K', '2K'] : (is480pCapable ? ['480P', '720P', '1080P'] : ['720P', '1080P']));
+  renderSelectOptions(videoResolution, resolutions, (value) => value);
+
+  let ratios;
+  if (provider === 'volcengine' || isAgnes25) {
+    ratios = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'];
+  } else if (isHappyhorse) {
+    ratios = ['16:9', '9:16', '1:1', '4:3', '3:4', '4:5', '5:4', '9:21', '21:9'];
+  } else if (isWan30Video) {
+    ratios = ['adaptive', '21:9', '16:9', '4:3', '1:1', '3:4', '9:16'];
+  } else {
+    ratios = ['16:9', '9:16', '1:1', '4:3', '3:4'];
+  }
+  renderSelectOptions(videoRatio, ratios, (value) => value);
 }
 
 async function loadVideoModels() {
@@ -638,6 +706,45 @@ function setImageApiKeyMeta(provider) {
   }
 }
 
+function updateImageRatioGroup() {
+  updateSharedParamVisibility();
+  if (!genericRatioGroup) return;
+  const activeProvider = currentMode === 'image2image'
+    ? (providerSelectI2I ? providerSelectI2I.value : '')
+    : (providerSelect ? providerSelect.value : '');
+  const activeModel = currentMode === 'image2image'
+    ? (modelSelectI2I ? modelSelectI2I.value : '')
+    : (modelSelect ? modelSelect.value : '');
+  const show = currentMode !== 'video' && activeProvider === 'agnes' && AGNES_PRESET_MODELS.includes(activeModel);
+  genericRatioGroup.classList.toggle('d-none', !show);
+}
+
+// 官方文档未收录 negative_prompt / prompt_extend 的模型（wan2.7 图像系列、HappyHorse 视频系列、wan3.0-video）：
+// 隐藏对应控件，避免设置了却不生效的误导
+function updateSharedParamVisibility() {
+  const provider = currentMode === 'video'
+    ? (videoProvider ? videoProvider.value : '')
+    : (currentMode === 'image2image' ? providerSelectI2I.value : providerSelect.value);
+  const model = currentMode === 'video'
+    ? (videoModelSelect ? videoModelSelect.value : '')
+    : (currentMode === 'image2image' ? modelSelectI2I.value : modelSelect.value);
+  const hideNegative = provider === 'dashscope'
+    && (model.startsWith('wan2.7-image') || model.startsWith('happyhorse-') || model.startsWith('wan3.0-video'));
+  const hideExtend = provider === 'dashscope'
+    && (model.startsWith('wan2.7-image') || model.startsWith('happyhorse-'));
+  const negativeGroup = negativePrompt ? negativePrompt.closest('.col-md-6') : null;
+  const extendGroup = promptExtend ? promptExtend.closest('.form-check') : null;
+  if (negativeGroup) negativeGroup.classList.toggle('d-none', hideNegative);
+  if (extendGroup) extendGroup.classList.toggle('d-none', hideExtend);
+}
+
+function restoreImageSizeSelection() {
+  const saved = localStorage.getItem('imageSize');
+  if (saved && Array.from(imageSize.options).some((option) => option.value === saved)) {
+    imageSize.value = saved;
+  }
+}
+
 function updateSizeOptions() {
   const model = modelSelect.value;
   const sizes = MODEL_SIZES[model] || [];
@@ -649,6 +756,8 @@ function updateSizeOptions() {
     imageSize.appendChild(option);
   });
   imageSize.disabled = sizes.length === 0;
+  restoreImageSizeSelection();
+  updateImageRatioGroup();
 }
 
 function updateSizeOptionsI2I() {
@@ -664,6 +773,8 @@ function updateSizeOptionsI2I() {
     imageSize.appendChild(option);
   });
   imageSize.disabled = sizes.length === 0;
+  restoreImageSizeSelection();
+  updateImageRatioGroup();
 }
 
 function updateTextProviderState() {
@@ -703,15 +814,38 @@ function getActiveProvider() {
 function updateVolcengineUiState() {
   const isVolcengine = getActiveProvider() === 'volcengine';
   const i2iModel = modelSelectI2I ? modelSelectI2I.value : '';
+  const activeModel = currentMode === 'image2image' ? i2iModel : (modelSelect ? modelSelect.value : '');
   const isSpecialVolcI2I = currentMode === 'image2image' && isVolcengine
     && (i2iModel === 'jimeng-upscale'
       || i2iModel === 'jimeng-inpainting'
       || i2iModel === 'jimeng-material-product'
       || i2iModel === 'jimeng-material-pod');
+  // jimeng-3.0/3.1 与 jimeng-3.0-i2i 不支持面积 size，仅 width/height（文档核实）
+  const isNoAreaSizeModel = ['jimeng-3.0', 'jimeng-3.1', 'jimeng-3.0-i2i'].includes(activeModel);
+  const isI2IV30 = activeModel === 'jimeng-3.0-i2i';
+  const isT2IV3 = activeModel === 'jimeng-3.0' || activeModel === 'jimeng-3.1';
   if (genericSizeGroup) genericSizeGroup.classList.toggle('d-none', isVolcengine);
   if (genericSeedGroup) genericSeedGroup.classList.toggle('d-none', isVolcengine);
   if (volcengineParams) volcengineParams.classList.toggle('d-none', !isVolcengine || isSpecialVolcI2I);
+  if (volcengineSizeGroup) volcengineSizeGroup.classList.toggle('d-none', isNoAreaSizeModel);
   if (volcengineWatermarkGroup) volcengineWatermarkGroup.classList.toggle('d-none', !isVolcengine);
+  if (volcengineWidth && volcengineHeight) {
+    const min = isT2IV3 || isI2IV30 ? '512' : '1024';
+    const max = isI2IV30 ? '2016' : (isT2IV3 ? '2048' : '8192');
+    const placeholder = isI2IV30 ? '例如 1328' : (isT2IV3 ? '例如 1024' : '例如 2048');
+    volcengineWidth.min = min;
+    volcengineHeight.min = min;
+    volcengineWidth.max = max;
+    volcengineHeight.max = max;
+    volcengineWidth.placeholder = placeholder;
+    volcengineHeight.placeholder = placeholder;
+  }
+  if (volcengineParamsHint) {
+    volcengineParamsHint.textContent = isNoAreaSizeModel
+      ? '该模型不支持面积 size 参数，请使用 width/height（需同时填写才生效）；留空则按模型默认尺寸生成。'
+      : '即梦文档要求 size 与 width/height 二选一；若同时提供 width/height，则优先使用宽高。';
+  }
+  updateImageRatioGroup();
 }
 
 function updateI2ISpecialParamState() {
@@ -763,6 +897,10 @@ function updateVideoUiState() {
   const isXaiGrok = videoProvider && videoProvider.value === 'xai' && isImageVideo;
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
+  const isVolcengineVideoProvider = videoProvider && videoProvider.value === 'volcengine';
+  // Agnes 2.5 系列在图生视频参考模式同样支持宽高比
+  const isAgnes25Selected = videoProvider && videoProvider.value === 'agnes'
+    && ['agnes-video-2.5', 'agnes-video-2.5-flash'].includes(selectedVideoModel);
   const isRecamera = isImageVideo && selectedVideoModel === 'jimeng-v3.0-recamera';
   // 即梦 720P i2v 模型不支持帧上传（后端会拒绝），隐藏入口避免误用
   const isJimeng720I2V = videoProvider && videoProvider.value === 'volcengine' && isImageVideo
@@ -778,7 +916,7 @@ function updateVideoUiState() {
       : 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
     if (r2vFilesHint) {
       r2vFilesHint.textContent = isWan27R2V
-        ? '最多9个：图片（JPG/PNG/BMP/WebP，最大20MB）或视频（MP4/MOV，1-30秒，最大100MB）'
+        ? '最多5个（图片+视频合计）：图片（JPG/PNG/BMP/WebP，最大20MB）或视频（MP4/MOV，1-30秒，最大100MB）'
         : '最多9张图片：JPG/PNG/BMP/WebP，最大 20MB';
     }
   }
@@ -791,7 +929,7 @@ function updateVideoUiState() {
         : '最多上传 7 张参考图（JPG/PNG/BMP/WebP）';
     }
   }
-  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', isImageVideo || isMotion || isTranslate || isVideoedit);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', (isImageVideo && !isAgnes25Selected) || isMotion || isTranslate || isVideoedit);
   if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
   if (videoTranslateGroup) videoTranslateGroup.classList.toggle('d-none', !isTranslate);
   if (videoeditUploadGroup) videoeditUploadGroup.classList.toggle('d-none', !isVideoedit);
@@ -803,7 +941,8 @@ function updateVideoUiState() {
   const videoDurationGroup = document.getElementById('videoDuration')?.closest('.col-md-4');
   if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate || isVideoedit);
   const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
-  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate);
+  // 即梦视频分辨率由所选模型决定（720P/1080P/Pro），下拉不生效故隐藏
+  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate || isVolcengineVideoProvider);
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
@@ -827,6 +966,7 @@ function updateVideoUiState() {
       updateVideoProviderState();
     }
   }
+  updateSharedParamVisibility();
 }
 
 // 从 localStorage 恢复用户设置
@@ -839,7 +979,10 @@ if (localStorage.getItem('imageCount')) {
   imageCount.value = localStorage.getItem('imageCount');
 }
 if (localStorage.getItem('imageSize')) {
-  imageSize.value = localStorage.getItem('imageSize');
+  restoreImageSizeSelection();
+}
+if (imageRatio && localStorage.getItem('imageRatio') && AGNES_IMAGE_RATIOS.includes(localStorage.getItem('imageRatio'))) {
+  imageRatio.value = localStorage.getItem('imageRatio');
 }
 if (localStorage.getItem('promptExtend') !== null) {
   promptExtend.checked = localStorage.getItem('promptExtend') === 'true';
@@ -886,6 +1029,7 @@ if (videoModelSelect) {
     localStorage.setItem(getModelStorageKey('video', provider), videoModelSelect.value);
     if (modelHintVideo) modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
     updateVideoUiState();
+    updateVideoParamOptions();
   });
 }
 
@@ -943,6 +1087,10 @@ function updateVideoProviderState() {
       lastFrameLabel.textContent = isVolcengine ? '尾帧图片（首尾帧模式可选）' : '尾帧图片（仅 2.7 可选）';
     }
   }
+
+  updateVideoParamOptions();
+  // 分辨率/宽高比随 provider 显隐变化，切换后立即刷新（自动降级切换也走这里）
+  updateVideoUiState();
 }
 
 if (videoProvider) {
@@ -1043,6 +1191,7 @@ if (fetchI2ITaskIdBtn) {
 modelSelect.addEventListener('change', () => {
   const provider = providerSelect.value;
   updateSizeOptions();
+  updateVolcengineUiState();
   localStorage.setItem(getModelStorageKey('text2image', provider), modelSelect.value);
   if (modelHintT2I) modelHintT2I.textContent = T2I_MODEL_HINTS[modelSelect.value] || '输入描述即可生成图片。';
 });
@@ -1060,6 +1209,12 @@ modelSelectI2I.addEventListener('change', () => {
 imageCount.addEventListener('change', () => {
   localStorage.setItem('imageCount', imageCount.value);
 });
+
+if (imageRatio) {
+  imageRatio.addEventListener('change', () => {
+    localStorage.setItem('imageRatio', imageRatio.value);
+  });
+}
 
 promptExtend.addEventListener('change', () => {
   localStorage.setItem('promptExtend', promptExtend.checked);
@@ -1258,6 +1413,43 @@ if (storageDisableBtn) {
   });
 }
 
+// ---------- 数据库优化（设置页） ----------
+
+const dbOptimizeBtn = document.getElementById('dbOptimizeBtn');
+const dbOptimizeResult = document.getElementById('dbOptimizeResult');
+
+if (dbOptimizeBtn) {
+  dbOptimizeBtn.addEventListener('click', async () => {
+    if (!window.confirm('将清理数据库中遗留的图片/视频数据并压缩数据库文件。\n已转存到存储桶的内容不受影响；未备份成功的历史数据清理后将无法找回。\n\n确定继续？')) return;
+    const originalHtml = dbOptimizeBtn.innerHTML;
+    dbOptimizeBtn.disabled = true;
+    dbOptimizeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>优化中...';
+    dbOptimizeResult.innerHTML = '';
+    try {
+      const res = await fetch('/api/history/optimize', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const sizeText = (bytes) => {
+        const n = Number(bytes || 0);
+        return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(0, Math.round(n / 1024))} KB`;
+      };
+      const cleaned = data.historyRows + data.imageRows + data.videoRows;
+      let msg = cleaned > 0
+        ? `已清理 ${cleaned} 条记录中的媒体数据（约 ${sizeText(data.freedBytes)}），数据库 ${sizeText(data.fileSizeBefore)} → ${sizeText(data.fileSizeAfter)}。`
+        : `未发现库内残留的图片/视频数据。数据库 ${sizeText(data.fileSizeBefore)} → ${sizeText(data.fileSizeAfter)}。`;
+      if (data.nonBackedUpHistory > 0) {
+        msg += ` 其中 ${data.nonBackedUpHistory} 条历史未备份成功，数据已无法找回。`;
+      }
+      dbOptimizeResult.innerHTML = `<div class="alert alert-success py-2 mb-0">${escapeHtml(msg)}</div>`;
+    } catch (e) {
+      dbOptimizeResult.innerHTML = `<div class="alert alert-danger py-2 mb-0">${escapeHtml(`优化失败：${e.message}`)}</div>`;
+    } finally {
+      dbOptimizeBtn.disabled = false;
+      dbOptimizeBtn.innerHTML = originalHtml;
+    }
+  });
+}
+
 // ---------- 历史页 ----------
 
 const historyListEl = document.getElementById('historyList');
@@ -1355,7 +1547,7 @@ function renderHistoryRecords(records) {
       </div>`;
     historyListEl.appendChild(item);
   });
-  historyEmptyEl.classList.toggle('d-none', historyListEl.children.length === 0);
+  historyEmptyEl.classList.toggle('d-none', historyListEl.children.length > 0);
 }
 
 if (historyFilterGroup) {
@@ -1822,7 +2014,7 @@ function validateVolcengineSizeAndRatio({ model, size, width, height }) {
   const isJimengT2IV3 = model === 'jimeng-3.0' || model === 'jimeng-3.1';
   const isJimengI2IV30 = model === 'jimeng-3.0-i2i';
 
-  const minArea = isJimengT2IV3 ? 512 * 512 : 1024 * 1024;
+  const minArea = isJimengT2IV3 ? 512 * 512 : (isJimengI2IV30 ? 512 * 512 : 1024 * 1024);
   const maxArea = isJimengT2IV3 ? 2048 * 2048 : 4096 * 4096;
   const minRatio = isJimengT2IV3 ? (1 / 3) : (1 / 16);
   const maxRatio = isJimengT2IV3 ? 3 : 16;
@@ -2084,6 +2276,7 @@ generateBtn.addEventListener('click', async () => {
         parameters: {
           n,
           size,
+          ratio: provider === 'agnes' && AGNES_PRESET_MODELS.includes(model) ? (imageRatio ? imageRatio.value : undefined) : undefined,
           width: provider === 'volcengine' ? volcengineWidthVal : undefined,
           height: provider === 'volcengine' ? volcengineHeightVal : undefined,
           seed,
@@ -2299,12 +2492,13 @@ if (generateBtnVideo) {
 
     const isRecameraModel = model === 'jimeng-v3.0-recamera';
     const isXai = provider === 'xai';
+    const isAgnes25Video = provider === 'agnes' && (model === 'agnes-video-2.5' || model === 'agnes-video-2.5-flash');
     const videoParams = {
       duration: parseInt(videoDuration.value, 10),
       resolution: isXai
         ? (videoResolution.value === '1080P' ? '720p' : (videoResolution.value === '720P' ? '720p' : videoResolution.value.toLowerCase()))
         : videoResolution.value,
-      ratio: mode === 'text2video' ? videoRatio.value : undefined,
+      ratio: (mode === 'text2video' || isAgnes25Video) ? videoRatio.value : undefined,
       seed,
       negative_prompt: negativePrompt.value.trim() || undefined,
       prompt_extend: promptExtend.checked,
@@ -3047,6 +3241,7 @@ generateBtnI2I.addEventListener('click', async () => {
   formData.append('parameters', JSON.stringify({
     n,
     size: modelSpecificSize,
+    ratio: provider === 'agnes' && AGNES_PRESET_MODELS.includes(model) ? (imageRatio ? imageRatio.value : undefined) : undefined,
     width: provider === 'volcengine' ? modelSpecificWidth : undefined,
     height: provider === 'volcengine' ? modelSpecificHeight : undefined,
     seed: modelSpecificSeedFinal,

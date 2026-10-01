@@ -57,9 +57,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Generated content is backed up automatically into the bucket under **`backups/YYYY/MM/`**
 - Keys are stored only in server-side SQLite (`storage_config` table); APIs return masked values and never send keys back to the browser
 - One-click disable: generation keeps working, only backups stop
+- **Auto-upload on success (2.2.0)**: `data:` payloads are decoded and uploaded to the bucket directly, never written to the database; http(s) links are backed up asynchronously
+- **Database optimization (2.2.0)**: clean legacy media data inside SQLite and compact the database file (VACUUM) with one click from Settings
 
 ### Generation History (new in 2.0)
 - Every generated image/video is recorded into the local SQLite `history` table
+- **No media data in SQLite (2.2.0)**: image/video payloads are uploaded to the backup bucket on success and the database keeps metadata only; the history API no longer returns base64 data (responses could previously reach tens of MB and stall the page)
 - Each record shows a type badge (image/video), time, provider·model and backup status (backed up + size / in progress / failed reason / disabled)
 - **Download button**: streamed through a backend proxy from the bucket, filename includes type and date
 - **Delete**: removes the database record together with the backed-up object in the bucket
@@ -87,6 +90,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Frontend key or `GEMINI_API_KEY` (fallback: `GOOGLE_API_KEY`)
 - Uses OpenAI-compatible gateway (`POST /v1/images/generations` + `/images/edits`)
 - Endpoint configurable via `GEMINI_BASE_URL` (e.g. an OpenAI-compatible relay like `https://api.openox.tech/v1`)
+- Image size tiers 1K / 2K selectable in the UI (defaults to the upstream default when not selected)
 
 ### Volcengine (Jimeng)
 - Frontend uses `AK:SK` format
@@ -140,7 +144,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Type | Notes |
 |---|---|---|
-| `gpt-image-2` | openai | Text & image-to-image |
+| `gpt-image-2` | openai | Text & image-to-image, size options 1024x1024 / 1536x1024 / 1024x1536 |
 | `image2.5` | openai | Text & image-to-image, 1K/2K |
 
 **Agnes AI**:
@@ -152,6 +156,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `agnes-image-2.0-flash` | agnes | |
 
 ## Supported DashScope Video Models
+
+> Resolution and aspect-ratio options adapt per model: HappyHorse supports 480P and 9 aspect ratios; wan2.7-r2v caps duration at 10s and reference assets at 5 when a video reference is included.
 
 ### Text-to-Video
 
@@ -423,8 +429,11 @@ Generated image and video task records are stored in local SQLite:
 - table `image_tasks`: text-to-image and image-to-image task history
 - table `history`: generation history and backup status (new in 2.0)
 - table `storage_config`: storage backup config incl. keys — keep this file private (new in 2.0)
+- no media data in the database (2.2.0): image/video payloads go to the backup bucket; only http(s) links and metadata stay in SQLite
 
 The database is created automatically on startup. You do not need to upload a local DB file unless you want to migrate existing records.
+
+A **Database optimization** button in Settings (`POST /api/history/optimize`) cleans legacy media data inside SQLite and compacts the database file.
 
 For platforms without persistent disk, set `VIDEO_TASK_DB_PATH` to a persistent volume path.
 
@@ -520,7 +529,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.1.4' }`
+  - response: `{ status: 'ok', version: '2.2.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
