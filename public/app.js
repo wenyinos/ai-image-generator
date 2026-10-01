@@ -297,7 +297,7 @@ const MODELS_I2I = {
   openai: [
     { group: '🤖 GPT', options: [
       { value: 'gpt-image-2', label: 'GPT Image 2' },
-      { value: 'image2.5', label: 'GPT Image 2.5 (1K/2K)' },
+      // image2.5 未列在图生图：中转的 image2.5 通道仅支持文生图（/images/generations），edits 会被拒
     ] },
   ],
   volcengine: [
