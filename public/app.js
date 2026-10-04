@@ -87,6 +87,7 @@ const promptInputI2I = document.getElementById('promptInputI2I');
 const uploadArea = document.getElementById('uploadArea');
 const imageUpload = document.getElementById('imageUpload');
 const imagePreview = document.getElementById('imagePreview');
+const refsCountBadge = document.getElementById('refsCountBadge');
 const previewImage = document.getElementById('previewImage');
 const removeImageBtn = document.getElementById('removeImageBtn');
 const maskUploadGroup = document.getElementById('maskUploadGroup');
@@ -186,6 +187,8 @@ const imageTaskRecordsEmpty = document.getElementById('imageTaskRecordsEmpty');
 // 当前模式
 let currentMode = 'text2image'; // 'text2image'、'image2image' 或 'video'
 let uploadedImageFile = null;
+// OpenAI 图生图的多参考图列表（提交时走 edits 的 image[] 字段，最多 4 张）
+let uploadedImageRefs = [];
 let uploadedMaskFile = null;
 let uploadedTemplateFile = null;
 let videoTaskRecords = [];
@@ -649,6 +652,13 @@ async function loadVideoModels() {
 }
 
 function setImageApiKeyMeta(provider) {
+  // OpenAI 图生图开放多选上传（edits image[] 多参考图）；其他渠道保持单图
+  if (imageUpload) imageUpload.multiple = provider === 'openai';
+  if (provider !== 'openai' && uploadedImageRefs.length > 0) {
+    uploadedImageRefs = [];
+    updateRefsBadge();
+  }
+  const hasUploadedImage = !!uploadedImageFile || uploadedImageRefs.length > 0;
   if (provider === 'volcengine') {
     modelHintI2I.textContent = '即梦AI 4.0/4.6 支持参考图与多图生成';
   }
@@ -671,13 +681,15 @@ function setImageApiKeyMeta(provider) {
   }
 
   // 图生图模式：上传参考图并输入提示词即可生成（非火山/Gemini 时）
-  if (provider !== 'gemini' && provider !== 'volcengine') {
+  if (provider === 'openai') {
+    modelHintI2I.textContent = 'GPT 图生图：可一次上传多张参考图（最多 4 张，走官方 edits 的多图引用 image[]）。';
+  } else if (provider !== 'gemini' && provider !== 'volcengine') {
     modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
   }
   if (provider === 'volcengine') {
     volcengineImageUrlsGroup.classList.remove('d-none');
     if (volcengineLocalUploadHint) volcengineLocalUploadHint.classList.remove('d-none');
-    if (uploadedImageFile) {
+    if (hasUploadedImage) {
       imagePreview.classList.remove('d-none');
       uploadArea.classList.add('d-none');
     } else {
@@ -687,7 +699,7 @@ function setImageApiKeyMeta(provider) {
   } else {
     volcengineImageUrlsGroup.classList.add('d-none');
     if (volcengineLocalUploadHint) volcengineLocalUploadHint.classList.add('d-none');
-    if (uploadedImageFile) {
+    if (hasUploadedImage) {
       imagePreview.classList.remove('d-none');
       uploadArea.classList.add('d-none');
     } else {
@@ -2655,9 +2667,9 @@ uploadArea.addEventListener('click', () => {
 });
 
 imageUpload.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    handleImageFile(file);
+  const files = Array.from(e.target.files || []);
+  if (files.length > 0) {
+    handleImageFiles(files);
   }
 });
 
@@ -2674,9 +2686,12 @@ uploadArea.addEventListener('dragleave', () => {
 uploadArea.addEventListener('drop', (e) => {
   e.preventDefault();
   uploadArea.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    handleImageFile(file);
+  const files = Array.from(e.dataTransfer.files || []).filter((file) => file.type.startsWith('image/'));
+  if (!files.length) return;
+  if (imageUpload.multiple && files.length > 1) {
+    handleImageFiles(files);
+  } else {
+    handleImageFile(files[0]);
   }
 });
 
@@ -2770,6 +2785,54 @@ async function handleImageFile(file) {
   }
 }
 
+/**
+ * 处理上传文件列表：单文件沿用单图流程；多文件（仅 OpenAI 图生图开放多选）全部作为多参考图
+ * @param {File[]} files - 图片文件列表
+ */
+async function handleImageFiles(files) {
+  if (files.length === 1) {
+    uploadedImageRefs = [];
+    updateRefsBadge();
+    return handleImageFile(files[0]);
+  }
+  const accepted = [];
+  let skipped = 0;
+  for (const file of files.slice(0, 4)) {
+    if (file.size > 10 * 1024 * 1024) {
+      skipped += 1;
+      continue;
+    }
+    try {
+      accepted.push(file.size > 1024 * 1024 ? await compressImage(file, 1536, 0.8) : file);
+    } catch (err) {
+      skipped += 1;
+    }
+  }
+  if (!accepted.length) {
+    showAlert('参考图处理失败，请重试');
+    return;
+  }
+  if (files.length > 4) showAlert('最多支持 4 张参考图，已保留前 4 张');
+  else if (skipped > 0) showAlert(`有 ${skipped} 张图片超过 10MB 或处理失败，已跳过`);
+  uploadedImageRefs = accepted;
+  uploadedImageFile = null;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImage.src = e.target.result;
+    imagePreview.classList.remove('d-none');
+    uploadArea.classList.add('d-none');
+    updateRefsBadge();
+  };
+  reader.readAsDataURL(accepted[0]);
+}
+
+function updateRefsBadge() {
+  if (!refsCountBadge) return;
+  const count = uploadedImageRefs.length;
+  refsCountBadge.classList.toggle('d-none', count < 2);
+  refsCountBadge.textContent = `共 ${count} 张参考图`;
+}
+
 async function handleMaskImageFile(file) {
   if (file.size > 10 * 1024 * 1024) {
     showAlert('Mask 图片文件大小不能超过10MB');
@@ -2799,6 +2862,8 @@ async function handleMaskImageFile(file) {
 if (removeImageBtn) {
   removeImageBtn.addEventListener('click', () => {
     uploadedImageFile = null;
+    uploadedImageRefs = [];
+    updateRefsBadge();
     imageUpload.value = '';
     imagePreview.classList.add('d-none');
     uploadArea.classList.remove('d-none');
@@ -2972,7 +3037,7 @@ generateBtnI2I.addEventListener('click', async () => {
     : (isMaterialPod ? materialPodSeedVal : modelSpecificSeed);
   const modelSpecificSize = (isMaterialProduct || isMaterialPod) ? undefined : size;
 
-  if (provider !== 'volcengine' && !uploadedImageFile) {
+  if (provider !== 'volcengine' && !uploadedImageFile && !(provider === 'openai' && uploadedImageRefs.length > 0)) {
     showAlert('请上传参考图片');
     return;
   }
@@ -3180,7 +3245,9 @@ generateBtnI2I.addEventListener('click', async () => {
   // 构建表单数据
   const formData = new FormData();
   formData.append('provider', provider);
-  if (uploadedImageFile) {
+  if (provider === 'openai' && uploadedImageRefs.length > 0) {
+    uploadedImageRefs.forEach((file) => formData.append('imageRefs', file));
+  } else if (uploadedImageFile) {
     formData.append('image', uploadedImageFile);
   }
   if (provider === 'volcengine' && model === 'jimeng-inpainting' && uploadedMaskFile) {
