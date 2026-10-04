@@ -33,6 +33,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
   - uploaded local image (server stores temp file and exposes HTTP URL)
   - external HTTP(S) image URLs input
 - Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
+- OpenAI (`gpt-image-2`) image-to-image supports **multiple reference images (new in 2.2.1)**: up to 4 uploads per request (official edits `image[]` multi-image form)
 - DashScope model snapshot input: select a model + enter a snapshot date to auto-compose `model-snapshot`
 
 ### Video Generation
@@ -107,7 +108,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 ### OpenAI (GPT)
 - Frontend key or `OPENAI_API_KEY`
 - Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`, e.g. an OpenAI-compatible relay)
-- Supports: text-to-image, image-to-image (`gpt-image-2`, `image2.5`)
+- Supports: text-to-image (`gpt-image-2`, `image2.5`), image-to-image (`gpt-image-2`, multi-reference up to 4 images)
+- `image2.5` is text-to-image only in the UI / API: its upstream (relay) only accepts `/images/generations`, so the image-to-image picker lists `gpt-image-2` only
 
 ### xAI (Grok Video)
 - Frontend key or `XAI_API_KEY`
@@ -144,8 +146,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Type | Notes |
 |---|---|---|
-| `gpt-image-2` | openai | Text & image-to-image, size options 1024x1024 / 1536x1024 / 1024x1536 |
-| `image2.5` | openai | Text & image-to-image, 1K/2K |
+| `gpt-image-2` | openai | Text & image-to-image (multi-reference up to 4), size options 1024x1024 / 1536x1024 / 1024x1536 |
+| `image2.5` | openai | Text-to-image, 1K/2K (no image-to-image: upstream only accepts `/images/generations`) |
 
 **Agnes AI**:
 
@@ -529,7 +531,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.2.0' }`
+  - response: `{ status: 'ok', version: '2.2.1' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled

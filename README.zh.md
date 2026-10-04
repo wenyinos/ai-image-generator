@@ -33,6 +33,7 @@
   - 本地上传（服务端落盘后转为 HTTP URL）
   - 外部 HTTP(S) 图片 URL 输入
 - 火山图生图上传的临时文件会在**成功生成后 5 分钟自动清理**
+- OpenAI（`gpt-image-2`）图生图支持**多参考图（2.2.1 新增）**：单次最多上传 4 张（对应官方 edits 的 `image[]` 多图引用）
 - DashScope 模型快照输入：选择模型 + 输入快照日期自动拼接为 `模型-快照`
 
 ### 视频生成
@@ -107,7 +108,8 @@
 ### OpenAI (GPT)
 - 前端输入，或配置 `OPENAI_API_KEY`
 - 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
-- 支持：文生图、图生图（`gpt-image-2`、`image2.5`）
+- 支持：文生图（`gpt-image-2`、`image2.5`）、图生图（`gpt-image-2`，支持多参考图，最多 4 张）
+- `image2.5` 仅提供文生图：其上游（中转）只接受 `/images/generations`，图生图入口不提供
 
 ### xAI (Grok 视频)
 - 前端输入，或配置 `XAI_API_KEY`
@@ -144,8 +146,8 @@
 
 | 模型 | 类型 | 说明 |
 |---|---|---|
-| `gpt-image-2` | openai | 文生图、图生图，尺寸可选 1024x1024 / 1536x1024 / 1024x1536 |
-| `image2.5` | openai | 文生图、图生图，支持 1K/2K 分辨率 |
+| `gpt-image-2` | openai | 文生图、图生图（多参考图最多 4 张），尺寸可选 1024x1024 / 1536x1024 / 1024x1536 |
+| `image2.5` | openai | 文生图，支持 1K/2K 分辨率（不提供图生图：上游仅接受 `/images/generations`） |
 
 **Agnes AI**：
 
@@ -528,7 +530,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.2.0' }`
+  - 响应: `{ status: 'ok', version: '2.2.1' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
