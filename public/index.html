@@ -14,6 +14,9 @@
   <link href="css/pixel.css" rel="stylesheet">
   <link href="vendor/vanillajs-datepicker/dist/css/datepicker-bs5.min.css" rel="stylesheet">
   <style>
+    /* 主容器加宽：大屏下避免内容过窄（覆盖 Bootstrap 默认 1140/1320 上限） */
+    .container.app-container { max-width: 1440px; }
+
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
@@ -138,9 +141,9 @@
   </style>
 </head>
 <body>
-  <div class="container py-5">
+  <div class="container app-container py-5">
     <div class="row justify-content-center">
-      <div class="col-lg-10">
+      <div class="col-lg-11">
         <div class="card main-card border-0 shadow">
           <div class="card-body p-4 p-lg-5">
             <h1 class="card-title text-center mb-4">
@@ -609,7 +612,7 @@
                   <div class="col-md-6">
                     <label for="settingsDashscopeKey" class="form-label fw-semibold">DashScope API Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsDashscopeKey" data-provider="dashscope" placeholder="sk-..."></form>
+                      <input type="password" class="form-control settings-api-key-input" id="settingsDashscopeKey" data-provider="dashscope" placeholder="sk-...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsDashscopeKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>DASHSCOPE_API_KEY</code> · <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
@@ -617,7 +620,7 @@
                   <div class="col-md-6">
                     <label for="settingsGeminiKey" class="form-label fw-semibold">Gemini API Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsGeminiKey" data-provider="gemini" placeholder="AIza..."></form>
+                      <input type="password" class="form-control settings-api-key-input" id="settingsGeminiKey" data-provider="gemini" placeholder="AIza...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsGeminiKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>GEMINI_API_KEY</code> · <a href="https://aistudio.google.com/apikey" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
@@ -625,7 +628,7 @@
                   <div class="col-md-6">
                     <label for="settingsOpenaiKey" class="form-label fw-semibold">OpenAI API Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsOpenaiKey" data-provider="openai" placeholder="sk-..."></form>
+                      <input type="password" class="form-control settings-api-key-input" id="settingsOpenaiKey" data-provider="openai" placeholder="sk-...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsOpenaiKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>OPENAI_API_KEY</code> · <a href="https://platform.openai.com/api-keys" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
@@ -633,7 +636,7 @@
                   <div class="col-md-6">
                     <label for="settingsAgnesKey" class="form-label fw-semibold">Agnes API Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsAgnesKey" data-provider="agnes" placeholder="agnes-..."></form>
+                      <input type="password" class="form-control settings-api-key-input" id="settingsAgnesKey" data-provider="agnes" placeholder="agnes-...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsAgnesKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>AGNES_API_KEY</code> · <a href="https://agnes-ai.com" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
@@ -641,7 +644,7 @@
                   <div class="col-md-6">
                     <label for="settingsXaiKey" class="form-label fw-semibold">xAI API Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-api-key-input" id="settingsXaiKey" data-provider="xai" placeholder="xai-..."></form>
+                      <input type="password" class="form-control settings-api-key-input" id="settingsXaiKey" data-provider="xai" placeholder="xai-...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsXaiKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>XAI_API_KEY</code> · <a href="https://console.x.ai/" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
@@ -649,12 +652,12 @@
                   <div class="col-md-6">
                     <label for="settingsVolcengineAk" class="form-label fw-semibold">Volcengine Access Key（可选）</label>
                     <div class="input-group mb-2">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-cred-input" id="settingsVolcengineAk" data-cred="volcengineAk" placeholder="AK..."></form>
+                      <input type="password" class="form-control settings-cred-input" id="settingsVolcengineAk" data-cred="volcengineAk" placeholder="AK...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsVolcengineAk"><i class="bi bi-eye"></i></button>
                     </div>
                     <label for="settingsVolcengineSk" class="form-label fw-semibold">Volcengine Secret Key（可选）</label>
                     <div class="input-group">
-                      <form onsubmit="return false" style="display:contents"><input type="password" class="form-control settings-cred-input" id="settingsVolcengineSk" data-cred="volcengineSk" placeholder="SK..."></form>
+                      <input type="password" class="form-control settings-cred-input" id="settingsVolcengineSk" data-cred="volcengineSk" placeholder="SK...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsVolcengineSk"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>VOLCENGINE_ACCESS_KEY</code> / <code>VOLCENGINE_SECRET_KEY</code>，AK 与 SK 需同时填写 · <a href="https://console.volcengine.com/iam/keymanage" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
