@@ -46,6 +46,12 @@
 - 长任务通过异步轮询实时显示进度
 - 视频任务记录保存到本地 SQLite，并在前端展示
 
+### 界面与主题（2.5.0 新增）
+- 全新玟茵开源社区（wenyinos）风格界面：紫色设计体系、顶部品牌紫栏（标题居中）、紫色页脚
+- 日间/夜间模式一键切换：首次访问跟随系统偏好，手动选择后记住；加载防闪烁
+- 全部静态资源本地化：字体（Questrial / Noto Sans SC / Noto Serif SC）、图标、样式零在线请求
+- 宽屏表单双列布局与适宽按钮，移动端自适应边距；刷新页面保持上次使用的标签页
+
 ### 设置页与统一凭证（2.0 新增）
 - 顶部新增"设置"页：按提供商（DashScope / Gemini / OpenAI / Agnes / xAI / 火山 AK+SK）集中配置 API Key
 - 文生图、图生图、视频生成**共用同一套 Key**，输入即自动保存到浏览器本地
@@ -530,7 +536,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.2.1' }`
+  - 响应: `{ status: 'ok', version: '2.5.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息

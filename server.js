@@ -85,16 +85,20 @@ app.get('/unlock', (req, res) => {
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
 <link href="/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+<link href="/vendor/fonts/wenyin-fonts.css" rel="stylesheet">
+<link href="/css/wenyin.css" rel="stylesheet">
+<script nonce="${res.locals.cspNonce}">
+(function(){var t=null;try{t=localStorage.getItem('aig-theme');}catch(e){}if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();
+</script>
 <style>
-body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh}
-.main-card{border:none;border-radius:1rem;box-shadow:0 .5rem 1rem rgba(0,0,0,.15)}
+.unlock-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:6px;box-shadow:var(--shadow-soft)}
 </style>
 </head>
 <body>
 <div class="container py-5">
 <div class="row justify-content-center align-items-center" style="min-height:80vh">
 <div class="col-sm-10 col-md-8 col-lg-6 col-xl-5">
-<div class="card main-card">
+<div class="card unlock-card">
 <div class="card-body p-4 p-md-5">
 <form id="unlockForm" autocomplete="on">
 <h3 class="fw-bold mb-2"><i class="bi bi-shield-lock"></i> 访问验证</h3>
@@ -115,10 +119,13 @@ body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh
 </div>
 </div>
 </div>
-<footer class="text-center text-white py-4">
-<small>&copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.</small>
-</footer>
 </div>
+
+<footer class="wenyin-footer">
+<div class="container text-center">
+<div class="footer-copyright">&copy; 2026 <a href="https://github.com/wenyinos" target="_blank" rel="noopener">wenyinos</a>. All rights reserved.</div>
+</div>
+</footer>
 <script nonce="${res.locals.cspNonce}">
 (function(){
 const form=document.getElementById('unlockForm');
@@ -216,7 +223,7 @@ app.use('/api', require('./lib/routes/history'));
 
 // 健康检查
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.2.1' });
+  res.json({ status: 'ok', version: '2.5.0' });
 });
 
 // 启动时清理残留上传文件

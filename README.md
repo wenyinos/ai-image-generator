@@ -46,6 +46,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Long-running task progress display through async polling
 - Video task records are stored in local SQLite and shown in the UI
 
+### UI & Theme (new in 2.5.0)
+- Wenyin Open Source Community (wenyinos) style UI: purple design system, branded purple top bar with a centered title, purple footer
+- One-click light/dark mode: follows the system preference on first visit, remembers the manual choice; flicker-free loading
+- All static assets served locally: fonts (Questrial / Noto Sans SC / Noto Serif SC), icons and styles — zero online requests
+- Two-column forms and width-capped buttons on wide screens, adaptive page margins on mobile; the last active tab is restored after a refresh
+
 ### Settings Page & Unified Keys (new in 2.0)
 - New "Settings" tab: configure API keys per provider (DashScope / Gemini / OpenAI / Agnes / xAI / Volcengine AK+SK) in one place
 - One set of keys shared across text-to-image, image-to-image and video generation; saved to the browser automatically as you type
@@ -531,7 +537,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.2.1' }`
+  - response: `{ status: 'ok', version: '2.5.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
