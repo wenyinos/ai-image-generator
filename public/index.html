@@ -10,147 +10,34 @@
   <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
   <link href="vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="vendor/fonts/nunito-sans.css" rel="stylesheet">
-  <link href="css/pixel.css" rel="stylesheet">
-  <link href="vendor/vanillajs-datepicker/dist/css/datepicker-bs5.min.css" rel="stylesheet">
+  <link href="vendor/fonts/wenyin-fonts.css" rel="stylesheet">
+  <link href="css/wenyin.css" rel="stylesheet">
+  <script src="js/theme-init.js"></script>
   <style>
     /* 主容器加宽：大屏下避免内容过窄（覆盖 Bootstrap 默认 1140/1320 上限） */
     .container.app-container { max-width: 1440px; }
-
-    body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-    }
-    .main-card {
-      border: none;
-      border-radius: 1rem;
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .main-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
-    }
-    .image-container {
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f8f9fa;
-      border-radius: 0.5rem;
-      overflow: hidden;
-      transition: min-height 0.3s ease;
-    }
-    .image-container.has-images {
-      min-height: auto;
-      background: transparent;
-    }
-    .image-container img {
-      max-width: 100%;
-      height: auto;
-    }
-    .result-images-grid {
-      display: grid;
-      gap: 0.5rem;
-      width: 100%;
-    }
-    .result-images-grid.grid-1 { grid-template-columns: 1fr; }
-    .result-images-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
-    .result-images-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
-    .result-images-grid.grid-4 { grid-template-columns: repeat(2, 1fr); }
-    .result-images-grid .image-wrapper {
-      overflow: hidden;
-      border-radius: 0.25rem;
-    }
-    .result-images-grid .image-wrapper img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 0.25rem;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .result-images-grid .image-wrapper img:hover {
-      transform: scale(1.02);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    .placeholder-text {
-      color: #6c757d;
-    }
-    .spinner-border {
-      width: 3rem;
-      height: 3rem;
-    }
-    .upload-area {
-      border: 2px dashed #dee2e6;
-      border-radius: 0.5rem;
-      padding: 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: #f8f9fa;
-    }
-    .upload-area:hover {
-      border-color: #667eea;
-      background: #e9ecef;
-    }
-    .upload-area.dragover {
-      border-color: #667eea;
-      background: #e7f3ff;
-    }
-    .upload-preview {
-      max-width: 100%;
-      max-height: 300px;
-      border-radius: 0.5rem;
-      margin-top: 1rem;
-    }
-    .nav-tabs .nav-link {
-      color: #495057;
-      font-weight: 500;
-    }
-    .nav-tabs .nav-link.active {
-      color: #667eea;
-      font-weight: 600;
-    }
-    /* 设置页只显示 API Key 配置，隐藏三个生成模式共享的参数/结果区 */
-    body.settings-active .settings-hide {
-      display: none !important;
-    }
-    .image-wrapper {
-      overflow: hidden;
-      border-radius: 0.25rem;
-    }
-    .image-wrapper img {
-      width: 100%;
-      height: auto;
-      border-radius: 0.25rem;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .image-wrapper img:hover {
-      transform: scale(1.02);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    #imagePreviewModal .modal-content {
-      border: none;
-      border-radius: 0.5rem;
-    }
-    #imagePreviewModal .modal-body img {
-      border-radius: 0 0 0.5rem 0.5rem;
-    }
   </style>
 </head>
 <body>
-  <div class="container app-container py-5">
+  <!-- 顶部导航（无 banner） -->
+  <nav class="wenyin-navbar">
+    <div class="container app-container navbar-inner">
+      <a class="navbar-brand" href="./">
+        <i class="bi bi-palette-fill"></i>AI 视觉生成
+      </a>
+      <div class="navbar-actions">
+        <button class="nav-action-btn theme-toggle-btn" id="themeToggle" type="button" aria-label="切换日间/夜间模式" title="切换日间/夜间模式">
+          <i class="bi bi-moon-stars" id="themeToggleIcon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container app-container wenyin-page">
     <div class="row justify-content-center">
       <div class="col-lg-11">
-        <div class="card main-card border-0 shadow">
-          <div class="card-body p-4 p-lg-5">
-            <h1 class="card-title text-center mb-4">
-              <i class="bi bi-palette-fill text-primary me-2"></i>AI 视觉生成
-            </h1>
-
-            <!-- 模式切换标签 -->
+        <div class="card main-card">
+          <div class="card-body">
             <ul class="nav nav-tabs nav-tabs-primary mb-4" id="modeTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="text2image-tab" data-bs-toggle="tab" data-bs-target="#text2image" type="button" role="tab">
@@ -278,6 +165,8 @@
                   </div>
                 </div>
 
+                <div class="row g-3">
+                <div class="col-lg-7">
                 <div class="mb-3">
                   <label class="form-label fw-semibold">参考图片</label>
                   <div class="upload-area" id="uploadArea">
@@ -340,15 +229,19 @@
                   <div class="form-text">即梦接口按文档使用 image_urls，需可公网访问的 http/https 链接。</div>
                   <div class="form-text">也可直接使用上方本地上传图片作为参考图。</div>
                 </div>
+                </div>
 
-                <div class="mb-3">
+                <div class="col-lg-5 d-flex flex-column">
+                <div class="mb-3 d-flex flex-column flex-grow-1">
                   <label for="promptInputI2I" class="form-label fw-semibold">图片描述（可选）</label>
                   <textarea
-                    class="form-control"
+                    class="form-control flex-grow-1"
                     id="promptInputI2I"
                     rows="2"
                     placeholder="描述你想要生成的效果，例如：转换为水彩画风格"
                   ></textarea>
+                </div>
+                </div>
                 </div>
               </div>
 
@@ -392,9 +285,6 @@
                       <input type="text" class="form-control" id="modelSnapshotVideo" placeholder="模型快照（如 2026-06-12，可选）">
                     </div>
                     <div class="form-text" id="modelHintVideo">文生视频模式：输入描述即可生成视频。</div>
-                    <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="refreshVideoModelsBtn">
-                      <i class="bi bi-arrow-clockwise"></i> 获取可用模型
-                    </button>
                   </div>
                 </div>
                 <div class="mb-3">
@@ -713,7 +603,7 @@
                 <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2" id="historyPager">
                   <div class="text-muted small" id="historyPageInfo"></div>
                   <div class="d-flex align-items-center gap-2">
-                    <label class="text-muted small mb-0" for="historyPageSizeSelect">每页</label>
+                    <label class="text-muted small mb-0 text-nowrap" for="historyPageSizeSelect">每页</label>
                     <select class="form-select form-select-sm" id="historyPageSizeSelect" style="max-width:80px">
                       <option value="10">10 条</option>
                       <option value="20" selected>20 条</option>
@@ -949,7 +839,7 @@
               </div>
             </div>
 
-            <div class="d-grid mb-2 settings-hide">
+            <div class="d-grid mb-2 settings-hide generate-actions">
               <button class="btn btn-primary btn-lg btn-pill" id="generateBtn" type="button">
                 <i class="bi bi-magic me-1"></i> 生成图片
               </button>
@@ -1120,25 +1010,20 @@
       </div>
     </div>
 
-    <footer class="text-center text-white py-4 mt-4">
-      <small>
-        &copy; 2026 <a href="https://github.com/wenyinos" target="_blank" class="text-white text-decoration-none">wenyinos</a>. All rights reserved.
-        <br>
-        <span class="mt-1">
-          <i class="bi bi-github"></i> 
-          <a href="https://github.com/wenyinos/ai-image-generator" target="_blank" class="text-white text-decoration-none">
-            GitHub 仓库
-          </a>
-        </span>
-      </small>
-    </footer>
   </div>
 
+  <footer class="wenyin-footer">
+    <div class="container app-container text-center">
+      <div class="footer-links mb-2">
+        <a href="https://github.com/wenyinos" target="_blank" rel="noopener">玟茵开源社区</a>
+        <a href="https://github.com/wenyinos/ai-image-generator" target="_blank" rel="noopener"><i class="bi bi-github me-1"></i>GitHub 仓库</a>
+      </div>
+      <div class="footer-copyright">&copy; 2026 wenyinos. All rights reserved.</div>
+    </div>
+  </footer>
+
   <script src="vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="vendor/headroom.js/dist/headroom.min.js"></script>
-  <script src="vendor/smooth-scroll/dist/smooth-scroll.min.js"></script>
-  <script src="vendor/vanillajs-datepicker/dist/js/datepicker.min.js"></script>
-  <script src="js/pixel.js"></script>
+  <script src="js/theme.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
