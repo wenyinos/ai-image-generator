@@ -162,7 +162,6 @@ const volcengineImageUrls = document.getElementById('volcengineImageUrls');
 const videoMode = document.getElementById('videoMode');
 const videoProvider = document.getElementById('videoProvider');
 const videoModelSelect = document.getElementById('videoModelSelect');
-const refreshVideoModelsBtn = document.getElementById('refreshVideoModelsBtn');
 const videoPromptInput = document.getElementById('videoPromptInput');
 const videoFrameGroup = document.getElementById('videoFrameGroup');
 const videoFirstFrame = document.getElementById('videoFirstFrame');
@@ -1032,9 +1031,6 @@ if (videoMode) {
     }
   });
 }
-if (refreshVideoModelsBtn) {
-  refreshVideoModelsBtn.addEventListener('click', loadVideoModels);
-}
 if (videoModelSelect) {
   videoModelSelect.addEventListener('change', () => {
     const provider = videoProvider ? videoProvider.value : 'dashscope';
@@ -1051,7 +1047,6 @@ function updateVideoProviderState() {
   const isMotion = videoMode && videoMode.value === 'motion';
   const isImageVideo = videoMode && videoMode.value === 'image2video';
   if (modelSnapshotGroupVideo) modelSnapshotGroupVideo.classList.toggle('d-none', provider !== 'dashscope');
-  if (refreshVideoModelsBtn) refreshVideoModelsBtn.classList.toggle('d-none', isVolcengine);
 
   // 渲染模型列表
   const savedModel = localStorage.getItem(getModelStorageKey('video', provider));
@@ -3493,3 +3488,28 @@ window.addEventListener('pageshow', (event) => {
   recoverForegroundState({ force: true });
   pollActiveTaskOnce();
 });
+
+// 刷新后恢复上次使用的标签页（避免总是回到文生图）
+const TAB_STORAGE_KEY = 'aig-active-tab';
+const modeTabsEl = document.getElementById('modeTabs');
+if (modeTabsEl) {
+  modeTabsEl.addEventListener('shown.bs.tab', (e) => {
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, e.target.id);
+    } catch (err) {
+      /* 隐私模式下忽略 */
+    }
+  });
+  let savedTabId = null;
+  try {
+    savedTabId = localStorage.getItem(TAB_STORAGE_KEY);
+  } catch (err) {
+    savedTabId = null;
+  }
+  if (savedTabId && savedTabId !== 'text2image-tab') {
+    const savedTabBtn = document.getElementById(savedTabId);
+    if (savedTabBtn && modeTabsEl.contains(savedTabBtn)) {
+      new bootstrap.Tab(savedTabBtn).show();
+    }
+  }
+}
