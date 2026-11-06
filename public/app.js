@@ -869,6 +869,7 @@ function updateTextProviderState() {
   updateSizeOptions();
   localStorage.setItem('provider', provider);
   if (modelSnapshotGroupT2I) modelSnapshotGroupT2I.classList.toggle('d-none', provider !== 'dashscope');
+  renderActiveAI778Params();
 }
 
 function updateImageProviderState() {
@@ -882,6 +883,108 @@ function updateImageProviderState() {
   }
   localStorage.setItem('providerI2I', provider);
   if (modelSnapshotGroupI2I) modelSnapshotGroupI2I.classList.toggle('d-none', provider !== 'dashscope');
+  renderActiveAI778Params();
+}
+
+// ---- AI778 动态参数控件 ----
+
+let AI778_SPECS = null;
+
+function renderAI778Params(container, model) {
+  if (!container) return;
+  const spec = AI778_SPECS ? AI778_SPECS[model] : null;
+  if (!spec) {
+    container.innerHTML = '';
+    container.classList.add('d-none');
+    return;
+  }
+  const items = (spec.params || []).filter((item) => !item.needsInput && item.type !== 'upload');
+  const needsExternalInput = (spec.params || []).some((item) => item.needsInput);
+  if (items.length === 0 && !needsExternalInput) {
+    container.innerHTML = '';
+    container.classList.add('d-none');
+    return;
+  }
+  container.innerHTML = '';
+  if (needsExternalInput) {
+    const warning = document.createElement('div');
+    warning.className = 'col-12';
+    warning.innerHTML = '<div class="alert alert-warning py-2 mb-0 small">该模型需要视频/音频素材输入，当前页面仅支持图片参考，需补充对应素材后才能调用。</div>';
+    container.appendChild(warning);
+  }
+  items.forEach((item) => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4';
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = item.label || item.name;
+    let control;
+    if (Array.isArray(item.options) && item.options.length > 0) {
+      control = document.createElement('select');
+      control.className = 'form-select';
+      if (!item.required) {
+        const auto = document.createElement('option');
+        auto.value = '';
+        auto.textContent = '自动 (模型默认)';
+        control.appendChild(auto);
+      }
+      item.options.forEach((option) => {
+        const opt = document.createElement('option');
+        opt.value = option.value;
+        opt.textContent = option.label || option.value;
+        if (option.unavailable) opt.disabled = true;
+        control.appendChild(opt);
+      });
+      if (item.default !== undefined) {
+        control.value = item.default;
+      } else if (item.required) {
+        const firstAvailable = item.options.find((option) => !option.unavailable);
+        if (firstAvailable) control.value = firstAvailable.value;
+      } else {
+        control.value = '';
+      }
+    } else {
+      control = document.createElement('input');
+      control.className = 'form-control';
+      control.placeholder = 'auto';
+      if (item.default !== undefined) control.value = item.default;
+    }
+    control.dataset.ai778Param = item.name;
+    col.append(label, control);
+    container.appendChild(col);
+  });
+  container.classList.remove('d-none');
+}
+
+function collectAI778Params(container) {
+  const result = {};
+  if (!container) return result;
+  container.querySelectorAll('[data-ai778-param]').forEach((element) => {
+    if (element.value !== '') result[element.dataset.ai778Param] = element.value;
+  });
+  return result;
+}
+
+function renderActiveAI778Params() {
+  const isI2I = currentMode === 'image2image';
+  const provider = isI2I ? providerSelectI2I.value : providerSelect.value;
+  const model = isI2I ? modelSelectI2I.value : modelSelect.value;
+  renderAI778Params(document.getElementById('ai778ParamsImage'), provider === 'ai778' ? model : '');
+  renderAI778Params(
+    document.getElementById('ai778ParamsVideo'),
+    videoProvider && videoProvider.value === 'ai778' && videoModelSelect ? videoModelSelect.value : ''
+  );
+}
+
+async function loadAI778Specs() {
+  try {
+    const res = await fetch('/api/ai778-model-specs');
+    if (!res.ok) return;
+    AI778_SPECS = await res.json();
+    renderActiveAI778Params();
+  } catch (err) {
+    AI778_SPECS = null;
+  }
 }
 
 function getActiveProvider() {
@@ -975,6 +1078,7 @@ function updateVideoUiState() {
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
   const isVolcengineVideoProvider = videoProvider && videoProvider.value === 'volcengine';
+  const isAi778VideoProvider = videoProvider && videoProvider.value === 'ai778';
   // Agnes 2.5 系列在图生视频参考模式同样支持宽高比
   const isAgnes25Selected = videoProvider && videoProvider.value === 'agnes'
     && ['agnes-video-2.5', 'agnes-video-2.5-flash'].includes(selectedVideoModel);
@@ -997,7 +1101,7 @@ function updateVideoUiState() {
         : '最多9张图片：JPG/PNG/BMP/WebP，最大 20MB';
     }
   }
-  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', (isImageVideo && !isAgnes25Selected) || isMotion || isTranslate || isVideoedit);
+  if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', (isImageVideo && !isAgnes25Selected) || isMotion || isTranslate || isVideoedit || isAi778VideoProvider);
   if (motionUploadGroup) motionUploadGroup.classList.toggle('d-none', !isMotion);
   if (videoTranslateGroup) videoTranslateGroup.classList.toggle('d-none', !isTranslate);
   if (videoeditUploadGroup) videoeditUploadGroup.classList.toggle('d-none', !isVideoedit);
@@ -1007,10 +1111,10 @@ function updateVideoUiState() {
   const videoPromptGroup = document.getElementById('videoPromptInput')?.closest('.mb-3');
   if (videoPromptGroup) videoPromptGroup.classList.toggle('d-none', isMotion || isTranslate);
   const videoDurationGroup = document.getElementById('videoDuration')?.closest('.col-md-4');
-  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate || isVideoedit);
+  if (videoDurationGroup) videoDurationGroup.classList.toggle('d-none', isMotion || isTranslate || isVideoedit || isAi778VideoProvider);
   const videoResolutionGroup = document.getElementById('videoResolution')?.closest('.col-md-4');
-  // 即梦视频分辨率由所选模型决定（720P/1080P/Pro），下拉不生效故隐藏
-  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate || isVolcengineVideoProvider);
+  // 即梦视频分辨率由所选模型决定（720P/1080P/Pro）；AI778 参数由动态控件提供，均隐藏通用下拉
+  if (videoResolutionGroup) videoResolutionGroup.classList.toggle('d-none', isMotion || isTranslate || isVolcengineVideoProvider || isAi778VideoProvider);
   if (videoProvider) {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
@@ -1078,6 +1182,7 @@ updateI2ISpecialParamState();
 renderVideoModelOptions();
 updateVideoUiState();
 loadVideoModels();
+loadAI778Specs();
 
 // 切换事件
 providerSelect.addEventListener('change', () => {
@@ -1107,6 +1212,7 @@ if (videoModelSelect) {
     if (modelHintVideo) modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
     updateVideoUiState();
     updateVideoParamOptions();
+    renderAI778Params(document.getElementById('ai778ParamsVideo'), provider === 'ai778' ? videoModelSelect.value : '');
   });
 }
 
@@ -1159,6 +1265,7 @@ function updateVideoProviderState() {
   }
 
   updateVideoParamOptions();
+  renderAI778Params(document.getElementById('ai778ParamsVideo'), provider === 'ai778' && videoModelSelect ? videoModelSelect.value : '');
   // 分辨率/宽高比随 provider 显隐变化，切换后立即刷新（自动降级切换也走这里）
   updateVideoUiState();
 }
@@ -1264,6 +1371,7 @@ modelSelect.addEventListener('change', () => {
   updateVolcengineUiState();
   localStorage.setItem(getModelStorageKey('text2image', provider), modelSelect.value);
   if (modelHintT2I) modelHintT2I.textContent = T2I_MODEL_HINTS[modelSelect.value] || '输入描述即可生成图片。';
+  renderActiveAI778Params();
 });
 
 modelSelectI2I.addEventListener('change', () => {
@@ -1273,6 +1381,7 @@ modelSelectI2I.addEventListener('change', () => {
   setImageApiKeyMeta(provider);
   updateVolcengineUiState();
   updateI2ISpecialParamState();
+  renderActiveAI778Params();
 });
 
 // 保存参数偏好到 localStorage
@@ -2353,6 +2462,7 @@ generateBtn.addEventListener('click', async () => {
           negative_prompt: negativePromptVal,
           prompt_extend: promptExtendVal,
           watermark: watermarkVal,
+          ai778Params: provider === 'ai778' ? collectAI778Params(document.getElementById('ai778ParamsImage')) : undefined,
         },
       }),
     });
@@ -2576,6 +2686,7 @@ if (generateBtnVideo) {
       aspect_ratio: provider === 'volcengine' && mode === 'text2video' ? videoRatio.value : undefined,
       template_id: isRecameraModel && recameraTemplate ? recameraTemplate.value : undefined,
       camera_strength: isRecameraModel && recameraStrength ? recameraStrength.value : undefined,
+      ai778Params: provider === 'ai778' ? collectAI778Params(document.getElementById('ai778ParamsVideo')) : undefined,
     };
     const formData = new FormData();
     formData.append('apiKey', apiKey);
@@ -3374,6 +3485,7 @@ generateBtnI2I.addEventListener('click', async () => {
     image_edit_prompt: isMaterialProduct || isMaterialPod ? materialEditPromptVal : undefined,
     edit_prompt: isMaterialProduct ? materialEditPromptVal : undefined,
     lora_weight: isMaterialPod ? materialLoraWeightVal : undefined,
+    ai778Params: provider === 'ai778' ? collectAI778Params(document.getElementById('ai778ParamsImage')) : undefined,
   }));
 
   try {

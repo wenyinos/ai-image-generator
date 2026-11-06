@@ -14,6 +14,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ## Features
 
+### New in 2.7.1
+- AI778 image and video parameters are now generated from the official model specs (`lib/ai778-model-specs.json`)
+- Required parameters are filled automatically; common options (resolution, duration, aspect ratio, quality, version, size, complexity, output format, etc.) are selectable per model
+- Models that require video/audio input show a clear limitation notice
+
 ### New in 2.7.0
 - Added **22 AI778 per-call video models** to the Video tab: text-to-video, image-to-video and reference-to-video
 - Video model names show the starting price (¥/video) and the resolution multiplier; the model hint shows all resolution tiers
@@ -132,6 +137,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Uses the platform media protocol: `POST /v1/media/generate`, then polls `GET /v1/skills/task-status?task_id=...`
 - 16 per-call image models; every model supports text-to-image and image-to-image, each with its price shown next to the model name
 - 22 per-call video models are also available in the Video tab (text-to-video, image-to-video, reference-to-video); prices are shown as ¥/video starting price
+- Model parameters are rendered dynamically from `lib/ai778-model-specs.json`: required defaults are filled automatically, and common options (resolution, duration, aspect ratio, quality, version, size, etc.) are selectable per model
 - Image-to-image accepts up to 16 reference images (base64 data URLs are sent via `params.images`); video generation polls the same task-status endpoint
 
 ### HTTP Proxy
@@ -577,7 +583,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.7.0' }`
+  - response: `{ status: 'ok', version: '2.7.1' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled

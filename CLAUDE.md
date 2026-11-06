@@ -93,7 +93,7 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 - 同步/异步模型分类 (`SYNC_MODELS`)
 - 尺寸白名单 (`ALLOWED_SIZES_BY_MODEL`)
 
-新增模型或 provider 参数时，从 config.js 开始修改。AI778 新增模型需在 `AI778_MODELS` 中登记默认参数与价格，并同步前端 `MODELS_T2I.ai778` / `MODELS_I2I.ai778` 的“名称 · ¥价格/次起”标注。
+新增模型或 provider 参数时，从 config.js 开始修改。AI778 新增模型需在 `AI778_MODELS` / `AI778_VIDEO_MODELS` 中登记价格，并同步前端模型名旁的“¥价格”标注；模型参数枚举与必填默认值维护在 `lib/ai778-model-specs.json`（由官方 `/v1/skills/models/{name}` 生成），前端会据此动态渲染参数控件。
 
 ## 重要约定
 
