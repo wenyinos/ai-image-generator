@@ -42,7 +42,7 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 | Volcengine | `generateWithVolcengine()` | `jimeng-video` 路由 → taskId 立即返回 | `fetchVolcengineTaskResult()` → HMAC 签名 POST |
 | Agnes | `generateWithAgnes()` | `agnes-video` 路由 → taskId | `fetchAgnesVideoResult()` |
 | OpenAI | `generateWithOpenAI()` | 不支持 | 同步返回，无需轮询 |
-| AI778 | `generateWithAI778()`（媒体协议提交 + 状态轮询） | 不支持 | `GET /v1/skills/task-status?task_id=` |
+| AI778 | `generateWithAI778()`（媒体协议提交 + 状态轮询） | `ai778-video` 路由 → taskId | `GET /v1/skills/task-status?task_id=` |
 
 ### Volcengine HMAC-SHA256 签名 (`utils.js`)
 
@@ -89,7 +89,7 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 单一配置来源。所有常量通过 `process.env` + 默认值定义，包括：
 - 超时时间（ms）
 - API 端点 URL
-- 模型列表和别名映射 (`VOLCENGINE_MODEL_ALIASES`, `VIDEO_MODELS`, `AI778_MODELS`)
+- 模型列表和别名映射 (`VOLCENGINE_MODEL_ALIASES`, `VIDEO_MODELS`, `AI778_MODELS`, `AI778_VIDEO_MODELS`)
 - 同步/异步模型分类 (`SYNC_MODELS`)
 - 尺寸白名单 (`ALLOWED_SIZES_BY_MODEL`)
 

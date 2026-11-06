@@ -14,6 +14,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ## Features
 
+### New in 2.7.0
+- Added **22 AI778 per-call video models** to the Video tab: text-to-video, image-to-video and reference-to-video
+- Video model names show the starting price (¥/video) and the resolution multiplier; the model hint shows all resolution tiers
+- AI778 video is available alongside Agnes / DashScope / Volcengine; the same `AI778_API_KEY` is shared by image and video
+- AI778 video tasks are submitted to `/v1/media/generate` and polled through `/v1/skills/task-status`
+
 ### New in 2.6.0
 - Added **AI778** image provider: 16 per-call models, each supporting text-to-image and image-to-image; prices are shown next to model names
 - AI778 is the default provider for text-to-image and image-to-image; Agnes AI is the default for video generation
@@ -125,7 +131,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Base URL: `https://api.lk888.ai/v1` (configurable via `AI778_BASE_URL`)
 - Uses the platform media protocol: `POST /v1/media/generate`, then polls `GET /v1/skills/task-status?task_id=...`
 - 16 per-call image models; every model supports text-to-image and image-to-image, each with its price shown next to the model name
-- Image-to-image accepts up to 16 reference images (base64 data URLs are sent via `params.images`)
+- 22 per-call video models are also available in the Video tab (text-to-video, image-to-video, reference-to-video); prices are shown as ¥/video starting price
+- Image-to-image accepts up to 16 reference images (base64 data URLs are sent via `params.images`); video generation polls the same task-status endpoint
 
 ### HTTP Proxy
 - Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (OpenAI) through a proxy
@@ -178,6 +185,33 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `kling-v3-omni` | Kling V3 Omni | ¥0.1822/call |
 | `wan2.6-image` | Wan 2.6 image | ¥0.1063/call |
 | `kling-v3` | Kling V3 | ¥0.1822/call |
+
+**AI778 per-call video models** (price = minimum ¥/video; multiplier = resolution factor on base price):
+
+| Model | Notes | Min price | Resolution multiplier |
+|---|---|---|---|
+| `vo3.1` | VO3.1 | ¥0.2189 | same price |
+| `gk-video-3` | GK-video-3 | ¥0.2732 | same price |
+| `omni-1.1` | Omni 1.1 | ¥0.2733 | 720P×1 / 1080P×1.6667 / 4K×2.5 |
+| `viduq3` | Vidu Q3 | ¥0.3029 | 540P×1 / 720P×1.5~1.875 / 1080P×1.8~2 |
+| `omni-flash` | omni-flash (currently no active channel) | ¥0.3643 | same price |
+| `wan2.6-cankaosheng` | Wan 2.6 reference | ¥0.4144 | 1080P×1.6667 |
+| `wan2.6-shouzheng` | Wan 2.6 first frame | ¥0.4782 | 1080P×1.6667 |
+| `viduq3-cankaosheng` | Vidu Q3 reference | ¥0.5222 | 540P×0.5~1 / 720P×1~2 / 1080P×1.5~2.5 |
+| `video-enhance` | Video upscale (currently no active channel) | ¥0.5951 | same price |
+| `pixverse-c1-cankaosheng` | Pix C1 reference | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
+| `pixverse-c1-shouweizhen` | Pix C1 first/last frame | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
+| `omni_flash-10s-fl` | Omni Flash first/last frame | ¥0.7742 | same price |
+| `omni_flash-10s` | Omni Flash 10s | ¥0.7742 | same price |
+| `viduq2-cankaosheng` | Vidu Q2 reference | ¥0.9138 | 540P/720P×1 / 1080P×2 |
+| `wan2.7-cankaosheng` | Wan 2.7 reference | ¥1.3662 | 1080P×1.6667 |
+| `wan2.7-shouweizhen` | Wan 2.7 first/last frame | ¥1.3662 | 1080P×1.6667 |
+| `wan2.7-xuxie` | Wan 2.7 video extension | ¥1.3662 | 1080P×1.6667 |
+| `kling-v3-omni-cankao` | Kling Omni reference | ¥3.0345 | same price |
+| `kling-v3-omni-shouweizhen` | Kling Omni first/last frame | ¥3.0345 | same price |
+| `kling-v3-video` | Kling V3 video | ¥3.414 | same price |
+| `seedance-2.0-anci` | Seedance 2.0 per-call | ¥5.8443 | same price |
+| `seedance-2.5-anci` | Seedance 2.5 per-call | ¥12.5235 | same price |
 
 ## Supported DashScope Video Models
 
@@ -543,7 +577,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.6.0' }`
+  - response: `{ status: 'ok', version: '2.7.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled

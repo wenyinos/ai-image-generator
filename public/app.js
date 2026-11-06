@@ -426,6 +426,28 @@ const VIDEO_MODEL_HINTS = {
   'agnes-video-v2.0': 'Agnes Video V2.0：支持文生视频和图生视频。',
   'agnes-video-2.5': 'Agnes Video 2.5：新一代模型，支持 4-12 秒、720P-2K、多宽高比。',
   'agnes-video-2.5-flash': 'Agnes Video 2.5 Flash：新一代快速版，720P 输出。',
+  'vo3.1': 'AI778 按次：¥0.2189/条起；分辨率不影响价格。',
+  'gk-video-3': 'AI778 按次：¥0.2732/条起；分辨率不影响价格。',
+  'omni-1.1': 'AI778 按次：¥0.2733/条起；分辨率倍率 720P×1 / 1080P×1.6667 / 4K×2.5。',
+  'viduq3': 'AI778 按次：¥0.3029/条起；分辨率倍率 540P×1 / 720P×1.5~1.875 / 1080P×1.8~2。',
+  'omni-flash': 'AI778 按次：¥0.3643/条起；分辨率不影响价格（当前无活跃渠道）。',
+  'wan2.6-cankaosheng': 'AI778 按次：¥0.4144/条起；1080P 倍率 ×1.6667。',
+  'wan2.6-shouzheng': 'AI778 按次：¥0.4782/条起；1080P 倍率 ×1.6667。',
+  'viduq3-cankaosheng': 'AI778 按次：¥0.5222/条起；分辨率倍率 540P×0.5~1 / 720P×1~2 / 1080P×1.5~2.5。',
+  'video-enhance': 'AI778 按次：¥0.5951/条起；分辨率不影响价格（当前无活跃渠道）。',
+  'pixverse-c1-cankaosheng': 'AI778 按次：¥0.6912/条起；分辨率倍率 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71（基础价按最低档折算，实际以起价为准）。',
+  'pixverse-c1-shouweizhen': 'AI778 按次：¥0.6912/条起；分辨率倍率 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71（基础价按最低档折算，实际以起价为准）。',
+  'omni_flash-10s-fl': 'AI778 按次：¥0.7742/条起；分辨率不影响价格。',
+  'omni_flash-10s': 'AI778 按次：¥0.7742/条起；分辨率不影响价格。',
+  'viduq2-cankaosheng': 'AI778 按次：¥0.9138/条起；分辨率倍率 540P/720P×1 / 1080P×2。',
+  'wan2.7-cankaosheng': 'AI778 按次：¥1.3662/条起；1080P 倍率 ×1.6667。',
+  'wan2.7-shouweizhen': 'AI778 按次：¥1.3662/条起；1080P 倍率 ×1.6667。',
+  'wan2.7-xuxie': 'AI778 按次：¥1.3662/条起；1080P 倍率 ×1.6667。',
+  'kling-v3-omni-cankao': 'AI778 按次：¥3.0345/条起；分辨率不影响价格。',
+  'kling-v3-omni-shouweizhen': 'AI778 按次：¥3.0345/条起；分辨率不影响价格。',
+  'kling-v3-video': 'AI778 按次：¥3.414/条起；分辨率不影响价格。',
+  'seedance-2.0-anci': 'AI778 按次：¥5.8443/条起；分辨率不影响价格（一口价按条）。',
+  'seedance-2.5-anci': 'AI778 按次：¥12.5235/条起；分辨率不影响价格（一口价按条）。',
 };
 
 let VIDEO_MODELS = {
@@ -476,6 +498,32 @@ const JIMENG_VIDEO_MODELS = {
 const JIMENG_MOTION_MODELS = [
   { value: 'jimeng-motion-2.0', label: '动作模仿2.0（多人/非真人）' },
   { value: 'jimeng-motion-1.0', label: '动作模仿1.0' },
+];
+
+// AI778 按次视频模型（价格单位：元/条起；倍率为分辨率档位相对基础价的系数）
+const AI778_VIDEO_MODELS = [
+  { value: 'vo3.1', label: 'VO3.1 · ¥0.2189/条起 · 分辨率同价' },
+  { value: 'gk-video-3', label: 'GK-video-3 · ¥0.2732/条起 · 分辨率同价' },
+  { value: 'omni-1.1', label: 'Omni 1.1 · ¥0.2733/条起 · 1080P×1.67' },
+  { value: 'viduq3', label: 'Vidu Q3 · ¥0.3029/条起 · 1080P×1.8~2' },
+  { value: 'omni-flash', label: 'omni-flash · ¥0.3643/条起 · 分辨率同价' },
+  { value: 'wan2.6-cankaosheng', label: '万相 2.6 参考生 · ¥0.4144/条起 · 1080P×1.67' },
+  { value: 'wan2.6-shouzheng', label: '万相 2.6 首帧 · ¥0.4782/条起 · 1080P×1.67' },
+  { value: 'viduq3-cankaosheng', label: 'Vidu Q3 参考生 · ¥0.5222/条起 · 1080P×1.5~2.5' },
+  { value: 'video-enhance', label: '视频超分 · ¥0.5951/条起 · 分辨率同价' },
+  { value: 'pixverse-c1-cankaosheng', label: 'Pix C1 参考生 · ¥0.6912/条起 · 1080P×24~71' },
+  { value: 'pixverse-c1-shouweizhen', label: 'Pix C1 首尾帧 · ¥0.6912/条起 · 1080P×24~71' },
+  { value: 'omni_flash-10s-fl', label: 'Omni Flash 首尾帧 · ¥0.7742/条起 · 分辨率同价' },
+  { value: 'omni_flash-10s', label: 'Omni Flash 10秒 · ¥0.7742/条起 · 分辨率同价' },
+  { value: 'viduq2-cankaosheng', label: 'Vidu Q2 参考生 · ¥0.9138/条起 · 1080P×2' },
+  { value: 'wan2.7-cankaosheng', label: '万相 2.7 参考生 · ¥1.3662/条起 · 1080P×1.67' },
+  { value: 'wan2.7-shouweizhen', label: '万相 2.7 首尾帧 · ¥1.3662/条起 · 1080P×1.67' },
+  { value: 'wan2.7-xuxie', label: '万相 2.7 视频续写 · ¥1.3662/条起 · 1080P×1.67' },
+  { value: 'kling-v3-omni-cankao', label: '可灵-Omni 参考生 · ¥3.0345/条起 · 分辨率同价' },
+  { value: 'kling-v3-omni-shouweizhen', label: '可灵-Omni 首尾帧 · ¥3.0345/条起 · 分辨率同价' },
+  { value: 'kling-v3-video', label: '可灵-V3-video · ¥3.414/条起 · 分辨率同价' },
+  { value: 'seedance-2.0-anci', label: 'SD 2.0 按次 · ¥5.8443/条起 · 分辨率同价' },
+  { value: 'seedance-2.5-anci', label: 'SD 2.5 按次 · ¥12.5235/条起 · 分辨率同价' },
 ];
 
 // 各模型支持的尺寸选项
@@ -600,6 +648,8 @@ function renderVideoModelOptions() {
       { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
+  } else if (provider === 'ai778') {
+    renderModelOptions(videoModelSelect, [{ group: 'AI778 视频（按次计费）', options: AI778_VIDEO_MODELS }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
@@ -607,6 +657,9 @@ function renderVideoModelOptions() {
     renderModelOptions(videoModelSelect, [{ group: '阿里云百炼视频模型', options: VIDEO_MODELS[mode] || [] }], savedModel);
   }
   updateVideoParamOptions();
+  if (modelHintVideo && videoModelSelect) {
+    modelHintVideo.textContent = VIDEO_MODEL_HINTS[videoModelSelect.value] || '';
+  }
 }
 
 function renderSelectOptions(selectEl, values, labelFn) {
@@ -962,10 +1015,13 @@ function updateVideoUiState() {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
     const agnesOption = videoProvider.querySelector('option[value="agnes"]');
+    const ai778Option = videoProvider.querySelector('option[value="ai778"]');
     const agnesSupported = videoMode && (videoMode.value === 'text2video' || videoMode.value === 'image2video');
+    const ai778Supported = videoMode && !isMotion && !isTranslate && !isVideoedit;
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
     if (volcengineOption) volcengineOption.hidden = isVideoedit || isR2V;
     if (agnesOption) agnesOption.hidden = !agnesSupported;
+    if (ai778Option) ai778Option.hidden = !ai778Supported;
     if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
@@ -976,6 +1032,10 @@ function updateVideoUiState() {
     }
     if (!agnesSupported && videoProvider.value === 'agnes') {
       videoProvider.value = 'dashscope';
+      updateVideoProviderState();
+    }
+    if (!ai778Supported && videoProvider.value === 'ai778') {
+      videoProvider.value = agnesSupported ? 'agnes' : 'dashscope';
       updateVideoProviderState();
     }
   }
@@ -1070,6 +1130,8 @@ function updateVideoProviderState() {
       { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
+  } else if (provider === 'ai778') {
+    renderModelOptions(videoModelSelect, [{ group: 'AI778 视频（按次计费）', options: AI778_VIDEO_MODELS }], savedModel);
   } else if (isVolcengine) {
     const videoModeKey = isImageVideo ? 'image2video' : 'text2video';
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
@@ -1149,6 +1211,7 @@ async function fetchTaskById(inputEl, typeEl, providerEl) {
   const resultType = typeEl ? typeEl.value : 'image';
   const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status'
     : provider === 'agnes' ? '/api/agnes-task-status'
+    : provider === 'ai778' ? '/api/ai778-task-status'
     : '/api/dashscope-task-status';
   const isVolcengine = provider === 'volcengine';
   const apiKey = getStoredApiKey(provider);
@@ -1989,6 +2052,7 @@ async function handleGenerationResult(data, { apiKey, model, resultType, title, 
   if (data.taskId) {
     const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status'
       : data.provider === 'agnes' ? '/api/agnes-task-status'
+      : data.provider === 'ai778' ? '/api/ai778-task-status'
       : '/api/dashscope-task-status';
     setLoading(true, `${title}：${getTaskStatusText(data.taskStatus)}，任务ID ${data.taskId}`);
     await pollGenerationTask({
@@ -2484,7 +2548,7 @@ if (generateBtnVideo) {
       showAlert('参考生视频需要上传至少1个参考图片或视频');
       return;
     }
-    if (mode === 'image2video' && !firstFrame && provider === 'dashscope') {
+    if (mode === 'image2video' && !firstFrame && (provider === 'dashscope' || provider === 'ai778')) {
       showAlert('图生视频需要上传首帧图片');
       return;
     }
@@ -2529,6 +2593,7 @@ if (generateBtnVideo) {
 
     const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video'
       : provider === 'agnes' ? '/api/agnes-video'
+      : provider === 'ai778' ? '/api/ai778-video'
       : '/api/generate-video';
     let activeVideoTaskId = '';
     try {

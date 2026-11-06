@@ -14,6 +14,12 @@
 
 ## 功能特性
 
+### 2.7.0 新增
+- 视频生成页接入 **22 个 AI778 按次计费视频模型**：文生视频、图生视频、参考生视频
+- 视频模型名称旁标注最低价（¥/条起）与分辨率倍率，选中后提示显示完整分辨率档位
+- AI778 视频与 Agnes / 百炼 / 即梦并列可选；图片与视频共用同一个 `AI778_API_KEY`
+- AI778 视频任务通过 `/v1/media/generate` 提交，`/v1/skills/task-status` 轮询
+
 ### 2.6.0 新增
 - 新增 **AI778** 图片渠道：16 个按次计费模型，均支持文生图与图生图，模型名称旁标注价格
 - AI778 设为文生图 / 图生图默认渠道；Agnes AI 设为视频生成默认渠道
@@ -125,7 +131,8 @@
 - 端点：`https://api.lk888.ai/v1`（可通过 `AI778_BASE_URL` 配置）
 - 使用本站媒体协议：`POST /v1/media/generate` 提交，轮询 `GET /v1/skills/task-status?task_id=...`
 - 16 个按次计费图片模型，均支持文生图与图生图；模型名称旁标注最低价/次起
-- 图生图最多 16 张参考图（base64 data URL 通过 `params.images` 传入）
+- 视频生成页另提供 22 个按次计费视频模型（文生视频、图生视频、参考生视频），模型名称旁标注 ¥/条起
+- 图生图最多 16 张参考图（base64 data URL 通过 `params.images` 传入）；视频任务使用同一状态查询接口轮询
 
 ### HTTP 代理
 - 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（OpenAI）路由到代理
@@ -178,6 +185,33 @@
 | `kling-v3-omni` | 可灵-V3-Omni | ¥0.1822/次起 |
 | `wan2.6-image` | 万相 2.6 图像 | ¥0.1063/次起 |
 | `kling-v3` | 可灵-V3 | ¥0.1822/次起 |
+
+**AI778 按次视频模型**（价格 = 最低 ¥/条；倍率 = 分辨率档位相对基础价的系数）：
+
+| 模型 | 说明 | 最低价 | 分辨率倍率 |
+|---|---|---|---|
+| `vo3.1` | VO3.1 | ¥0.2189 | 同价 |
+| `gk-video-3` | GK-video-3 | ¥0.2732 | 同价 |
+| `omni-1.1` | Omni 1.1 | ¥0.2733 | 720P×1 / 1080P×1.6667 / 4K×2.5 |
+| `viduq3` | Vidu Q3 | ¥0.3029 | 540P×1 / 720P×1.5~1.875 / 1080P×1.8~2 |
+| `omni-flash` | omni-flash（当前无活跃渠道） | ¥0.3643 | 同价 |
+| `wan2.6-cankaosheng` | 万相 2.6 参考生 | ¥0.4144 | 1080P×1.6667 |
+| `wan2.6-shouzheng` | 万相 2.6 首帧 | ¥0.4782 | 1080P×1.6667 |
+| `viduq3-cankaosheng` | Vidu Q3 参考生 | ¥0.5222 | 540P×0.5~1 / 720P×1~2 / 1080P×1.5~2.5 |
+| `video-enhance` | 视频超分（当前无活跃渠道） | ¥0.5951 | 同价 |
+| `pixverse-c1-cankaosheng` | Pix C1 参考生 | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
+| `pixverse-c1-shouweizhen` | Pix C1 首尾帧 | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
+| `omni_flash-10s-fl` | Omni Flash 首尾帧 | ¥0.7742 | 同价 |
+| `omni_flash-10s` | Omni Flash 10秒 | ¥0.7742 | 同价 |
+| `viduq2-cankaosheng` | Vidu Q2 参考生 | ¥0.9138 | 540P/720P×1 / 1080P×2 |
+| `wan2.7-cankaosheng` | 万相 2.7 参考生 | ¥1.3662 | 1080P×1.6667 |
+| `wan2.7-shouweizhen` | 万相 2.7 首尾帧 | ¥1.3662 | 1080P×1.6667 |
+| `wan2.7-xuxie` | 万相 2.7 视频续写 | ¥1.3662 | 1080P×1.6667 |
+| `kling-v3-omni-cankao` | 可灵-Omni 参考生 | ¥3.0345 | 同价 |
+| `kling-v3-omni-shouweizhen` | 可灵-Omni 首尾帧 | ¥3.0345 | 同价 |
+| `kling-v3-video` | 可灵-V3-video | ¥3.414 | 同价 |
+| `seedance-2.0-anci` | SD 2.0 按次 | ¥5.8443 | 同价 |
+| `seedance-2.5-anci` | SD 2.5 按次 | ¥12.5235 | 同价 |
 
 ## 支持的 DashScope 视频模型
 
@@ -542,7 +576,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.6.0' }`
+  - 响应: `{ status: 'ok', version: '2.7.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
