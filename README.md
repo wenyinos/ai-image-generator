@@ -8,14 +8,21 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 - Frontend: Bootstrap 5 + vanilla JavaScript (all assets served locally)
 - Backend: Express (Node.js)
-- Providers: **DashScope**, **Google Gemini**, **Volcengine (Jimeng)**, **Agnes AI**
+- Providers: **DashScope**, **Volcengine (Jimeng)**, **Agnes AI**, **OpenAI**, **AI778**
 - Local task records: SQLite (`data/video-tasks.sqlite` by default)
 - Storage backup: S3-compatible object storage (Cloudflare R2 / AWS S3 / Aliyun OSS / Tencent COS / MinIO)
 
 ## Features
 
+### New in 2.6.0
+- Added **AI778** image provider: 16 per-call models, each supporting text-to-image and image-to-image; prices are shown next to model names
+- AI778 is the default provider for text-to-image and image-to-image; Agnes AI is the default for video generation
+- Removed Gemini and Grok (xAI) providers
+- Reference image limit raised to **16** for OpenAI and AI778 image-to-image
+- OpenAI models are labeled at ¥0.1/image
+
 ### Text-to-Image
-- Provider switching in UI (DashScope / Gemini / Volcengine / Agnes AI)
+- Provider switching in UI (DashScope / Volcengine / Agnes AI / OpenAI / AI778)
 - Multi-model support with model-specific size constraints
 - Parameters: image count, size, seed, negative prompt, prompt extension, watermark
 - Sync/async protocol handling for DashScope models
@@ -33,11 +40,12 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
   - uploaded local image (server stores temp file and exposes HTTP URL)
   - external HTTP(S) image URLs input
 - Local uploaded temp file for Volcengine is auto-cleaned **5 minutes after successful generation**
-- OpenAI (`gpt-image-2`) image-to-image supports **multiple reference images (new in 2.2.1)**: up to 4 uploads per request (official edits `image[]` multi-image form)
+- OpenAI (`gpt-image-2`) image-to-image supports **multiple reference images**: up to 16 uploads per request (official edits `image[]` multi-image form)
+- AI778 image-to-image accepts up to 16 reference images (platform media protocol `params.images`)
 - DashScope model snapshot input: select a model + enter a snapshot date to auto-compose `model-snapshot`
 
 ### Video Generation
-- Provider switching in UI (DashScope / Volcengine)
+- Provider switching in UI (Agnes AI / DashScope / Volcengine)
 - DashScope text-to-video and image-to-video workflows
 - Built-in model options for `happyhorse-1.1-*`, `happyhorse-1.0-*`, `wan2.7-*`, and earlier Wan video models
 - DashScope model snapshot input: select a model + enter a snapshot date to auto-compose `model-snapshot`
@@ -53,7 +61,7 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Two-column forms and width-capped buttons on wide screens, adaptive page margins on mobile; the last active tab is restored after a refresh
 
 ### Settings Page & Unified Keys (new in 2.0)
-- New "Settings" tab: configure API keys per provider (DashScope / Gemini / OpenAI / Agnes / xAI / Volcengine AK+SK) in one place
+- New "Settings" tab: configure API keys per provider (DashScope / OpenAI / Agnes / AI778 / Volcengine AK+SK) in one place
 - One set of keys shared across text-to-image, image-to-image and video generation; saved to the browser automatically as you type
 - Legacy per-mode key storage is migrated automatically on first load
 - Empty keys still fall back to server-side `.env` variables (unchanged)
@@ -93,12 +101,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 ### DashScope
 - Frontend key or `DASHSCOPE_API_KEY`
 
-### Gemini
-- Frontend key or `GEMINI_API_KEY` (fallback: `GOOGLE_API_KEY`)
-- Uses OpenAI-compatible gateway (`POST /v1/images/generations` + `/images/edits`)
-- Endpoint configurable via `GEMINI_BASE_URL` (e.g. an OpenAI-compatible relay like `https://api.openox.tech/v1`)
-- Image size tiers 1K / 2K selectable in the UI (defaults to the upstream default when not selected)
-
 ### Volcengine (Jimeng)
 - Frontend uses `AK:SK` format
 - Or backend env:
@@ -114,19 +116,19 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 ### OpenAI (GPT)
 - Frontend key or `OPENAI_API_KEY`
 - Endpoint: `https://api.openai.com/v1` (configurable via `OPENAI_BASE_URL`, e.g. an OpenAI-compatible relay)
-- Supports: text-to-image (`gpt-image-2`, `image2.5`), image-to-image (`gpt-image-2`, multi-reference up to 4 images)
+- Supports: text-to-image (`gpt-image-2`, `image2.5`), image-to-image (`gpt-image-2`, multi-reference up to 16 images)
+- Models are labeled ¥0.1/image in the UI
 - `image2.5` is text-to-image only in the UI / API: its upstream (relay) only accepts `/images/generations`, so the image-to-image picker lists `gpt-image-2` only
 
-### xAI (Grok Video)
-- Frontend key or `XAI_API_KEY`
-- Endpoint: `https://api.x.ai/v1` (configurable via `XAI_BASE_URL`, e.g. an OpenAI-compatible relay)
-- Uses `seconds` (string) for duration parameter
-- Supports: text-to-video, image-to-video
-  - `grok-video-1.0`: text/image-to-video, up to 7 reference images, 16:9/9:16/1:1, 4-15s, 480p/720p
-  - `grok-video-1.5`: single-image-to-video (exactly 1 reference), 16:9/9:16, 4-15s, 480p/720p
+### AI778 (per-call image)
+- Frontend key or `AI778_API_KEY`
+- Base URL: `https://api.lk888.ai/v1` (configurable via `AI778_BASE_URL`)
+- Uses the platform media protocol: `POST /v1/media/generate`, then polls `GET /v1/skills/task-status?task_id=...`
+- 16 per-call image models; every model supports text-to-image and image-to-image, each with its price shown next to the model name
+- Image-to-image accepts up to 16 reference images (base64 data URLs are sent via `params.images`)
 
 ### HTTP Proxy
-- Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (Gemini, OpenAI, Grok) through a proxy
+- Set `HTTP_PROXY` (or `HTTPS_PROXY`/`ALL_PROXY`) to route external API calls (OpenAI) through a proxy
 - Example: `HTTP_PROXY=http://127.0.0.1:7890`
 
 ## Supported DashScope Models
@@ -141,18 +143,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `qwen-image-3.0` | qwen | sync | Text & image-to-image, 1K/2K |
 | `qwen-image-2.0-pro` | qwen | sync | Text rendering |
 
-**Gemini**: `gemini-3.1-flash-image-preview` (default)
-
-| Model | Type | Notes |
-|---|---|---|
-| `gemini-3-pro-image-preview` | gemini | Text & image-to-image, preview |
-| `gemini-3.1-flash-image-preview` | gemini | Text & image-to-image, fast preview |
-
 **OpenAI (GPT)**:
 
 | Model | Type | Notes |
 |---|---|---|
-| `gpt-image-2` | openai | Text & image-to-image (multi-reference up to 4), size options 1024x1024 / 1536x1024 / 1024x1536 |
+| `gpt-image-2` | openai | Text & image-to-image (multi-reference up to 16), size options 1024x1024 / 1536x1024 / 1024x1536 |
 | `image2.5` | openai | Text-to-image, 1K/2K (no image-to-image: upstream only accepts `/images/generations`) |
 
 **Agnes AI**:
@@ -162,6 +157,27 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `agnes-image-2.5-flash` | agnes | Latest, 1K-4K presets, multi-image composition |
 | `agnes-image-2.1-flash` | agnes | Recommended |
 | `agnes-image-2.0-flash` | agnes | |
+
+**AI778 (per-call)**:
+
+| Model | Notes | Min price |
+|---|---|---|
+| `tt-image-2.5` | TT Image 2.5, standard/enhanced, 1K-4K, transparent background | ¥0.024/call |
+| `tt-image-2` | TT Image 2, flagship, text + edit | ¥0.0349/call |
+| `tt-image-2.6` | TT Image 2.6, SVG/GIF output | ¥0.0167/call |
+| `banana-2.1` | Nano Banana 2.1 per-call, up to 14 refs, web search | ¥0.0797/call |
+| `banana-pro` | Nano Banana Pro, up to 4K | ¥0.1275/call |
+| `banana-2` | Nano Banana 2, up to 4K | ¥0.1063/call |
+| `doubao-seedream-5-0-pro-260628` | Seedream 5.0 Pro, up to 10 refs | ¥0.2732/call |
+| `gk-image-2.0` | GK Image 2.0 | ¥0.3491/call |
+| `mj_imagine` | Midjourney | ¥0.425/call |
+| `vidu-image-2` | Vidu Image 2, up to 7 refs | ¥0.2561/call |
+| `doubao-seedream-5-0-260128` | Seedream 5.0 | ¥0.334/call |
+| `wan2.7-image` | Wan 2.7 image | ¥0.1518/call |
+| `doubao-seedream-4-5-251128` | Seedream 4.5, up to 4K | ¥0.3795/call |
+| `kling-v3-omni` | Kling V3 Omni | ¥0.1822/call |
+| `wan2.6-image` | Wan 2.6 image | ¥0.1063/call |
+| `kling-v3` | Kling V3 | ¥0.1822/call |
 
 ## Supported DashScope Video Models
 
@@ -202,13 +218,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `agnes-video-2.5-flash` | Latest fast model, 4-12s, 720P (async) |
 | `agnes-video-2.5` | 4-12s, 720P/1080P/1K/2K (async) |
 | `agnes-video-v2.0` | Text-to-video, image-to-video (async) |
-
-### Grok Video (xAI)
-
-| Model | Notes |
-|---|---|
-| `grok-video-1.0` | Text/image-to-video, up to 7 reference images, 16:9/9:16/1:1, 480p/720p |
-| `grok-video-1.5` | Single-image-to-video (exactly 1 reference), 16:9/9:16, 480p/720p |
 
 ## Supported Jimeng Video Models
 
@@ -293,7 +302,6 @@ Minimum example:
 ```env
 PORT=3000
 DASHSCOPE_API_KEY=your_dashscope_key
-# GEMINI_API_KEY=your_gemini_key
 # VOLCENGINE_ACCESS_KEY=your_ak
 # VOLCENGINE_SECRET_KEY=your_sk
 ```
@@ -314,7 +322,6 @@ Core:
 
 Provider keys:
 - `DASHSCOPE_API_KEY`
-- `GEMINI_API_KEY` / `GOOGLE_API_KEY`
 - `VOLCENGINE_ACCESS_KEY`
 - `VOLCENGINE_SECRET_KEY`
 - `VOLCENGINE_SESSION_TOKEN` (optional)
@@ -326,7 +333,6 @@ Timeouts:
 - `VIDEO_GENERATION_MAX_POLL_ATTEMPTS` (default `288`)
 - `VIDEO_GENERATION_REQUEST_TIMEOUT_MS` (default `1800000`)
 - `DASHSCOPE_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
-- `GEMINI_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
 - `VOLCENGINE_TIMEOUT_MS` (optional provider override; default follows `GENERATION_REQUEST_TIMEOUT_MS`)
 
 Volcengine request tuning:
@@ -537,7 +543,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.5.0' }`
+  - response: `{ status: 'ok', version: '2.6.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled

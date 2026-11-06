@@ -186,7 +186,7 @@ const imageTaskRecordsEmpty = document.getElementById('imageTaskRecordsEmpty');
 // 当前模式
 let currentMode = 'text2image'; // 'text2image'、'image2image' 或 'video'
 let uploadedImageFile = null;
-// OpenAI 图生图的多参考图列表（提交时走 edits 的 image[] 字段，最多 4 张）
+// OpenAI / AI778 图生图的多参考图列表（提交时走多图字段，最多 16 张）
 let uploadedImageRefs = [];
 let uploadedMaskFile = null;
 let uploadedTemplateFile = null;
@@ -197,10 +197,8 @@ let foregroundRecoveryNeeded = false;
 let foregroundRecoveryPromise = null;
 let lastForegroundRecoveryAt = 0;
 let activeTaskContext = null;
-const GEMINI_MODEL_ID = 'gemini-3.1-flash-image-preview';
-
 // 统一凭证存储键（文生图 / 图生图 / 视频生成共用）
-const SETTINGS_PROVIDERS = ['dashscope', 'volcengine', 'gemini', 'agnes', 'openai', 'xai'];
+const SETTINGS_PROVIDERS = ['dashscope', 'volcengine', 'agnes', 'openai', 'ai778'];
 
 // 旧版按模式拆分的存储键一次性迁移到统一键
 function migrateLegacyApiKeys() {
@@ -247,16 +245,30 @@ const MODELS_T2I = {
       { value: 'wan2.6-t2i', label: 'wan2.6-t2i (标准)' },
     ] },
   ],
-  gemini: [
-    { group: '✨ Gemini', options: [
-      { value: GEMINI_MODEL_ID, label: 'Gemini 3.1 Flash Image (预览)' },
-      { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (预览)' },
-    ] },
-  ],
   openai: [
     { group: '🤖 GPT', options: [
-      { value: 'gpt-image-2', label: 'GPT Image 2' },
-      { value: 'image2.5', label: 'GPT Image 2.5 (1K/2K)' },
+      { value: 'gpt-image-2', label: 'GPT Image 2 · ¥0.1/张' },
+      { value: 'image2.5', label: 'GPT Image 2.5 (1K/2K) · ¥0.1/张' },
+    ] },
+  ],
+  ai778: [
+    { group: '🎨 AI778 图片（按次计费）', options: [
+      { value: 'tt-image-2.5', label: 'TT Image 2.5 · ¥0.024/次起' },
+      { value: 'tt-image-2', label: 'TT Image 2 · ¥0.0349/次起' },
+      { value: 'tt-image-2.6', label: 'TT Image 2.6 · ¥0.0167/次起' },
+      { value: 'banana-2.1', label: '纳米香蕉 2.1 按次 · ¥0.0797/次起' },
+      { value: 'banana-pro', label: '纳米香蕉 Pro · ¥0.1275/次起' },
+      { value: 'banana-2', label: '纳米香蕉 2 · ¥0.1063/次起' },
+      { value: 'doubao-seedream-5-0-pro-260628', label: '即梦 5.0 Pro · ¥0.2732/次起' },
+      { value: 'gk-image-2.0', label: 'GK Image 2.0 · ¥0.3491/次起' },
+      { value: 'mj_imagine', label: 'Midjourney · ¥0.425/次起' },
+      { value: 'vidu-image-2', label: 'VIDU Image 2 · ¥0.2561/次起' },
+      { value: 'doubao-seedream-5-0-260128', label: '即梦 5.0 · ¥0.334/次起' },
+      { value: 'wan2.7-image', label: '万相 2.7 图像 · ¥0.1518/次起' },
+      { value: 'doubao-seedream-4-5-251128', label: '即梦 4.5 · ¥0.3795/次起' },
+      { value: 'kling-v3-omni', label: '可灵-V3-Omni · ¥0.1822/次起' },
+      { value: 'wan2.6-image', label: '万相 2.6 图像 · ¥0.1063/次起' },
+      { value: 'kling-v3', label: '可灵-V3 · ¥0.1822/次起' },
     ] },
   ],
   volcengine: [
@@ -290,16 +302,30 @@ const MODELS_I2I = {
       { value: 'wan2.6-image', label: 'wan2.6-image (图文混排)' },
     ] },
   ],
-  gemini: [
-    { group: '✨ Gemini', options: [
-      { value: GEMINI_MODEL_ID, label: 'Gemini 3.1 Flash Image (预览)' },
-      { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (预览)' },
-    ] },
-  ],
   openai: [
     { group: '🤖 GPT', options: [
-      { value: 'gpt-image-2', label: 'GPT Image 2' },
+      { value: 'gpt-image-2', label: 'GPT Image 2 · ¥0.1/张' },
       // image2.5 未列在图生图：中转的 image2.5 通道仅支持文生图（/images/generations），edits 会被拒
+    ] },
+  ],
+  ai778: [
+    { group: '🎨 AI778 图片（按次计费）', options: [
+      { value: 'tt-image-2.5', label: 'TT Image 2.5 · ¥0.024/次起' },
+      { value: 'tt-image-2', label: 'TT Image 2 · ¥0.0349/次起' },
+      { value: 'tt-image-2.6', label: 'TT Image 2.6 · ¥0.0167/次起' },
+      { value: 'banana-2.1', label: '纳米香蕉 2.1 按次 · ¥0.0797/次起' },
+      { value: 'banana-pro', label: '纳米香蕉 Pro · ¥0.1275/次起' },
+      { value: 'banana-2', label: '纳米香蕉 2 · ¥0.1063/次起' },
+      { value: 'doubao-seedream-5-0-pro-260628', label: '即梦 5.0 Pro · ¥0.2732/次起' },
+      { value: 'gk-image-2.0', label: 'GK Image 2.0 · ¥0.3491/次起' },
+      { value: 'mj_imagine', label: 'Midjourney · ¥0.425/次起' },
+      { value: 'vidu-image-2', label: 'VIDU Image 2 · ¥0.2561/次起' },
+      { value: 'doubao-seedream-5-0-260128', label: '即梦 5.0 · ¥0.334/次起' },
+      { value: 'wan2.7-image', label: '万相 2.7 图像 · ¥0.1518/次起' },
+      { value: 'doubao-seedream-4-5-251128', label: '即梦 4.5 · ¥0.3795/次起' },
+      { value: 'kling-v3-omni', label: '可灵-V3-Omni · ¥0.1822/次起' },
+      { value: 'wan2.6-image', label: '万相 2.6 图像 · ¥0.1063/次起' },
+      { value: 'kling-v3', label: '可灵-V3 · ¥0.1822/次起' },
     ] },
   ],
   volcengine: [
@@ -345,10 +371,22 @@ const T2I_MODEL_HINTS = {
   'qwen-image-2.0-pro': '千问图片2.0 Pro：擅长文字渲染，支持中英文。',
   'qwen-image-3.0': '千问图片3.0：支持图文指令，10px小字、12国语言清晰渲染，1K/2K。',
   'qwen-image-3.0-pro': '千问图片3.0 Pro：最强版，复杂版面/密集信息/微细节，支持2K。',
-  'gemini-3-pro-image-preview': 'Gemini 3 Pro Image 预览：Google 顶级图像生成模型，支持文生图和图生图。',
-  'gemini-3.1-flash-image-preview': 'Gemini 3.1 Flash Image 预览：Google 高速图像模型，支持文生图和图生图。',
   'gpt-image-2': 'GPT Image 2：OpenAI 图像模型，支持文生图和图生图编辑。',
   'image2.5': 'GPT Image 2.5：支持 1K/2K 分辨率，兼顾质量与速度。',
+  'tt-image-2.5': 'AI778 按次：¥0.024/次起，标准版/增强版，1K-4K，支持透明背景。',
+  'tt-image-2': 'AI778 按次：¥0.0349/次起，旗舰图像模型，文生图+图片编辑。',
+  'tt-image-2.6': 'AI778 按次：¥0.0167/次起，支持 SVG 矢量图与 GIF 小动图。',
+  'banana-2.1': 'AI778 按次：¥0.0797/次起，1K/2K/4K，最多 14 张参考图，联网搜索生图。',
+  'banana-pro': 'AI778 按次：¥0.1275/次起，专业旗舰，最高 4K，多语言海报与复杂排版。',
+  'banana-2': 'AI778 按次：¥0.1063/次起，高速版，最高 4K，最多 14 张参考图。',
+  'doubao-seedream-5-0-pro-260628': 'AI778 按次：¥0.2732/次起，即梦 5.0 Pro，最多 10 张参考图，1K/2K。',
+  'gk-image-2.0': 'AI778 按次：¥0.3491/次起，写实质感与人物一致性，1K/2K。',
+  'mj_imagine': 'AI778 按次：¥0.425/次起，Midjourney，电影级审美，原生 2K。',
+  'vidu-image-2': 'AI778 按次：¥0.2561/次起，最多 7 张参考图，1K/2K/3K。',
+  'doubao-seedream-5-0-260128': 'AI778 按次：¥0.334/次起，即梦 5.0，深度思考与联网搜索生图。',
+  'doubao-seedream-4-5-251128': 'AI778 按次：¥0.3795/次起，即梦 4.5，最高 4K，高密度文字渲染。',
+  'kling-v3-omni': 'AI778 按次：¥0.1822/次起，可灵 V3 Omni，支持多图参考与 4K。',
+  'kling-v3': 'AI778 按次：¥0.1822/次起，可灵 V3，文生图+单图参考图生图。',
   'jimeng-3.0': '即梦文生图3.0：基础文生图。',
   'jimeng-3.1': '即梦文生图3.1：画质提升版。',
   'jimeng-4.0': '即梦图片生成4.0：高质量生成。',
@@ -388,8 +426,6 @@ const VIDEO_MODEL_HINTS = {
   'agnes-video-v2.0': 'Agnes Video V2.0：支持文生视频和图生视频。',
   'agnes-video-2.5': 'Agnes Video 2.5：新一代模型，支持 4-12 秒、720P-2K、多宽高比。',
   'agnes-video-2.5-flash': 'Agnes Video 2.5 Flash：新一代快速版，720P 输出。',
-  'grok-video-1.0': 'Grok Video 1.0：文生视频/图生视频，最多7张参考图，支持16:9/9:16/1:1，480p/720p。',
-  'grok-video-1.5': 'Grok Video 1.5：单图生视频（必须1张参考图），支持16:9/9:16，480p/720p。',
 };
 
 let VIDEO_MODELS = {
@@ -459,9 +495,6 @@ const MODEL_SIZES = {
   'qwen-image-2.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   'qwen-image-3.0': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
   'qwen-image-3.0-pro': ['1024*1024', '2048*2048', '1664*928', '928*1664', '1472*1104', '1104*1472'],
-  // Gemini（经中转网关，1K/2K 档位）
-  [GEMINI_MODEL_ID]: ['1K', '2K'],
-  'gemini-3-pro-image-preview': ['1K', '2K'],
   // Agnes (档位式)
   'agnes-image-2.5-flash': ['1K', '2K', '3K', '4K'],
   'agnes-image-2.1-flash': ['1K', '2K', '3K', '4K'],
@@ -482,9 +515,6 @@ const MODEL_SIZES_I2I = {
   'wan2.7-image-pro': ['1K', '2K'],
   'wan2.7-image': ['1K', '2K'],
   'wan2.6-image': ['1024*1024', '1280*1280', '1024*768', '768*1024', '1280*720', '720*1280'],
-  // Gemini（经中转网关，1K/2K 档位）
-  [GEMINI_MODEL_ID]: ['1K', '2K'],
-  'gemini-3-pro-image-preview': ['1K', '2K'],
   // Agnes (档位式)
   'agnes-image-2.5-flash': ['1K', '2K', '3K', '4K'],
   'agnes-image-2.1-flash': ['1K', '2K', '3K', '4K'],
@@ -499,10 +529,6 @@ const MODEL_SIZES_I2I = {
   'gpt-image-2': ['1024x1024', '1536x1024', '1024x1536'],
   'image2.5': ['1K', '2K'],
 };
-
-function normalizeGeminiModel(model) {
-  return model || GEMINI_MODEL_ID;
-}
 
 // DashScope 模型快照拼接：选择模型 + 输入快照日期 → 拼接为 model-snapshot
 function applyModelSnapshot(model, provider, inputEl) {
@@ -528,7 +554,9 @@ function loadCredential(key) {
 }
 
 function renderModelOptions(selectElement, groups, selectedValue) {
+  if (!selectElement) return;
   selectElement.innerHTML = '';
+  if (!Array.isArray(groups)) return;
   groups.forEach((group) => {
     const optgroup = document.createElement('optgroup');
     optgroup.label = group.group;
@@ -572,14 +600,6 @@ function renderVideoModelOptions() {
       { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
-  } else if (provider === 'xai') {
-    const grokOptions = mode === 'image2video'
-      ? [
-        { value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' },
-        { value: 'grok-video-1.5', label: 'Grok Video 1.5（单图生视频）' },
-      ]
-      : [{ value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' }];
-    renderModelOptions(videoModelSelect, [{ group: 'Grok 视频模型', options: grokOptions }], savedModel);
   } else if (provider === 'volcengine') {
     const jimengModels = JIMENG_VIDEO_MODELS[mode] || JIMENG_VIDEO_MODELS.text2video;
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: jimengModels }], savedModel);
@@ -651,9 +671,9 @@ async function loadVideoModels() {
 }
 
 function setImageApiKeyMeta(provider) {
-  // OpenAI 图生图开放多选上传（edits image[] 多参考图）；其他渠道保持单图
-  if (imageUpload) imageUpload.multiple = provider === 'openai';
-  if (provider !== 'openai' && uploadedImageRefs.length > 0) {
+  // OpenAI / AI778 图生图开放多选上传（多参考图）；其他渠道保持单图
+  if (imageUpload) imageUpload.multiple = provider === 'openai' || provider === 'ai778';
+  if (provider !== 'openai' && provider !== 'ai778' && uploadedImageRefs.length > 0) {
     uploadedImageRefs = [];
     updateRefsBadge();
   }
@@ -662,9 +682,7 @@ function setImageApiKeyMeta(provider) {
     modelHintI2I.textContent = '即梦AI 4.0/4.6 支持参考图与多图生成';
   }
 
-  if (provider === 'gemini') {
-    modelHintI2I.textContent = 'Gemini 图生图支持参考图+文本联合生成';
-  } else if (provider === 'volcengine') {
+  if (provider === 'volcengine') {
     const i2iModel = modelSelectI2I.value;
     if (i2iModel === 'jimeng-upscale') {
       modelHintI2I.textContent = '智能超清：上传 1 张原图；可选 4K/8K，scale 越高细节增强越明显。';
@@ -679,10 +697,12 @@ function setImageApiKeyMeta(provider) {
     }
   }
 
-  // 图生图模式：上传参考图并输入提示词即可生成（非火山/Gemini 时）
+  // 图生图模式：上传参考图并输入提示词即可生成（非火山时）
   if (provider === 'openai') {
-    modelHintI2I.textContent = 'GPT 图生图：可一次上传多张参考图（最多 4 张，走官方 edits 的多图引用 image[]）。';
-  } else if (provider !== 'gemini' && provider !== 'volcengine') {
+    modelHintI2I.textContent = 'GPT 图生图：可一次上传多张参考图（最多 16 张，走官方 edits 的多图引用 image[]）。';
+  } else if (provider === 'ai778') {
+    modelHintI2I.textContent = 'AI778 图生图：可一次上传最多 16 张参考图（按次计费，失败自动退款）。';
+  } else if (provider !== 'volcengine') {
     modelHintI2I.textContent = '图生图模式：上传参考图并输入提示词即可生成。';
   }
   if (provider === 'volcengine') {
@@ -791,10 +811,7 @@ function updateSizeOptionsI2I() {
 function updateTextProviderState() {
   const provider = providerSelect.value;
   const modelStorageKey = getModelStorageKey('text2image', provider);
-  const savedModel = normalizeGeminiModel(localStorage.getItem(modelStorageKey));
-  if (provider === 'gemini' && savedModel === GEMINI_MODEL_ID) {
-    localStorage.setItem(modelStorageKey, GEMINI_MODEL_ID);
-  }
+  const savedModel = localStorage.getItem(modelStorageKey);
   renderModelOptions(modelSelect, MODELS_T2I[provider], savedModel);
   updateSizeOptions();
   localStorage.setItem('provider', provider);
@@ -804,10 +821,7 @@ function updateTextProviderState() {
 function updateImageProviderState() {
   const provider = providerSelectI2I.value;
   const modelStorageKey = getModelStorageKey('image2image', provider);
-  const savedModel = normalizeGeminiModel(localStorage.getItem(modelStorageKey));
-  if (provider === 'gemini' && savedModel === GEMINI_MODEL_ID) {
-    localStorage.setItem(modelStorageKey, GEMINI_MODEL_ID);
-  }
+  const savedModel = localStorage.getItem(modelStorageKey);
   renderModelOptions(modelSelectI2I, MODELS_I2I[provider], savedModel);
   setImageApiKeyMeta(provider);
   if (currentMode === 'image2image') {
@@ -905,7 +919,6 @@ function updateVideoUiState() {
   const isTranslate = videoMode && videoMode.value === 'translate';
   const isVideoedit = videoMode && videoMode.value === 'videoedit';
   const isR2V = videoMode && videoMode.value === 'r2v';
-  const isXaiGrok = videoProvider && videoProvider.value === 'xai' && isImageVideo;
   if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
   const selectedVideoModel = videoModelSelect ? videoModelSelect.value : '';
   const isVolcengineVideoProvider = videoProvider && videoProvider.value === 'volcengine';
@@ -916,8 +929,8 @@ function updateVideoUiState() {
   // 即梦 720P i2v 模型不支持帧上传（后端会拒绝），隐藏入口避免误用
   const isJimeng720I2V = videoProvider && videoProvider.value === 'volcengine' && isImageVideo
     && ['jimeng-v3.0-i2v-first', 'jimeng-v3.0-i2v-tail'].includes(selectedVideoModel);
-  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isXaiGrok || isJimeng720I2V);
-  if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V && !isXaiGrok);
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isJimeng720I2V);
+  if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
   if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
     const r2vModel = videoModelSelect ? videoModelSelect.value : '';
@@ -929,15 +942,6 @@ function updateVideoUiState() {
       r2vFilesHint.textContent = isWan27R2V
         ? '最多5个（图片+视频合计）：图片（JPG/PNG/BMP/WebP，最大20MB）或视频（MP4/MOV，1-30秒，最大100MB）'
         : '最多9张图片：JPG/PNG/BMP/WebP，最大 20MB';
-    }
-  }
-  if (isXaiGrok && r2vFiles) {
-    const grokModel = videoModelSelect ? videoModelSelect.value : '';
-    r2vFiles.accept = 'image/jpeg,image/jpg,image/png,image/bmp,image/webp';
-    if (r2vFilesHint) {
-      r2vFilesHint.textContent = grokModel === 'grok-video-1.5'
-        ? '必须且只能上传 1 张参考图（JPG/PNG/BMP/WebP）'
-        : '最多上传 7 张参考图（JPG/PNG/BMP/WebP）';
     }
   }
   if (videoRatioGroup) videoRatioGroup.classList.toggle('d-none', (isImageVideo && !isAgnes25Selected) || isMotion || isTranslate || isVideoedit);
@@ -958,12 +962,10 @@ function updateVideoUiState() {
     const dashscopeOption = videoProvider.querySelector('option[value="dashscope"]');
     const volcengineOption = videoProvider.querySelector('option[value="volcengine"]');
     const agnesOption = videoProvider.querySelector('option[value="agnes"]');
-    const xaiOption = videoProvider.querySelector('option[value="xai"]');
     const agnesSupported = videoMode && (videoMode.value === 'text2video' || videoMode.value === 'image2video');
     if (dashscopeOption) dashscopeOption.hidden = isMotion || isTranslate;
     if (volcengineOption) volcengineOption.hidden = isVideoedit || isR2V;
     if (agnesOption) agnesOption.hidden = !agnesSupported;
-    if (xaiOption) xaiOption.hidden = !agnesSupported;
     if ((isMotion || isTranslate) && videoProvider.value === 'dashscope') {
       videoProvider.value = 'volcengine';
       updateVideoProviderState();
@@ -972,7 +974,7 @@ function updateVideoUiState() {
       videoProvider.value = 'dashscope';
       updateVideoProviderState();
     }
-    if (!agnesSupported && (videoProvider.value === 'agnes' || videoProvider.value === 'xai')) {
+    if (!agnesSupported && videoProvider.value === 'agnes') {
       videoProvider.value = 'dashscope';
       updateVideoProviderState();
     }
@@ -980,11 +982,18 @@ function updateVideoUiState() {
   updateSharedParamVisibility();
 }
 
-// 从 localStorage 恢复用户设置
-providerSelect.value = localStorage.getItem('provider') || 'dashscope';
-providerSelectI2I.value = localStorage.getItem('providerI2I') || 'dashscope';
+// 从 localStorage 恢复用户设置；历史渠道不在当前选项中时回退默认值
+function restoreProviderSelection(selectElement, storageKey, fallback) {
+  if (!selectElement) return;
+  const saved = localStorage.getItem(storageKey);
+  const valid = saved && Array.from(selectElement.options).some((option) => option.value === saved);
+  selectElement.value = valid ? saved : fallback;
+}
+
+restoreProviderSelection(providerSelect, 'provider', 'ai778');
+restoreProviderSelection(providerSelectI2I, 'providerI2I', 'ai778');
 if (videoMode && localStorage.getItem('videoMode')) videoMode.value = localStorage.getItem('videoMode');
-if (videoProvider && localStorage.getItem('videoProvider')) videoProvider.value = localStorage.getItem('videoProvider');
+restoreProviderSelection(videoProvider, 'videoProvider', 'agnes');
 
 if (localStorage.getItem('imageCount')) {
   imageCount.value = localStorage.getItem('imageCount');
@@ -1061,14 +1070,6 @@ function updateVideoProviderState() {
       { value: 'agnes-video-2.5', label: 'Agnes Video 2.5' },
       { value: 'agnes-video-v2.0', label: 'Agnes Video V2.0' },
     ] }], savedModel);
-  } else if (provider === 'xai') {
-    const grokOptions = isImageVideo
-      ? [
-        { value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' },
-        { value: 'grok-video-1.5', label: 'Grok Video 1.5（单图生视频）' },
-      ]
-      : [{ value: 'grok-video-1.0', label: 'Grok Video 1.0（文/图生视频，最多7图）' }];
-    renderModelOptions(videoModelSelect, [{ group: 'Grok 视频模型', options: grokOptions }], savedModel);
   } else if (isVolcengine) {
     const videoModeKey = isImageVideo ? 'image2video' : 'text2video';
     renderModelOptions(videoModelSelect, [{ group: '即梦AI视频模型', options: JIMENG_VIDEO_MODELS[videoModeKey] }], savedModel);
@@ -1148,7 +1149,6 @@ async function fetchTaskById(inputEl, typeEl, providerEl) {
   const resultType = typeEl ? typeEl.value : 'image';
   const endpoint = provider === 'volcengine' ? '/api/volcengine-task-status'
     : provider === 'agnes' ? '/api/agnes-task-status'
-    : provider === 'xai' ? '/api/grok-task-status'
     : '/api/dashscope-task-status';
   const isVolcengine = provider === 'volcengine';
   const apiKey = getStoredApiKey(provider);
@@ -1989,7 +1989,6 @@ async function handleGenerationResult(data, { apiKey, model, resultType, title, 
   if (data.taskId) {
     const endpoint = data.provider === 'volcengine' ? '/api/volcengine-task-status'
       : data.provider === 'agnes' ? '/api/agnes-task-status'
-      : data.provider === 'xai' ? '/api/grok-task-status'
       : '/api/dashscope-task-status';
     setLoading(true, `${title}：${getTaskStatusText(data.taskStatus)}，任务ID ${data.taskId}`);
     await pollGenerationTask({
@@ -2498,13 +2497,10 @@ if (generateBtnVideo) {
     downloadBtn.classList.add('d-none');
 
     const isRecameraModel = model === 'jimeng-v3.0-recamera';
-    const isXai = provider === 'xai';
     const isAgnes25Video = provider === 'agnes' && (model === 'agnes-video-2.5' || model === 'agnes-video-2.5-flash');
     const videoParams = {
       duration: parseInt(videoDuration.value, 10),
-      resolution: isXai
-        ? (videoResolution.value === '1080P' ? '720p' : (videoResolution.value === '720P' ? '720p' : videoResolution.value.toLowerCase()))
-        : videoResolution.value,
+      resolution: videoResolution.value,
       ratio: (mode === 'text2video' || isAgnes25Video) ? videoRatio.value : undefined,
       seed,
       negative_prompt: negativePrompt.value.trim() || undefined,
@@ -2513,7 +2509,7 @@ if (generateBtnVideo) {
       frames: provider === 'volcengine' ? (parseInt(videoDuration.value, 10) === 10 ? 241 : 121)
         : (provider === 'agnes' && model === 'agnes-video-v2.0') ? ({ 5: 121, 10: 241, 15: 361 })[parseInt(videoDuration.value, 10)] || 121
         : undefined,
-      aspect_ratio: (provider === 'volcengine' || isXai) && mode === 'text2video' ? videoRatio.value : undefined,
+      aspect_ratio: provider === 'volcengine' && mode === 'text2video' ? videoRatio.value : undefined,
       template_id: isRecameraModel && recameraTemplate ? recameraTemplate.value : undefined,
       camera_strength: isRecameraModel && recameraStrength ? recameraStrength.value : undefined,
     };
@@ -2525,9 +2521,6 @@ if (generateBtnVideo) {
     formData.append('progressMode', 'true');
     if (mode === 'r2v' && r2vFileList.length > 0) {
       r2vFileList.forEach((file) => formData.append('r2vFiles', file));
-    } else if (isXai && mode === 'image2video' && r2vFileList.length > 0) {
-      // Grok 参考生视频：复用 r2vFiles 多图上传
-      r2vFileList.forEach((file) => formData.append('grokImages', file));
     } else {
       if (firstFrame) formData.append('firstFrame', firstFrame);
       if (lastFrame) formData.append('lastFrame', lastFrame);
@@ -2536,7 +2529,6 @@ if (generateBtnVideo) {
 
     const apiEndpoint = provider === 'volcengine' ? '/api/jimeng-video'
       : provider === 'agnes' ? '/api/agnes-video'
-      : provider === 'xai' ? '/api/grok-video'
       : '/api/generate-video';
     let activeVideoTaskId = '';
     try {
@@ -2781,7 +2773,7 @@ async function handleImageFile(file) {
 }
 
 /**
- * 处理上传文件列表：单文件沿用单图流程；多文件（仅 OpenAI 图生图开放多选）全部作为多参考图
+ * 处理上传文件列表：单文件沿用单图流程；多文件（OpenAI / AI778 图生图开放多选）全部作为多参考图
  * @param {File[]} files - 图片文件列表
  */
 async function handleImageFiles(files) {
@@ -2792,7 +2784,7 @@ async function handleImageFiles(files) {
   }
   const accepted = [];
   let skipped = 0;
-  for (const file of files.slice(0, 4)) {
+  for (const file of files.slice(0, 16)) {
     if (file.size > 10 * 1024 * 1024) {
       skipped += 1;
       continue;
@@ -2807,7 +2799,7 @@ async function handleImageFiles(files) {
     showAlert('参考图处理失败，请重试');
     return;
   }
-  if (files.length > 4) showAlert('最多支持 4 张参考图，已保留前 4 张');
+  if (files.length > 16) showAlert('最多支持 16 张参考图，已保留前 16 张');
   else if (skipped > 0) showAlert(`有 ${skipped} 张图片超过 10MB 或处理失败，已跳过`);
   uploadedImageRefs = accepted;
   uploadedImageFile = null;
@@ -3032,7 +3024,7 @@ generateBtnI2I.addEventListener('click', async () => {
     : (isMaterialPod ? materialPodSeedVal : modelSpecificSeed);
   const modelSpecificSize = (isMaterialProduct || isMaterialPod) ? undefined : size;
 
-  if (provider !== 'volcengine' && !uploadedImageFile && !(provider === 'openai' && uploadedImageRefs.length > 0)) {
+  if (provider !== 'volcengine' && !uploadedImageFile && !((provider === 'openai' || provider === 'ai778') && uploadedImageRefs.length > 0)) {
     showAlert('请上传参考图片');
     return;
   }
@@ -3240,7 +3232,7 @@ generateBtnI2I.addEventListener('click', async () => {
   // 构建表单数据
   const formData = new FormData();
   formData.append('provider', provider);
-  if (provider === 'openai' && uploadedImageRefs.length > 0) {
+  if ((provider === 'openai' || provider === 'ai778') && uploadedImageRefs.length > 0) {
     uploadedImageRefs.forEach((file) => formData.append('imageRefs', file));
   } else if (uploadedImageFile) {
     formData.append('image', uploadedImageFile);

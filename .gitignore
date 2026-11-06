@@ -4,5 +4,6 @@ AGENT.md
 .codex
 public/uploads/*
 data/*
+test-output/
 CODE_REVIEW.md
 SECURITY_REVIEW.md

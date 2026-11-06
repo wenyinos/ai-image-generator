@@ -27,10 +27,10 @@ npm run dev        # 开发模式 (同 start)
 每个 API 调用的凭证按优先级解析：
 
 1. 前端输入（用户填写的 API Key 或 `AK:SK`）
-2. `.env` 环境变量（`DASHSCOPE_API_KEY`, `GEMINI_API_KEY`, `VOLCENGINE_ACCESS_KEY` 等）
+2. `.env` 环境变量（`DASHSCOPE_API_KEY`, `VOLCENGINE_ACCESS_KEY`, `AI778_API_KEY` 等）
 3. 兜底：空字符串，后端返回 400
 
-Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCredentials()` 解析后用于签名。`getApiKey()` 函数统一处理 DashScope 和 Gemini 的凭证回退。
+Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCredentials()` 解析后用于签名。`getApiKey()` 函数统一处理各 Provider 的凭证回退。
 
 ### Provider 分发模式
 
@@ -40,7 +40,9 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 |----------|---------|---------|---------|
 | DashScope | 直接调 `fetchWithTimeout` 到阿里云 API | 同左 | `GET /api/v1/tasks/{taskId}` |
 | Volcengine | `generateWithVolcengine()` | `jimeng-video` 路由 → taskId 立即返回 | `fetchVolcengineTaskResult()` → HMAC 签名 POST |
-| Gemini | `generateWithGemini()` | 不支持 | 同步返回，无需轮询 |
+| Agnes | `generateWithAgnes()` | `agnes-video` 路由 → taskId | `fetchAgnesVideoResult()` |
+| OpenAI | `generateWithOpenAI()` | 不支持 | 同步返回，无需轮询 |
+| AI778 | `generateWithAI778()`（媒体协议提交 + 状态轮询） | 不支持 | `GET /v1/skills/task-status?task_id=` |
 
 ### Volcengine HMAC-SHA256 签名 (`utils.js`)
 
@@ -87,11 +89,11 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 单一配置来源。所有常量通过 `process.env` + 默认值定义，包括：
 - 超时时间（ms）
 - API 端点 URL
-- 模型列表和别名映射 (`VOLCENGINE_MODEL_ALIASES`, `VIDEO_MODELS`)
+- 模型列表和别名映射 (`VOLCENGINE_MODEL_ALIASES`, `VIDEO_MODELS`, `AI778_MODELS`)
 - 同步/异步模型分类 (`SYNC_MODELS`)
 - 尺寸白名单 (`ALLOWED_SIZES_BY_MODEL`)
 
-新增模型或 provider 参数时，从 config.js 开始修改。
+新增模型或 provider 参数时，从 config.js 开始修改。AI778 新增模型需在 `AI778_MODELS` 中登记默认参数与价格，并同步前端 `MODELS_T2I.ai778` / `MODELS_I2I.ai778` 的“名称 · ¥价格/次起”标注。
 
 ## 重要约定
 

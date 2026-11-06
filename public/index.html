@@ -69,17 +69,17 @@
             <div class="tab-content" id="modeTabContent">
               <!-- 文生图模式 -->
               <div class="tab-pane fade show active" id="text2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine、Gemini 与 Agnes 生成图片</p>
+                <p class="text-center text-muted mb-4">输入描述，支持 DashScope、Volcengine、Agnes 与 AI778 生成图片</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
                     <label for="providerSelect" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelect">
-                      <option value="dashscope" selected>DashScope (阿里云百炼)</option>
-                      <option value="volcengine">Volcengine (火山方舟)</option>
-                      <option value="gemini">Gemini (Google)</option>
-                      <option value="agnes">Agnes AI</option>
+                      <option value="ai778" selected>AI778 (图片按次)</option>
                       <option value="openai">GPT (OpenAI)</option>
+                      <option value="agnes">Agnes AI</option>
+                      <option value="dashscope">DashScope (阿里云百炼)</option>
+                      <option value="volcengine">Volcengine (火山方舟)</option>
                     </select>
                   </div>
                   <div class="col-md-6">
@@ -134,17 +134,17 @@
 
               <!-- 图生图模式 -->
               <div class="tab-pane fade" id="image2image" role="tabpanel">
-                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Gemini、Volcengine 与 Agnes 图生图</p>
+                <p class="text-center text-muted mb-4">上传参考图，支持 DashScope、Volcengine、Agnes 与 AI778 图生图</p>
 
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
                     <label for="providerSelectI2I" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="providerSelectI2I">
-                      <option value="dashscope" selected>DashScope (阿里云百炼)</option>
-                      <option value="volcengine">Volcengine (火山方舟)</option>
-                      <option value="gemini">Gemini (Google)</option>
-                      <option value="agnes">Agnes AI</option>
+                      <option value="ai778" selected>AI778 (图片按次)</option>
                       <option value="openai">GPT (OpenAI)</option>
+                      <option value="agnes">Agnes AI</option>
+                      <option value="dashscope">DashScope (阿里云百炼)</option>
+                      <option value="volcengine">Volcengine (火山方舟)</option>
                     </select>
                   </div>
                   <div class="col-md-6">
@@ -263,10 +263,9 @@
                   <div class="col-md-4">
                     <label for="videoProvider" class="form-label fw-semibold">提供商</label>
                     <select class="form-select" id="videoProvider">
-                      <option value="dashscope" selected>阿里云百炼</option>
+                      <option value="agnes" selected>Agnes AI</option>
+                      <option value="dashscope">阿里云百炼</option>
                       <option value="volcengine">即梦AI (火山引擎)</option>
-                      <option value="agnes">Agnes AI</option>
-                      <option value="xai">Grok (xAI)</option>
                     </select>
                   </div>
                   <div class="col-md-4">
@@ -487,7 +486,6 @@
                       <option value="dashscope">DashScope</option>
                       <option value="volcengine">即梦AI</option>
                       <option value="agnes">Agnes AI</option>
-                      <option value="xai">Grok</option>
                     </select>
                     <button class="btn btn-outline-primary" type="button" id="fetchTaskIdBtn">
                       <i class="bi bi-arrow-repeat"></i> 获取
@@ -508,14 +506,6 @@
                     <div class="form-text">环境变量 <code>DASHSCOPE_API_KEY</code> · <a href="https://bailian.console.aliyun.com/cn-beijing?apiKey=1&tab=model#/api-key" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
                   </div>
                   <div class="col-md-6">
-                    <label for="settingsGeminiKey" class="form-label fw-semibold">Gemini API Key（可选）</label>
-                    <div class="input-group">
-                      <input type="password" class="form-control settings-api-key-input" id="settingsGeminiKey" data-provider="gemini" placeholder="AIza...">
-                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsGeminiKey"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <div class="form-text">环境变量 <code>GEMINI_API_KEY</code> · <a href="https://aistudio.google.com/apikey" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
-                  </div>
-                  <div class="col-md-6">
                     <label for="settingsOpenaiKey" class="form-label fw-semibold">OpenAI API Key（可选）</label>
                     <div class="input-group">
                       <input type="password" class="form-control settings-api-key-input" id="settingsOpenaiKey" data-provider="openai" placeholder="sk-...">
@@ -524,20 +514,20 @@
                     <div class="form-text">环境变量 <code>OPENAI_API_KEY</code> · <a href="https://platform.openai.com/api-keys" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
                   </div>
                   <div class="col-md-6">
+                    <label for="settingsAi778Key" class="form-label fw-semibold">AI778 API Key（可选）</label>
+                    <div class="input-group">
+                      <input type="password" class="form-control settings-api-key-input" id="settingsAi778Key" data-provider="ai778" placeholder="sk-...">
+                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsAi778Key"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="form-text">环境变量 <code>AI778_API_KEY</code> · <a href="https://ai778.cc" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
+                  </div>
+                  <div class="col-md-6">
                     <label for="settingsAgnesKey" class="form-label fw-semibold">Agnes API Key（可选）</label>
                     <div class="input-group">
                       <input type="password" class="form-control settings-api-key-input" id="settingsAgnesKey" data-provider="agnes" placeholder="agnes-...">
                       <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsAgnesKey"><i class="bi bi-eye"></i></button>
                     </div>
                     <div class="form-text">环境变量 <code>AGNES_API_KEY</code> · <a href="https://agnes-ai.com" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
-                  </div>
-                  <div class="col-md-6">
-                    <label for="settingsXaiKey" class="form-label fw-semibold">xAI API Key（可选）</label>
-                    <div class="input-group">
-                      <input type="password" class="form-control settings-api-key-input" id="settingsXaiKey" data-provider="xai" placeholder="xai-...">
-                      <button class="btn btn-outline-secondary settings-toggle-visibility" type="button" data-target="settingsXaiKey"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <div class="form-text">环境变量 <code>XAI_API_KEY</code> · <a href="https://console.x.ai/" target="_blank" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> 前往控制台获取 API Key</a></div>
                   </div>
                   <div class="col-md-6">
                     <label for="settingsVolcengineAk" class="form-label fw-semibold">Volcengine Access Key（可选）</label>

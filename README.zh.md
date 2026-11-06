@@ -8,14 +8,21 @@
 
 - 前端：Bootstrap 5 + 原生 JavaScript（所有资源本地化）
 - 后端：Express (Node.js)
-- Provider：**DashScope**、**Google Gemini**、**火山引擎（即梦）**、**Agnes AI**
+- Provider：**DashScope**、**火山引擎（即梦）**、**Agnes AI**、**OpenAI**、**AI778**
 - 本地任务记录：SQLite（默认 `data/video-tasks.sqlite`）
 - 存储备份：S3 兼容对象存储（Cloudflare R2 / AWS S3 / 阿里云 OSS / 腾讯云 COS / MinIO）
 
 ## 功能特性
 
+### 2.6.0 新增
+- 新增 **AI778** 图片渠道：16 个按次计费模型，均支持文生图与图生图，模型名称旁标注价格
+- AI778 设为文生图 / 图生图默认渠道；Agnes AI 设为视频生成默认渠道
+- 移除 Gemini 与 Grok (xAI) 渠道
+- OpenAI 与 AI778 图生图参考图上限提升至 **16 张**
+- OpenAI 模型统一标注 ¥0.1/张
+
 ### 文生图
-- 前端可切换 Provider（DashScope / Gemini / Volcengine）
+- 前端可切换 Provider（DashScope / Volcengine / Agnes AI / OpenAI / AI778）
 - 支持多模型与模型级尺寸约束
 - 可配置参数：出图数量、尺寸、随机种子、负向提示词、提示词扩写、水印
 - DashScope 同步/异步协议自动处理
@@ -33,11 +40,12 @@
   - 本地上传（服务端落盘后转为 HTTP URL）
   - 外部 HTTP(S) 图片 URL 输入
 - 火山图生图上传的临时文件会在**成功生成后 5 分钟自动清理**
-- OpenAI（`gpt-image-2`）图生图支持**多参考图（2.2.1 新增）**：单次最多上传 4 张（对应官方 edits 的 `image[]` 多图引用）
+- OpenAI（`gpt-image-2`）图生图支持**多参考图**：单次最多上传 16 张（对应官方 edits 的 `image[]` 多图引用）
+- AI778 图生图最多支持 16 张参考图（本站媒体协议 `params.images`）
 - DashScope 模型快照输入：选择模型 + 输入快照日期自动拼接为 `模型-快照`
 
 ### 视频生成
-- 前端可切换 Provider（DashScope / Volcengine）
+- 前端可切换 Provider（Agnes AI / DashScope / Volcengine）
 - 支持 DashScope 文生视频与图生视频
 - 内置 `happyhorse-1.1-*`、`happyhorse-1.0-*`、`wan2.7-*` 以及早期 Wan 视频模型
 - DashScope 模型快照输入：选择模型 + 输入快照日期自动拼接为 `模型-快照`
@@ -53,7 +61,7 @@
 - 宽屏表单双列布局与适宽按钮，移动端自适应边距；刷新页面保持上次使用的标签页
 
 ### 设置页与统一凭证（2.0 新增）
-- 顶部新增"设置"页：按提供商（DashScope / Gemini / OpenAI / Agnes / xAI / 火山 AK+SK）集中配置 API Key
+- 顶部新增"设置"页：按提供商（DashScope / OpenAI / Agnes / AI778 / 火山 AK+SK）集中配置 API Key
 - 文生图、图生图、视频生成**共用同一套 Key**，输入即自动保存到浏览器本地
 - 旧版按模式拆分的 Key 存储自动迁移，无感升级
 - Key 留空时仍回退服务端 `.env` 环境变量（原有通道不变）
@@ -93,12 +101,6 @@
 ### DashScope
 - 前端输入，或配置 `DASHSCOPE_API_KEY`
 
-### Gemini
-- 前端输入，或配置 `GEMINI_API_KEY`（未配置时回退 `GOOGLE_API_KEY`）
-- 使用 OpenAI 兼容网关（`POST /v1/images/generations` + `/images/edits`）
-- 端点可通过 `GEMINI_BASE_URL` 配置（例如 OpenAI 兼容中转 `https://api.openox.tech/v1`）
-- 出图尺寸支持 1K / 2K 档位（前端可选；未选择时由上游按默认出图）
-
 ### 火山引擎（即梦）
 - 前端输入 `AK:SK`
 - 或服务端环境变量：
@@ -114,22 +116,22 @@
 ### OpenAI (GPT)
 - 前端输入，或配置 `OPENAI_API_KEY`
 - 端点：`https://api.openai.com/v1`（可通过 `OPENAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
-- 支持：文生图（`gpt-image-2`、`image2.5`）、图生图（`gpt-image-2`，支持多参考图，最多 4 张）
+- 支持：文生图（`gpt-image-2`、`image2.5`）、图生图（`gpt-image-2`，支持多参考图，最多 16 张）
+- 前端模型名称旁标注 ¥0.1/张
 - `image2.5` 仅提供文生图：其上游（中转）只接受 `/images/generations`，图生图入口不提供
 
-### xAI (Grok 视频)
-- 前端输入，或配置 `XAI_API_KEY`
-- 端点：`https://api.x.ai/v1`（可通过 `XAI_BASE_URL` 配置，例如 OpenAI 兼容中转）
-- 时长参数使用 `seconds`（字符串）
-- 支持：文生视频、图生视频
-  - `grok-video-1.0`：文/图生视频，最多 7 张参考图，16:9/9:16/1:1，4-15 秒，480p/720p
-  - `grok-video-1.5`：单图生视频（必须且只能 1 张参考图），16:9/9:16，4-15 秒，480p/720p
+### AI778（图片按次）
+- 前端输入，或配置 `AI778_API_KEY`
+- 端点：`https://api.lk888.ai/v1`（可通过 `AI778_BASE_URL` 配置）
+- 使用本站媒体协议：`POST /v1/media/generate` 提交，轮询 `GET /v1/skills/task-status?task_id=...`
+- 16 个按次计费图片模型，均支持文生图与图生图；模型名称旁标注最低价/次起
+- 图生图最多 16 张参考图（base64 data URL 通过 `params.images` 传入）
 
 ### HTTP 代理
-- 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（Gemini、OpenAI、Grok）路由到代理
+- 设置 `HTTP_PROXY`（或 `HTTPS_PROXY`/`ALL_PROXY`）可将外网 API 调用（OpenAI）路由到代理
 - 示例：`HTTP_PROXY=http://127.0.0.1:7890`
 
-## 支持的 DashScope / Gemini 模型
+## 支持的 DashScope 模型
 
 | 模型 | 类型 | 同步/异步 | 说明 |
 |---|---|---|---|
@@ -141,18 +143,11 @@
 | `qwen-image-3.0` | qwen | 同步 | 文生图、图生图，1K/2K |
 | `qwen-image-2.0-pro` | qwen | 同步 | 擅长文字渲染 |
 
-**Gemini**：`gemini-3.1-flash-image-preview`（默认）
-
-| 模型 | 类型 | 说明 |
-|---|---|---|
-| `gemini-3-pro-image-preview` | gemini | 文生图、图生图，预览版 |
-| `gemini-3.1-flash-image-preview` | gemini | 文生图、图生图，高速预览版 |
-
 **OpenAI (GPT)**：
 
 | 模型 | 类型 | 说明 |
 |---|---|---|
-| `gpt-image-2` | openai | 文生图、图生图（多参考图最多 4 张），尺寸可选 1024x1024 / 1536x1024 / 1024x1536 |
+| `gpt-image-2` | openai | 文生图、图生图（多参考图最多 16 张），尺寸可选 1024x1024 / 1536x1024 / 1024x1536 |
 | `image2.5` | openai | 文生图，支持 1K/2K 分辨率（不提供图生图：上游仅接受 `/images/generations`） |
 
 **Agnes AI**：
@@ -162,6 +157,27 @@
 | `agnes-image-2.5-flash` | agnes | 最新，支持 1K-4K 档位与多图合成 |
 | `agnes-image-2.1-flash` | agnes | 推荐 |
 | `agnes-image-2.0-flash` | agnes | |
+
+**AI778（按次）**：
+
+| 模型 | 说明 | 最低价 |
+|---|---|---|
+| `tt-image-2.5` | TT Image 2.5，标准/增强版，1K-4K，透明背景 | ¥0.024/次起 |
+| `tt-image-2` | TT Image 2，旗舰，文生图+编辑 | ¥0.0349/次起 |
+| `tt-image-2.6` | TT Image 2.6，支持 SVG/GIF | ¥0.0167/次起 |
+| `banana-2.1` | 纳米香蕉 2.1 按次，最多 14 张参考图 | ¥0.0797/次起 |
+| `banana-pro` | 纳米香蕉 Pro，最高 4K | ¥0.1275/次起 |
+| `banana-2` | 纳米香蕉 2，最高 4K | ¥0.1063/次起 |
+| `doubao-seedream-5-0-pro-260628` | 即梦 5.0 Pro，最多 10 张参考图 | ¥0.2732/次起 |
+| `gk-image-2.0` | GK Image 2.0 | ¥0.3491/次起 |
+| `mj_imagine` | Midjourney | ¥0.425/次起 |
+| `vidu-image-2` | VIDU Image 2，最多 7 张参考图 | ¥0.2561/次起 |
+| `doubao-seedream-5-0-260128` | 即梦 5.0 | ¥0.334/次起 |
+| `wan2.7-image` | 万相 2.7 图像 | ¥0.1518/次起 |
+| `doubao-seedream-4-5-251128` | 即梦 4.5，最高 4K | ¥0.3795/次起 |
+| `kling-v3-omni` | 可灵-V3-Omni | ¥0.1822/次起 |
+| `wan2.6-image` | 万相 2.6 图像 | ¥0.1063/次起 |
+| `kling-v3` | 可灵-V3 | ¥0.1822/次起 |
 
 ## 支持的 DashScope 视频模型
 
@@ -202,13 +218,6 @@
 | `agnes-video-2.5-flash` | 最新快速版，4-12 秒，720P（异步） |
 | `agnes-video-2.5` | 4-12 秒，720P/1080P/1K/2K（异步） |
 | `agnes-video-v2.0` | 文生视频、图生视频（异步） |
-
-### Grok 视频（xAI）
-
-| 模型 | 说明 |
-|---|---|
-| `grok-video-1.0` | 文/图生视频，最多 7 张参考图，16:9/9:16/1:1，480p/720p |
-| `grok-video-1.5` | 单图生视频（必须且只能 1 张参考图），16:9/9:16，480p/720p |
 
 ## 支持的即梦视频模型
 
@@ -293,7 +302,6 @@ cp .env.example .env
 ```env
 PORT=3000
 DASHSCOPE_API_KEY=your_dashscope_key
-# GEMINI_API_KEY=your_gemini_key
 # VOLCENGINE_ACCESS_KEY=your_ak
 # VOLCENGINE_SECRET_KEY=your_sk
 ```
@@ -314,7 +322,6 @@ npm run dev
 
 Provider 凭证：
 - `DASHSCOPE_API_KEY`
-- `GEMINI_API_KEY` / `GOOGLE_API_KEY`
 - `VOLCENGINE_ACCESS_KEY`
 - `VOLCENGINE_SECRET_KEY`
 - `VOLCENGINE_SESSION_TOKEN`（可选）
@@ -326,7 +333,6 @@ Provider 凭证：
 - `VIDEO_GENERATION_MAX_POLL_ATTEMPTS`（默认 `288`）
 - `VIDEO_GENERATION_REQUEST_TIMEOUT_MS`（默认 `1800000`）
 - `DASHSCOPE_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
-- `GEMINI_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
 - `VOLCENGINE_TIMEOUT_MS`（Provider 级覆盖；默认跟随 `GENERATION_REQUEST_TIMEOUT_MS`）
 
 火山请求调优：
@@ -536,7 +542,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.5.0' }`
+  - 响应: `{ status: 'ok', version: '2.6.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息
