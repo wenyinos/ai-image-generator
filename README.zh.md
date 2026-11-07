@@ -14,6 +14,11 @@
 
 ## 功能特性
 
+### 2.7.2 新增
+- 恢复即梦 3.0 720P 图生视频模型的首帧/首尾帧上传
+- 减少页面请求：视频模型列表不再请求（使用内置列表）、AI778 模型参数本地缓存 24 小时、切回标签页不再刷新列表
+- API 限流拆分：GET 读取接口默认 300 次/分钟（`RATE_LIMIT_READ_MAX`），写操作仍按 `RATE_LIMIT_MAX`
+
 ### 2.7.1 新增
 - AI778 图片与视频参数改为按官方模型参数表生成（`lib/ai778-model-specs.json`）
 - 必填参数自动填充默认值；分辨率、时长、比例、画质、版本、尺寸、复杂度、输出格式等常用参数可按模型选择
@@ -403,7 +408,8 @@ Provider 凭证：
 网关：
 - `CORS_ORIGIN`（逗号分隔白名单）
 - `RATE_LIMIT_WINDOW_MS`（默认 `60000`）
-- `RATE_LIMIT_MAX`（默认 `30`）
+- `RATE_LIMIT_MAX`（默认 `30`，作用于写操作）
+- `RATE_LIMIT_READ_MAX`（默认 `300`，作用于 GET 读接口，避免页面初始化触发 429）
 
 ## 火山图生图 URL 要求（重点）
 
@@ -582,7 +588,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.7.1' }`
+  - 响应: `{ status: 'ok', version: '2.7.2' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息

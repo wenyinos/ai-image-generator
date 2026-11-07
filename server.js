@@ -61,8 +61,19 @@ app.use((req, res, next) => {
 // API 限流
 const apiRateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
 const apiRateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '30', 10);
-if (Number.isFinite(apiRateLimitWindowMs) && Number.isFinite(apiRateLimitMax) && apiRateLimitWindowMs > 0 && apiRateLimitMax > 0) {
-  app.use('/api/', createRateLimiter({ windowMs: apiRateLimitWindowMs, max: apiRateLimitMax }));
+// 读取类 GET 接口（模型列表、参数配置、任务记录等）放宽上限，避免页面初始化/刷新触发 429
+const apiRateLimitReadMax = Number.parseInt(process.env.RATE_LIMIT_READ_MAX || '300', 10);
+if (Number.isFinite(apiRateLimitWindowMs) && apiRateLimitWindowMs > 0) {
+  const writeLimiter = Number.isFinite(apiRateLimitMax) && apiRateLimitMax > 0
+    ? createRateLimiter({ windowMs: apiRateLimitWindowMs, max: apiRateLimitMax })
+    : null;
+  const readLimiter = Number.isFinite(apiRateLimitReadMax) && apiRateLimitReadMax > 0
+    ? createRateLimiter({ windowMs: apiRateLimitWindowMs, max: apiRateLimitReadMax })
+    : null;
+  app.use('/api/', (req, res, next) => {
+    if (req.method === 'GET') return readLimiter ? readLimiter(req, res, next) : next();
+    return writeLimiter ? writeLimiter(req, res, next) : next();
+  });
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -223,7 +234,7 @@ app.use('/api', require('./lib/routes/history'));
 
 // 健康检查
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.7.1' });
+  res.json({ status: 'ok', version: '2.7.2' });
 });
 
 // 启动时清理残留上传文件

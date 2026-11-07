@@ -15,7 +15,9 @@ const MAX_CONSECUTIVE_NETWORK_ERRORS = 5;
 const NETWORK_ERROR_RETRY_DELAY_MS = 3000;
 const FREE_TIER_QUOTA_ERROR_CODE = 'AllocationQuota.FreeTierOnly';
 const FREE_TIER_QUOTA_ERROR_MESSAGE = '此模型额度已用尽，请更换其他模型';
-const FOREGROUND_RECOVERY_MIN_INTERVAL_MS = 3000;
+const FOREGROUND_RECOVERY_MIN_INTERVAL_MS = 30000;
+const AI778_SPECS_CACHE_KEY = 'ai778SpecsCache';
+const AI778_SPECS_TTL_MS = 24 * 60 * 60 * 1000;
 
 // DOM 元素引用
 const providerSelect = document.getElementById('providerSelect');
@@ -450,7 +452,7 @@ const VIDEO_MODEL_HINTS = {
   'seedance-2.5-anci': 'AI778 按次：¥12.5235/条起；分辨率不影响价格（一口价按条）。',
 };
 
-let VIDEO_MODELS = {
+const VIDEO_MODELS = {
   text2video: [
     { value: 'happyhorse-1.1-t2v', label: 'happyhorse-1.1-t2v（推荐）' },
     { value: 'happyhorse-1.0-t2v', label: 'happyhorse-1.0-t2v' },
@@ -709,20 +711,6 @@ function updateVideoParamOptions() {
   renderSelectOptions(videoRatio, ratios, (value) => value);
 }
 
-async function loadVideoModels() {
-  const apiKey = getStoredApiKey('dashscope');
-  try {
-    const res = await fetch(`/api/video-models?apiKey=${encodeURIComponent(apiKey)}`);
-    const data = await res.json();
-    if (res.ok && data.models) {
-      VIDEO_MODELS = data.models;
-      renderVideoModelOptions();
-    }
-  } catch (err) {
-    renderVideoModelOptions();
-  }
-}
-
 function setImageApiKeyMeta(provider) {
   // OpenAI / AI778 图生图开放多选上传（多参考图）；其他渠道保持单图
   if (imageUpload) imageUpload.multiple = provider === 'openai' || provider === 'ai778';
@@ -978,9 +966,23 @@ function renderActiveAI778Params() {
 
 async function loadAI778Specs() {
   try {
+    const raw = localStorage.getItem(AI778_SPECS_CACHE_KEY);
+    if (raw) {
+      const cached = JSON.parse(raw);
+      if (cached && cached.specs && Date.now() - cached.ts < AI778_SPECS_TTL_MS) {
+        AI778_SPECS = cached.specs;
+        renderActiveAI778Params();
+        return;
+      }
+    }
+  } catch (err) { /* 缓存损坏时重新拉取 */ }
+  try {
     const res = await fetch('/api/ai778-model-specs');
     if (!res.ok) return;
     AI778_SPECS = await res.json();
+    try {
+      localStorage.setItem(AI778_SPECS_CACHE_KEY, JSON.stringify({ ts: Date.now(), specs: AI778_SPECS }));
+    } catch (err) { /* 存储空间不足时忽略 */ }
     renderActiveAI778Params();
   } catch (err) {
     AI778_SPECS = null;
@@ -1083,10 +1085,7 @@ function updateVideoUiState() {
   const isAgnes25Selected = videoProvider && videoProvider.value === 'agnes'
     && ['agnes-video-2.5', 'agnes-video-2.5-flash'].includes(selectedVideoModel);
   const isRecamera = isImageVideo && selectedVideoModel === 'jimeng-v3.0-recamera';
-  // 即梦 720P i2v 模型不支持帧上传（后端会拒绝），隐藏入口避免误用
-  const isJimeng720I2V = videoProvider && videoProvider.value === 'volcengine' && isImageVideo
-    && ['jimeng-v3.0-i2v-first', 'jimeng-v3.0-i2v-tail'].includes(selectedVideoModel);
-  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera || isJimeng720I2V);
+  if (videoFrameGroup) videoFrameGroup.classList.toggle('d-none', !isImageVideo || isRecamera);
   if (r2vUploadGroup) r2vUploadGroup.classList.toggle('d-none', !isR2V);
   if (recameraGroup) recameraGroup.classList.toggle('d-none', !isRecamera);
   if (isR2V && r2vFiles) {
@@ -1181,7 +1180,6 @@ updateVolcengineUiState();
 updateI2ISpecialParamState();
 renderVideoModelOptions();
 updateVideoUiState();
-loadVideoModels();
 loadAI778Specs();
 
 // 切换事件
@@ -3618,7 +3616,6 @@ async function recoverForegroundState({ force = false } = {}) {
       renderVideoModelOptions();
       updateVideoUiState();
       await Promise.allSettled([
-        loadVideoModels(),
         loadVideoTaskRecords(),
         loadImageTaskRecords('text2image'),
         loadImageTaskRecords('image2image'),
@@ -3647,7 +3644,10 @@ document.addEventListener('visibilitychange', () => {
     foregroundRecoveryNeeded = true;
     return;
   }
-  recoverForegroundState({ force: foregroundRecoveryNeeded });
+  // 普通切回标签页不重新拉取列表；仅在生成进行中/有活跃任务时恢复一次
+  if (isGenerationActive() || activeTaskContext) {
+    recoverForegroundState({ force: true });
+  }
   pollActiveTaskOnce();
 });
 

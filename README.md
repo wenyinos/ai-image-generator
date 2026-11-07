@@ -14,6 +14,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ## Features
 
+### New in 2.7.2
+- Restored first-frame / first+last-frame uploads for Jimeng 3.0 720P image-to-video models
+- Reduced page API requests: the video model list is no longer fetched (built-in list), AI778 model specs are cached locally for 24 hours, and switching back to the tab no longer refreshes lists
+- Split API rate limiting: GET read endpoints allow 300 requests/min by default (`RATE_LIMIT_READ_MAX`), write requests remain at `RATE_LIMIT_MAX`
+
 ### New in 2.7.1
 - AI778 image and video parameters are now generated from the official model specs (`lib/ai778-model-specs.json`)
 - Required parameters are filled automatically; common options (resolution, duration, aspect ratio, quality, version, size, complexity, output format, etc.) are selectable per model
@@ -403,7 +408,8 @@ Frontend access control:
 Gateway:
 - `CORS_ORIGIN` (comma-separated allowlist)
 - `RATE_LIMIT_WINDOW_MS` (default `60000`)
-- `RATE_LIMIT_MAX` (default `30`)
+- `RATE_LIMIT_MAX` (default `30`, applies to write requests)
+- `RATE_LIMIT_READ_MAX` (default `300`, applies to GET read endpoints so page initialization does not hit 429)
 
 ## Volcengine Image URL Requirement (Important)
 
@@ -583,7 +589,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.7.1' }`
+  - response: `{ status: 'ok', version: '2.7.2' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
