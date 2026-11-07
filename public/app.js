@@ -954,14 +954,40 @@ function collectAI778Params(container) {
 }
 
 function renderActiveAI778Params() {
+  const imageContainer = document.getElementById('ai778ParamsImage');
+  const videoContainer = document.getElementById('ai778ParamsVideo');
+  if (currentMode === 'video') {
+    // 视频模式完全隔离：不渲染任何图片参数
+    renderAI778Params(imageContainer, '');
+    renderAI778Params(
+      videoContainer,
+      videoProvider && videoProvider.value === 'ai778' && videoModelSelect ? videoModelSelect.value : ''
+    );
+    return;
+  }
   const isI2I = currentMode === 'image2image';
   const provider = isI2I ? providerSelectI2I.value : providerSelect.value;
   const model = isI2I ? modelSelectI2I.value : modelSelect.value;
-  renderAI778Params(document.getElementById('ai778ParamsImage'), provider === 'ai778' ? model : '');
-  renderAI778Params(
-    document.getElementById('ai778ParamsVideo'),
-    videoProvider && videoProvider.value === 'ai778' && videoModelSelect ? videoModelSelect.value : ''
-  );
+  renderAI778Params(imageContainer, provider === 'ai778' ? model : '');
+  // 图片模式完全隔离：不渲染任何视频参数
+  renderAI778Params(videoContainer, '');
+}
+
+// 统一的模式切换入口：手动点击、刷新恢复标签页、程序化切换都只走这里
+function applyModeUi(mode) {
+  currentMode = mode;
+  const isVideo = mode === 'video';
+  const isI2I = mode === 'image2image';
+  if (generateBtn) generateBtn.classList.toggle('d-none', isI2I || isVideo);
+  if (generateBtnI2I) generateBtnI2I.classList.toggle('d-none', !isI2I);
+  if (generateBtnVideo) generateBtnVideo.classList.toggle('d-none', !isVideo);
+  if (imageParamsPanel) imageParamsPanel.classList.toggle('d-none', isVideo);
+  if (image2imageParams) image2imageParams.classList.toggle('d-none', !isI2I);
+  if (mode === 'text2image') updateSizeOptions();
+  if (isI2I) updateSizeOptionsI2I();
+  updateVolcengineUiState();
+  updateVideoUiState();
+  renderActiveAI778Params();
 }
 
 async function loadAI778Specs() {
@@ -1072,6 +1098,13 @@ function updateI2ISpecialParamState() {
 
 function updateVideoUiState() {
   const isVideo = currentMode === 'video';
+  // 视频模式强制隐藏所有图片模式专属 UI，避免任何调用路径混入
+  if (isVideo) {
+    if (imageParamsPanel) imageParamsPanel.classList.add('d-none');
+    if (image2imageParams) image2imageParams.classList.add('d-none');
+    if (generateBtn) generateBtn.classList.add('d-none');
+    if (generateBtnI2I) generateBtnI2I.classList.add('d-none');
+  }
   const isImageVideo = videoMode && videoMode.value === 'image2video';
   const isMotion = videoMode && videoMode.value === 'motion';
   const isTranslate = videoMode && videoMode.value === 'translate';
@@ -2769,41 +2802,8 @@ if (videoPromptInput) {
 
 // ========== 图生图相关功能 ==========
 
-// 模式切换
-const text2imageTab = document.getElementById('text2image-tab');
-const image2imageTab = document.getElementById('image2image-tab');
-const videoTab = document.getElementById('video-tab');
-
-text2imageTab.addEventListener('click', () => {
-  currentMode = 'text2image';
-  generateBtn.classList.remove('d-none');
-  generateBtnI2I.classList.add('d-none');
-  image2imageParams.classList.add('d-none');
-  updateSizeOptions();
-  updateVolcengineUiState();
-  updateVideoUiState();
-});
-
-image2imageTab.addEventListener('click', () => {
-  currentMode = 'image2image';
-  generateBtn.classList.add('d-none');
-  generateBtnI2I.classList.remove('d-none');
-  image2imageParams.classList.remove('d-none');
-  updateSizeOptionsI2I();
-  updateVolcengineUiState();
-  updateVideoUiState();
-});
-
-if (videoTab) {
-  videoTab.addEventListener('click', () => {
-    currentMode = 'video';
-    generateBtn.classList.add('d-none');
-    generateBtnI2I.classList.add('d-none');
-    image2imageParams.classList.add('d-none');
-    updateVolcengineUiState();
-    updateVideoUiState();
-  });
-}
+// 模式切换统一由下方 modeTabs 的 shown.bs.tab 处理：
+// 手动点击与刷新后程序化恢复标签页都会同步 currentMode 与按钮/面板状态
 
 // 参考图强度滑块
 if (imageStrength) {
@@ -3663,8 +3663,16 @@ const TAB_STORAGE_KEY = 'aig-active-tab';
 const modeTabsEl = document.getElementById('modeTabs');
 if (modeTabsEl) {
   modeTabsEl.addEventListener('shown.bs.tab', (e) => {
+    const tabId = e.target.id;
+    if (tabId === 'text2image-tab') {
+      applyModeUi('text2image');
+    } else if (tabId === 'image2image-tab') {
+      applyModeUi('image2image');
+    } else if (tabId === 'video-tab') {
+      applyModeUi('video');
+    }
     try {
-      localStorage.setItem(TAB_STORAGE_KEY, e.target.id);
+      localStorage.setItem(TAB_STORAGE_KEY, tabId);
     } catch (err) {
       /* 隐私模式下忽略 */
     }
@@ -3682,3 +3690,6 @@ if (modeTabsEl) {
     }
   }
 }
+
+// 初始化时统一应用一次当前模式，确保按钮/面板状态与 currentMode 一致
+applyModeUi(currentMode);

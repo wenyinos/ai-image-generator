@@ -14,6 +14,11 @@
 
 ## 功能特性
 
+### 2.8.0 新增
+- 修复刷新恢复上次标签页时模式状态不同步：视频页不再出现图片参数与「生成图片」按钮
+- 标签页切换统一走 `applyModeUi()`；图片/视频的参数面板、生成按钮、AI778 参数容器完全互斥
+- 图片渠道与视频渠道状态完全隔离，不再共享 UI 状态
+
 ### 2.7.2 新增
 - 恢复即梦 3.0 720P 图生视频模型的首帧/首尾帧上传
 - 减少页面请求：视频模型列表不再请求（使用内置列表）、AI778 模型参数本地缓存 24 小时、切回标签页不再刷新列表
@@ -588,7 +593,7 @@ server {
 ## API 接口
 
 - `GET /health`
-  - 响应: `{ status: 'ok', version: '2.7.2' }`
+  - 响应: `{ status: 'ok', version: '2.8.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - 响应: `{ imageUrls: string[] }`，启用 `progressMode` 时返回异步任务信息

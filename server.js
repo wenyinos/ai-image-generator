@@ -234,7 +234,7 @@ app.use('/api', require('./lib/routes/history'));
 
 // 健康检查
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.7.2' });
+  res.json({ status: 'ok', version: '2.8.0' });
 });
 
 // 启动时清理残留上传文件

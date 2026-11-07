@@ -80,6 +80,7 @@ Volcengine 特殊处理：前端以 `AK:SK` 格式输入，`parseVolcengineCrede
 - **localStorage**：API Key 缓存、模型选择记忆
 
 关键机制：
+- **模式切换**：图片（文生图/图生图）与视频模式统一走 `applyModeUi()`，手动点击、刷新恢复标签页、程序化切换都必须经过它；不要单独修改 `currentMode` 或按钮/面板可见性。图片与视频参数面板、生成按钮、AI778 动态参数容器互斥渲染
 - **前台恢复**：`visibilitychange` + `pageshow` 事件 → `recoverForegroundState()` 刷新 UI 状态 → `pollActiveTaskOnce()` 立即查询活跃任务
 - **网络容错**：轮询循环中连续 3 次 `TypeError` (fetch failed) 才放弃，间隔 2 秒重试
 - **Blob 下载**：`setupDownloadLink()` fetch → blob → createObjectURL → 程序化点击下载，失败降级 `window.open`

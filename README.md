@@ -14,6 +14,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ## Features
 
+### New in 2.8.0
+- Fixed mode state desync when restoring the last active tab: image controls and the image generate button no longer appear on the video page
+- Unified tab switching through a single `applyModeUi()` entry; image/video panels, generate buttons and AI778 parameter containers are now mutually exclusive
+- Channel state is isolated per mode (image channels and video channels no longer share UI state)
+
 ### New in 2.7.2
 - Restored first-frame / first+last-frame uploads for Jimeng 3.0 720P image-to-video models
 - Reduced page API requests: the video model list is no longer fetched (built-in list), AI778 model specs are cached locally for 24 hours, and switching back to the tab no longer refreshes lists
@@ -589,7 +594,7 @@ server {
 ## API Endpoints
 
 - `GET /health`
-  - response: `{ status: 'ok', version: '2.7.2' }`
+  - response: `{ status: 'ok', version: '2.8.0' }`
 - `POST /api/generate-image`
   - body: `{ prompt, apiKey, model, provider, parameters }`
   - response: `{ imageUrls: string[] }` or async task metadata when `progressMode` is enabled
