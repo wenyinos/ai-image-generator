@@ -14,6 +14,11 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 ## Features
 
+### New in 2.9.0
+- Added **Seedream 5.5** (`doubao-seedream-5-5-261028`, from ¥0.1216/call) and **Muse Image** (`muse-image`, from ¥0.0367/call) to AI778 per-call image models
+- Refreshed AI778 image and video pricing from live channels; corrected resolution multipliers (Vidu Q3 ×2, Vidu Q3 reference ×1.5, Pix C1 ×24)
+- Removed 8 unavailable models: 5 with no active channel (`vidu-image-2`, `doubao-seedream-5-0-260128`, `doubao-seedream-4-5-251128`, `gk-video-3`, `seedance-2.5-anci`) and 3 that only offer per-second billing now (`omni-1.1`, `omni-flash`, `video-enhance`)
+
 ### New in 2.8.0
 - Fixed mode state desync when restoring the last active tab: image controls and the image generate button no longer appear on the video page
 - Unified tab switching through a single `applyModeUi()` entry; image/video panels, generate buttons and AI778 parameter containers are now mutually exclusive
@@ -145,8 +150,8 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 - Frontend key or `AI778_API_KEY`
 - Base URL: `https://api.lk888.ai/v1` (configurable via `AI778_BASE_URL`)
 - Uses the platform media protocol: `POST /v1/media/generate`, then polls `GET /v1/skills/task-status?task_id=...`
-- 16 per-call image models; every model supports text-to-image and image-to-image, each with its price shown next to the model name
-- 22 per-call video models are also available in the Video tab (text-to-video, image-to-video, reference-to-video); prices are shown as ¥/video starting price
+- 15 per-call image models; every model supports text-to-image and image-to-image, each with its price shown next to the model name
+- 17 per-call video models are also available in the Video tab (text-to-video, image-to-video, reference-to-video); prices are shown as ¥/video starting price
 - Model parameters are rendered dynamically from `lib/ai778-model-specs.json`: required defaults are filled automatically, and common options (resolution, duration, aspect ratio, quality, version, size, etc.) are selectable per model
 - Image-to-image accepts up to 16 reference images (base64 data URLs are sent via `params.images`); video generation polls the same task-status endpoint
 
@@ -185,19 +190,18 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Notes | Min price |
 |---|---|---|
-| `tt-image-2.5` | TT Image 2.5, standard/enhanced, 1K-4K, transparent background | ¥0.024/call |
-| `tt-image-2` | TT Image 2, flagship, text + edit | ¥0.0349/call |
-| `tt-image-2.6` | TT Image 2.6, SVG/GIF output | ¥0.0167/call |
-| `banana-2.1` | Nano Banana 2.1 per-call, up to 14 refs, web search | ¥0.0797/call |
+| `tt-image-2.5` | TT Image 2.5, standard/enhanced, 1K-4K, transparent background | ¥0.0234/call |
+| `tt-image-2` | TT Image 2, flagship, text + edit | ¥0.0304/call |
+| `tt-image-2.6` | TT Image 2.6, SVG/GIF output | ¥0.0234/call |
+| `muse-image` | Muse Image, 16 aspect ratios, 1K/2K same price | ¥0.0367/call |
+| `banana-2.1` | Nano Banana 2.1 per-call, up to 14 refs, web search | ¥0.1169/call |
 | `banana-pro` | Nano Banana Pro, up to 4K | ¥0.1275/call |
 | `banana-2` | Nano Banana 2, up to 4K | ¥0.1063/call |
+| `doubao-seedream-5-5-261028` | Seedream 5.5, 1K/1.5K/2K, up to 10 refs | ¥0.1216/call |
 | `doubao-seedream-5-0-pro-260628` | Seedream 5.0 Pro, up to 10 refs | ¥0.2732/call |
-| `gk-image-2.0` | GK Image 2.0 | ¥0.3491/call |
+| `gk-image-2.0` | GK Image 2.0 | ¥0.2505/call |
 | `mj_imagine` | Midjourney | ¥0.425/call |
-| `vidu-image-2` | Vidu Image 2, up to 7 refs | ¥0.2561/call |
-| `doubao-seedream-5-0-260128` | Seedream 5.0 | ¥0.334/call |
 | `wan2.7-image` | Wan 2.7 image | ¥0.1518/call |
-| `doubao-seedream-4-5-251128` | Seedream 4.5, up to 4K | ¥0.3795/call |
 | `kling-v3-omni` | Kling V3 Omni | ¥0.1822/call |
 | `wan2.6-image` | Wan 2.6 image | ¥0.1063/call |
 | `kling-v3` | Kling V3 | ¥0.1822/call |
@@ -206,17 +210,13 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 
 | Model | Notes | Min price | Resolution multiplier |
 |---|---|---|---|
-| `vo3.1` | VO3.1 | ¥0.2189 | same price |
-| `gk-video-3` | GK-video-3 | ¥0.2732 | same price |
-| `omni-1.1` | Omni 1.1 | ¥0.2733 | 720P×1 / 1080P×1.6667 / 4K×2.5 |
-| `viduq3` | Vidu Q3 | ¥0.3029 | 540P×1 / 720P×1.5~1.875 / 1080P×1.8~2 |
-| `omni-flash` | omni-flash (currently no active channel) | ¥0.3643 | same price |
+| `vo3.1` | VO3.1 | ¥0.3795 | same price |
+| `viduq3` | Vidu Q3 | ¥0.3029 | 540P×1 / 720P×1.66 / 1080P×2 |
 | `wan2.6-cankaosheng` | Wan 2.6 reference | ¥0.4144 | 1080P×1.6667 |
 | `wan2.6-shouzheng` | Wan 2.6 first frame | ¥0.4782 | 1080P×1.6667 |
-| `viduq3-cankaosheng` | Vidu Q3 reference | ¥0.5222 | 540P×0.5~1 / 720P×1~2 / 1080P×1.5~2.5 |
-| `video-enhance` | Video upscale (currently no active channel) | ¥0.5951 | same price |
-| `pixverse-c1-cankaosheng` | Pix C1 reference | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
-| `pixverse-c1-shouweizhen` | Pix C1 first/last frame | ¥0.6912 | 360P×8~24 / 540P×10~30 / 720P×13~39 / 1080P×24~71 |
+| `viduq3-cankaosheng` | Vidu Q3 reference | ¥0.5222 | 540P×0.5 / 720P×1 / 1080P×1.5 |
+| `pixverse-c1-cankaosheng` | Pix C1 reference | ¥0.6912 | 360P×8 / 540P×10 / 720P×13 / 1080P×24 |
+| `pixverse-c1-shouweizhen` | Pix C1 first/last frame | ¥0.6912 | 360P×8 / 540P×10 / 720P×13 / 1080P×24 |
 | `omni_flash-10s-fl` | Omni Flash first/last frame | ¥0.7742 | same price |
 | `omni_flash-10s` | Omni Flash 10s | ¥0.7742 | same price |
 | `viduq2-cankaosheng` | Vidu Q2 reference | ¥0.9138 | 540P/720P×1 / 1080P×2 |
@@ -227,7 +227,6 @@ A production-oriented AI visual generation web app with **text-to-image**, **ima
 | `kling-v3-omni-shouweizhen` | Kling Omni first/last frame | ¥3.0345 | same price |
 | `kling-v3-video` | Kling V3 video | ¥3.414 | same price |
 | `seedance-2.0-anci` | Seedance 2.0 per-call | ¥5.8443 | same price |
-| `seedance-2.5-anci` | Seedance 2.5 per-call | ¥12.5235 | same price |
 
 ## Supported DashScope Video Models
 
